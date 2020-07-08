@@ -7,11 +7,8 @@
 data_edit(
   x,
   col_bind = NULL,
-  col_readonly = NULL,
   col_edit = TRUE,
   col_options = NULL,
-  col_halign = "center",
-  col_valign = "middle",
   col_stretch = FALSE,
   row_bind = NULL,
   row_edit = TRUE,
@@ -21,30 +18,23 @@ data_edit(
   logo_size = 100,
   viewer = TRUE,
   theme = "yeti",
-  quiet = FALSE
+  quiet = FALSE,
+  ...
 )
 }
 \arguments{
-\item{x}{matrix-like object or name of a csv file to edit.}
+\item{x}{matrix-like object or name of a csv file to edit. An empty table can
+be created by specify the dimensions in a vector of the form \code{c(nrow,
+  ncol)}.}
 
 \item{col_bind}{additional columns to add to the data prior to loading into
 editor.}
-
-\item{col_readonly}{names of the columns that cannot be edited.}
 
 \item{col_edit}{logical indicating whether columns can be added or removed,
 set to TRUE by default.}
 
 \item{col_options}{named list containing the options for columns that use
 dropdown menus or checkboxes.}
-
-\item{col_halign}{can be either \code{"left"}, \code{"center"} or
-\code{"right"} to control the horizontal alignment of text in columns, set
-to \code{"center"} by default.}
-
-\item{col_valign}{can be either \code{"top"}, \code{"middle"},
-\code{"center"}, or \code{"bottom"} to control the vertical alignment of
-text in columns, set to \code{"middle"} by default.}
 
 \item{col_stretch}{logical indicating whether columns should be stretched to
 fill the full width of the display, set to FALSE by default.}
@@ -71,6 +61,9 @@ the RStudio viewer pane, set to TRUE by default.}
 
 \item{quiet}{logical indicating whether messages should be suppressed, set to
 FALSE by default.}
+
+\item{...}{additional arguments passed to \code{read.csv} or \code{fread} to
+read in \code{x} when it is supplied as the name of a csv file.}
 }
 \value{
 edited matrix-like object.

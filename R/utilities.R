@@ -69,7 +69,7 @@ file_ext_append <- function(x,
 
 # READ_FROM_CSV ----------------------------------------------------------------
 
-#' Use data.table to read in a csv file
+#' Read in a csv file
 #' @importFrom utils read.csv
 #' @noRd
 read_from_csv <- function(x,
@@ -84,26 +84,42 @@ read_from_csv <- function(x,
       )
     )
   }
-  read.csv(x,
-           ...)
+  # USE DATA.TABLE
+  if(requireNamespace("data.table", quietly = TRUE)){
+    data.table::fread(x,
+                      ...)
+  }else{
+    read.csv(x,
+             ...)
+  }
+  
 }
 
 # WRITE_TO_CSV -----------------------------------------------------------------
 
-#' Use data.table to write data to a csv file
+#' Write data to a csv file
 #' @importFrom utils write.csv
 #' @noRd
 write_to_csv <- function(x,
                          file = NULL,
+                         row.names = FALSE,
                          ...){
   
   if(is.null(file)){
     stop("Supply a name for the csv file to 'file'.")
   }
   file <- file_ext_append(file, ".csv")
-  write.csv(x,
-            file,
-            ...)
+  if(requireNamespace("data.table", quietly = TRUE)){
+    data.table::fwrite(x,
+                       file,
+                       ...)
+  }else{
+    write.csv(x,
+              file,
+              row.names = row.names, # DON'T WRITE ROW NAMES
+              ...)
+  }
+
 }
 
 ## EMPTY CHARACTER STRINGS -----------------------------------------------------

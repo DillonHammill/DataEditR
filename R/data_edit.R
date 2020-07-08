@@ -1,21 +1,37 @@
-## DATA_EDITOR -----------------------------------------------------------------
+## DATA_EDIT -------------------------------------------------------------------
+
+# NOTES: 
+# - rhandsontable does not automatically resize the row names column, so
+# we put in the first column instead.
+# - ability to add or remove columns only exists when useTypes = FALSE in 
+# rhandsontable.
+# - any call to hot_col will result in column add/remove capability being 
+# removed
+# - hot_cols only modifies columns with a set type, i.e. does nothing when 
+# useTypes = FALSE.
+# - column alignment is supported only in hot_col which removes the ability
+# to add or remove columns.
+# - similarly the readonly flag for a column can only be set in hot_col which 
+# removes the ability to add or remove columns.
+
+# RESULT:
+# - cannot make any calls to hot_col execpt when col_options is used.
+# - column alignment is not supported to allow addition/removal of columns
+# - the read only flag cannot act through hot_col and so is not supported. It
+# may be possible to handle this externally but this gets complicated when
+# columns are added or removed.
 
 #' Interactively edit data.frames, matrices or csv files
 #'
-#' @param x matrix-like object or name of a csv file to edit.
+#' @param x matrix-like object or name of a csv file to edit. An empty table can
+#'   be created by specify the dimensions in a vector of the form \code{c(nrow,
+#'   ncol)}.
 #' @param col_bind additional columns to add to the data prior to loading into
 #'   editor.
-#' @param col_readonly names of the columns that cannot be edited.
 #' @param col_edit logical indicating whether columns can be added or removed,
 #'   set to TRUE by default.
 #' @param col_options named list containing the options for columns that use
 #'   dropdown menus or checkboxes.
-#' @param col_halign can be either \code{"left"}, \code{"center"} or
-#'   \code{"right"} to control the horizontal alignment of text in columns, set
-#'   to \code{"center"} by default.
-#' @param col_valign can be either \code{"top"}, \code{"middle"},
-#'   \code{"center"}, or \code{"bottom"} to control the vertical alignment of
-#'   text in columns, set to \code{"middle"} by default.
 #' @param col_stretch logical indicating whether columns should be stretched to
 #'   fill the full width of the display, set to FALSE by default.
 #' @param row_bind additional rows to add to the data prior to loading into
@@ -32,6 +48,8 @@
 #' @param theme valid shinytheme name, set to "yeti" by default.
 #' @param quiet logical indicating whether messages should be suppressed, set to
 #'   FALSE by default.
+#' @param ... additional arguments passed to \code{read.csv} or \code{fread} to
+#'   read in \code{x} when it is supplied as the name of a csv file.
 #'
 #' @return edited matrix-like object.
 #'
@@ -60,11 +78,8 @@
 #' @export
 data_edit <- function(x,
                       col_bind = NULL,
-                      col_readonly = NULL,
                       col_edit = TRUE,
                       col_options = NULL,
-                      col_halign = "center",
-                      col_valign = "middle",
                       col_stretch = FALSE,
                       row_bind = NULL,
                       row_edit = TRUE,
@@ -74,13 +89,23 @@ data_edit <- function(x,
                       logo_size = 100,
                       viewer = TRUE,
                       theme = "yeti",
-                      quiet = FALSE) {
+                      quiet = FALSE,
+                      ...) {
 
   # PREPARE DATA ---------------------------------------------------------------
 
   # READ IN DATA
   if (is.null(dim(x))) {
-    x <- read_from_csv(x)
+    # READ IN FILE
+    if(length(x) == 1) {
+      x <- read_from_csv(x,
+                         ...)
+    # EMPTY MATRIX
+    }else if(length(x) == 2) {
+      x <- matrix(rep(NA, prod(x)),
+                  nrow = x[1],
+                  ncol = x[2])
+    }
   }
 
   # BIND ROWS
@@ -152,8 +177,8 @@ data_edit <- function(x,
   if (!is.null(title) | !is.null(logo)) {
     title_panel <- titlePanel(
       span(
-        title,
         logo,
+        title,
         span(actionButton("save_and_close", "Save & Close"))
       )
     )
@@ -161,24 +186,6 @@ data_edit <- function(x,
     title_panel <- titlePanel(
       span(actionButton("save_and_close", "Save & Close"))
     )
-  }
-
-  # HORIZONTAL ALIGNMENT
-  if (col_halign == "left") {
-    col_halign <- "htLeft"
-  } else if (col_halign == "center") {
-    col_halign <- "htCenter"
-  } else if (col_halign == "right") {
-    col_halign <- "htRight"
-  }
-
-  # VERTICAL ALIGNMENT
-  if (col_valign == "top") {
-    col_valign <- "htTop"
-  } else if (col_valign %in% c("middle", "center")) {
-    col_valign <- "htMiddle"
-  } else if (col_valign == "bottom") {
-    col_valign <- "htBottom"
   }
 
   # COLUMN STRETCH
@@ -196,18 +203,6 @@ data_edit <- function(x,
     col_edit <- FALSE
   }
   
-  # ROW NAMES
-  if(!row_names){
-    write_row_names <- FALSE
-    read_row_names <- NULL
-  }else{
-    write_row_names <- TRUE
-    read_row_names <- 1
-  }
-  
-  # TEMP FILE
-  temp_file <- NULL
-
   # SHINY APPLICATION ----------------------------------------------------------
 
   # DATA EDITOR
@@ -241,6 +236,7 @@ data_edit <- function(x,
           old_col_names <- colnames(values[["x"]])
           # UPDATED COLUMN NAMES
           new_col_names <- unlist(input$x_changeHeaders[["colHeaders"]])
+          # EMPTY COLUMN NAMES
           empty_col_names <- which(LAPPLY(new_col_names, nchar) == 0)
           # APPLY COLUMN NAMES - RENDER
           x_new <- hot_to_r(input$x)
@@ -267,7 +263,6 @@ data_edit <- function(x,
         
         # RHANDSONTABLE
         rhot <-
-          suppressWarnings(
             rhandsontable(values[["x"]],
               useTypes = FALSE,
               contextMenu = TRUE,
@@ -344,62 +339,27 @@ data_edit <- function(x,
                 allowRowEdit = row_edit,
                 allowColEdit = col_edit
               )
-          )
 
-        # COLUMN TYPES
-        lapply(colnames(values[["x"]]), function(z) {
-          
-          # READONLY
-          if (z %in% col_readonly) {
-            read_only <- TRUE
-          } else {
-            read_only <- FALSE
-          }
-
-          if (z %in% names(col_options)) {
-            # MENU
-            if (is.logical(col_options[[z]])) {
-              suppressWarnings(
-                rhot <<- rhot %>%
-                  hot_col(
-                    col = z,
-                    type = "checkbox",
-                    source = col_options[[z]],
-                    valign = col_valign,
-                    halign = col_halign,
-                    readOnly = read_only
-                  )
-              )
-              # DROPDOWN
-            } else {
-              suppressWarnings(
-                rhot <<- rhot %>%
-                  hot_col(
-                    col = z,
-                    type = "dropdown",
-                    source = col_options[[z]],
-                    valign = col_valign,
-                    halign = col_halign,
-                    readOnly = read_only
-                  )
-              )
+            for(z in colnames(values[["x"]])){
+              # CHECKBOX / DROPDOWN
+              if(z %in% names(col_options)){
+                # CHECKBOX
+                if(is.logical(col_options[[z]])){
+                  rhot <- hot_col(rhot,
+                                  col = z,
+                                  type = "checkbox",
+                                  source = col_options[[z]],
+                                  halign = col_align)
+                # DROPDOWN
+                }else{
+                  rhot <- hot_col(rhot,
+                                  col = z,
+                                  type = "dropdown",
+                                  source = col_options[[z]],
+                                  halign = col_align)
+                }
+              }
             }
-          } else {
-            # COLUMN SETTINGS
-            suppressWarnings(
-              rhot <<- rhot %>%
-                hot_col(
-                  col = z,
-                  type = "text",
-                  readOnly = read_only,
-                  valign = col_valign,
-                  halign = col_halign
-                )
-            )
-          }
-        })
-
-        # RHANDSONTABLE
         return(rhot)
       })
       
@@ -407,6 +367,7 @@ data_edit <- function(x,
       observeEvent(input$save_and_close, {
         stopApp(values[["x"]])
       })
+      
     }
   )
 
@@ -432,16 +393,16 @@ data_edit <- function(x,
                  row.names = FALSE)
   }
   
-  # ROW NAMES
+  # ROW NAMES - FIRST COLUMN
   if(row_names == TRUE){
-    new_row_names <- x[, colnames(x) == " "]
+    new_row_names <- x[, 1]
     # UNIQUE ROW NAMES
     if(length(unique(new_row_names)) != length(new_row_names)){
       message("Storing non-unique row names in the first column of 'x'.")
       colnames(x)[1] <- "rownames(x)"
     }else{
       rownames(x) <- new_row_names
-      x <- x[, colnames(x) != " "]
+      x <- x[, -1]
     }
   }else{
     rownames(x) <- NULL
