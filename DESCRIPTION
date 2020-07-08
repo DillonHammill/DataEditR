@@ -1,16 +1,27 @@
 Package: dataeditR
-Title: What the Package Does (One Line, Title Case)
-Version: 0.0.0.9000
+Title: Interactive Editor for Matrix-like Objects
+Version: 0.0.1
 Authors@R: 
-    person(given = "First",
-           family = "Last",
+    person(given = "Dillon",
+           family = "Hammill",
            role = c("aut", "cre"),
-           email = "first.last@example.com",
-           comment = c(ORCID = "YOUR-ORCID-ID"))
-Description: What the package does (one paragraph).
-License: `use_mit_license()`, `use_gpl3_license()` or friends to
-    pick a license
+           email = "DillonHammill@anu.edu.au",
+           comment = c(ORCID = "0000-0002-1407-7223"))
+Description: Provides an interactive way to edit matrix-like objects in R.
+URL: https://github.com/DillonHammill/dataeditR
+BugReports: https://github.com/DillonHammill/dataeditR/issues
+Depends:
+  R(>= 3.5.0)
+Imports:
+  shiny,
+  shinythemes,
+  rhandsontable,
+  htmltools,
+  utils,
+  methods
+License: GPL-2
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.1.0
+Language: en-GB
