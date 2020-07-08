@@ -1,3 +1,3 @@
-# dataeditR 0.0.0.9000
+# DataEditR 0.0.1
 
-* Added a `NEWS.md` file to track changes to the package.
+* Add `data_edit()` to allow interactive data viewing and entry.

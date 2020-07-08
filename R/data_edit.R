@@ -65,8 +65,6 @@
 #'
 #' @examples
 #' \dontrun{
-#' library(dataeditR)
-#'
 #' # Edit data.frame save to csv
 #' data_edit(mtcars,
 #' save_as = "mtcars-update.csv")
