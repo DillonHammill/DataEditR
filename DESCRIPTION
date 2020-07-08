@@ -8,8 +8,8 @@ Authors@R:
            email = "DillonHammill@anu.edu.au",
            comment = c(ORCID = "0000-0002-1407-7223"))
 Description: Provides an interactive way to edit matrix-like objects in R.
-URL: https://github.com/DillonHammill/dataeditR
-BugReports: https://github.com/DillonHammill/dataeditR/issues
+URL: https://github.com/DillonHammill/DataEditR
+BugReports: https://github.com/DillonHammill/DataEditR/issues
 Depends:
   R(>= 3.5.0)
 Imports:
