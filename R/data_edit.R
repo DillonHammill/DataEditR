@@ -348,15 +348,13 @@ data_edit <- function(x,
                   rhot <- hot_col(rhot,
                                   col = z,
                                   type = "checkbox",
-                                  source = col_options[[z]],
-                                  halign = col_align)
+                                  source = col_options[[z]])
                 # DROPDOWN
                 }else{
                   rhot <- hot_col(rhot,
                                   col = z,
                                   type = "dropdown",
-                                  source = col_options[[z]],
-                                  halign = col_align)
+                                  source = col_options[[z]])
                 }
               }
             }
