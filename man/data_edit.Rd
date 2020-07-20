@@ -20,13 +20,16 @@ data_edit(
   theme = "yeti",
   quiet = FALSE,
   read_fun = "read.csv",
+  read_args = NULL,
   write_fun = "write.csv",
+  write_args = NULL,
   ...
 )
 }
 \arguments{
-\item{x}{a matrix or data.frame object or the name of a csv file to edit. An
-empty table can be created by specify the dimensions in a vector of the
+\item{x}{a matrix, data.frame, data.table or the name of a csv file to
+edit.Tibble are also supported but will be coerced to data.frames. An
+empty table can be created by specifyng the dimensions in a vector of the
 form \code{c(nrow, ncol)}.}
 
 \item{col_bind}{additional columns to add to the data prior to loading into
@@ -67,11 +70,23 @@ FALSE by default.}
 \item{read_fun}{name of the function to use to read in the data when \code{x}
 is the name of a file, set to \code{read.csv} by default.}
 
-\item{write_fun}{name of the function to use to write the edited version of
-\code{x} to a file, set to \code{write.csv} by default.}
+\item{read_args}{a named list of additional arguments to pass to
+\code{read_fun}.}
 
-\item{...}{additional arguments passed to \code{read.csv} or \code{fread} to
-read in \code{x} when it is supplied as the name of a csv file.}
+\item{write_fun}{name of the function to use to write the edited version of
+\code{x} to a file, set to \code{write.csv} by default. Only requirement is
+that the first argument accepts the edited data and the second argument
+accepts the file name supplied to \code{save_as}.}
+
+\item{write_args}{a named list of additional arguments to pass to
+\code{write_fun}.}
+
+\item{...}{additional arguments passed to both \code{read_fun} and
+\code{write_fun}, such as \code{sep}. Arguments that are shared by
+\code{read_fun} and \code{write_fun} can be supplied separately to these
+functions using the \code{read_args} and \code{write_args} arguments. For
+example, this becomes particularly important when specifying
+\code{row.names} arguments.}
 }
 \value{
 edited matrix-like object.

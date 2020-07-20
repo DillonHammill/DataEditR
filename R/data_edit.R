@@ -23,8 +23,9 @@
 
 #' Interactively edit data.frames, matrices or csv files
 #'
-#' @param x a matrix or data.frame object or the name of a csv file to edit. An
-#'   empty table can be created by specify the dimensions in a vector of the
+#' @param x a matrix, data.frame, data.table or the name of a csv file to
+#'   edit.Tibble are also supported but will be coerced to data.frames. An
+#'   empty table can be created by specifyng the dimensions in a vector of the
 #'   form \code{c(nrow, ncol)}.
 #' @param col_bind additional columns to add to the data prior to loading into
 #'   editor.
@@ -50,10 +51,20 @@
 #'   FALSE by default.
 #' @param read_fun name of the function to use to read in the data when \code{x}
 #'   is the name of a file, set to \code{read.csv} by default.
+#' @param read_args a named list of additional arguments to pass to
+#'   \code{read_fun}.
 #' @param write_fun name of the function to use to write the edited version of
-#'   \code{x} to a file, set to \code{write.csv} by default.
-#' @param ... additional arguments passed to \code{read.csv} or \code{fread} to
-#'   read in \code{x} when it is supplied as the name of a csv file.
+#'   \code{x} to a file, set to \code{write.csv} by default. Only requirement is
+#'   that the first argument accepts the edited data and the second argument
+#'   accepts the file name supplied to \code{save_as}.
+#' @param write_args a named list of additional arguments to pass to
+#'   \code{write_fun}.
+#' @param ... additional arguments passed to both \code{read_fun} and
+#'   \code{write_fun}, such as \code{sep}. Arguments that are shared by
+#'   \code{read_fun} and \code{write_fun} can be supplied separately to these
+#'   functions using the \code{read_args} and \code{write_args} arguments. For
+#'   example, this becomes particularly important when specifying
+#'   \code{row.names} arguments.
 #'
 #' @return edited matrix-like object.
 #'
@@ -92,17 +103,37 @@ data_edit <- function(x,
                       theme = "yeti",
                       quiet = FALSE,
                       read_fun = "read.csv",
+                      read_args = NULL,
                       write_fun = "write.csv",
+                      write_args = NULL,
                       ...) {
-
+  
   # PREPARE DATA ---------------------------------------------------------------
 
   # READ IN DATA
   if (is.null(dim(x))) {
     # READ IN FILE
     if(length(x) == 1) {
+      # FUNCTION
       read_fun <- match.fun(read_fun)
-      x <- read_fun(x, ...)
+      # ARGUMENTS
+      if(!is.null(read_args)){
+        if(!is(read_args, "list") | 
+           any(!names(read_args) %in% formalArgs(read_fun))){
+          stop("read_args must be a named list of arguments for read_fun.")
+        }
+        read_args <- c(list(x), read_args)
+      }else{
+        read_args <- list(x)
+      }
+      # EXTRA ARGUMENTS
+      extra_args <- list(...)
+      if(extra_args != 0){
+        read_args <- c(read_args, 
+                       extra_args[!names(extra_args) %in% names(read_args)])
+      }
+      # CALL FUNCTION
+      x <- do.call(read_fun, read_args)
     # EMPTY MATRIX/DATA.FRAME
     }else if(length(x) == 2) {
       x <- matrix(rep(NA, prod(x)),
@@ -158,19 +189,19 @@ data_edit <- function(x,
   if(!is.null(rownames(x))){
     # EMPTY ROW NAMES - CHARACTER(0)
     if(length(rownames(x)) == 0){
-      row_names <- "empty"
+      rn <- "empty"
     # ROW INDICES
     } else if(all(rownames(x) == seq(1, nrow(x)))) {
-      row_names <- "index"
+      rn <- "index"
     # ROW NAMES SET
     } else {
-      row_names <- "set"
+      rn <- "set"
       x <- cbind(rownames(x), x)
       colnames(x)[1] <- " "
       rownames(x) <- NULL # display row indices in table
     }
   } else {
-    row_names <- "empty"
+    rn <- "empty"
   }
   
   # COERCE TO DATA.FRAME
@@ -417,14 +448,33 @@ data_edit <- function(x,
 
   # SAVE EDITIED DATA
   if (!is.null(save_as)) {
+    # FUNCTION
     write_fun <- match.fun(write_fun)
-    write_fun(x,
-              save_as, 
-              ...)
+    # ARGUMENTS
+    if(!is.null(write_args)){
+      if(!is(write_args, "list") | 
+         any(!names(write_args) %in% formalArgs(write_fun))){
+        stop("write_args must be a named list of arguments for write_fun.")
+      }
+      write_args <- c(list(x,
+                           save_as),
+                      write_args)
+    }else{
+      write_args <- list(x,
+                         save_as)
+    }
+    # EXTRA ARGUMENTS
+    extra_args <- list(...)
+    if(extra_args != 0){
+      write_args <- c(write_args, 
+                      extra_args[!names(extra_args) %in% names(write_args)])
+    }
+    # CALL FUNCTION
+    do.call(write_fun, write_args)
   }
   
   # ROW NAMES - FIRST COLUMN
-  if(row_names == "set"){
+  if(rn == "set"){
     new_row_names <- x[, 1]
     # UNIQUE ROW NAMES
     if(length(unique(new_row_names)) != length(new_row_names)){
@@ -435,7 +485,7 @@ data_edit <- function(x,
       x <- x[, -1]
     }
   # EMPTY ROWNAMES - INDICES KEPT
-  }else if(row_names == "empty") {
+  }else if(rn == "empty") {
     rownames(x) <- NULL
   }
   
