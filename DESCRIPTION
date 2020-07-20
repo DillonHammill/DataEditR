@@ -1,5 +1,5 @@
 Package: DataEditR
-Title: Interactive Editor for Matrix-like Objects
+Title: Interactive Editor for Tabular Data
 Version: 0.0.1
 Authors@R: 
     person(given = "Dillon",
@@ -17,9 +17,7 @@ Imports:
   shiny,
   shinythemes,
   rhandsontable,
-  htmltools,
-  utils,
-  methods
+  htmltools
 Suggests:
   data.table
 License: GPL-2

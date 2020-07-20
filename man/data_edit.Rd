@@ -19,6 +19,8 @@ data_edit(
   viewer = TRUE,
   theme = "yeti",
   quiet = FALSE,
+  read_fun = "read.csv",
+  write_fun = "write.csv",
   ...
 )
 }
@@ -61,6 +63,12 @@ the RStudio viewer pane, set to TRUE by default.}
 
 \item{quiet}{logical indicating whether messages should be suppressed, set to
 FALSE by default.}
+
+\item{read_fun}{name of the function to use to read in the data when \code{x}
+is the name of a file, set to \code{read.csv} by default.}
+
+\item{write_fun}{name of the function to use to write the edited version of
+\code{x} to a file, set to \code{write.csv} by default.}
 
 \item{...}{additional arguments passed to \code{read.csv} or \code{fread} to
 read in \code{x} when it is supplied as the name of a csv file.}

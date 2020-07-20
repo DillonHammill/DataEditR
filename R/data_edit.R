@@ -48,6 +48,10 @@
 #' @param theme valid shinytheme name, set to "yeti" by default.
 #' @param quiet logical indicating whether messages should be suppressed, set to
 #'   FALSE by default.
+#' @param read_fun name of the function to use to read in the data when \code{x}
+#'   is the name of a file, set to \code{read.csv} by default.
+#' @param write_fun name of the function to use to write the edited version of
+#'   \code{x} to a file, set to \code{write.csv} by default.
 #' @param ... additional arguments passed to \code{read.csv} or \code{fread} to
 #'   read in \code{x} when it is supplied as the name of a csv file.
 #'
@@ -87,6 +91,8 @@ data_edit <- function(x,
                       viewer = TRUE,
                       theme = "yeti",
                       quiet = FALSE,
+                      read_fun = "read.csv",
+                      write_fun = "write.csv",
                       ...) {
 
   # PREPARE DATA ---------------------------------------------------------------
@@ -95,8 +101,8 @@ data_edit <- function(x,
   if (is.null(dim(x))) {
     # READ IN FILE
     if(length(x) == 1) {
-      x <- read_from_csv(x,
-                         ...)
+      read_fun <- match.fun(read_fun)
+      x <- read_fun(x, ...)
     # EMPTY MATRIX
     }else if(length(x) == 2) {
       x <- matrix(rep(NA, prod(x)),
@@ -245,7 +251,7 @@ data_edit <- function(x,
           # UPDATED COLUMN NAMES
           new_col_names <- unlist(input$x_changeHeaders[["colHeaders"]])
           # EMPTY COLUMN NAMES
-          empty_col_names <- which(LAPPLY(new_col_names, nchar) == 0)
+          empty_col_names <- which(unlist(lapply(new_col_names, nchar) == 0))
           # APPLY COLUMN NAMES - RENDER
           x_new <- hot_to_r(input$x)
           colnames(x_new) <- new_col_names
@@ -410,9 +416,10 @@ data_edit <- function(x,
 
   # SAVE EDITIED DATA
   if (!is.null(save_as)) {
-    write_to_csv(x, 
-                 save_as,
-                 row.names = FALSE)
+    write_fun <- match.fun(write_fun)
+    write_fun(x,
+              save_as, 
+              ...)
   }
   
   # ROW NAMES - FIRST COLUMN
