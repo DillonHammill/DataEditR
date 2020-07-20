@@ -111,6 +111,11 @@ data_edit <- function(x,
 
   # PREPARE DATA ---------------------------------------------------------------
 
+  # EMPTY DATA
+  if(missing(x)) {
+    x <- data.frame("V1" = NA)
+  }
+  
   # READ IN DATA
   if (is.null(dim(x))) {
     # READ IN FILE
@@ -128,12 +133,8 @@ data_edit <- function(x,
       }
       # EXTRA ARGUMENTS
       extra_args <- list(...)
-      if (extra_args != 0) {
-        read_args <- c(
-          read_args,
-          extra_args[!names(extra_args) %in% names(read_args)]
-        )
-      }
+      read_args <- c(read_args, 
+                     extra_args[!names(extra_args) %in% names(read_args)])
       # CALL FUNCTION
       x <- do.call(read_fun, read_args)
       # EMPTY MATRIX/DATA.FRAME
@@ -474,12 +475,8 @@ data_edit <- function(x,
     }
     # EXTRA ARGUMENTS
     extra_args <- list(...)
-    if (extra_args != 0) {
-      write_args <- c(
-        write_args,
-        extra_args[!names(extra_args) %in% names(write_args)]
-      )
-    }
+    write_args <- c(write_args, 
+                    extra_args[!names(extra_args) %in% names(write_args)])
     # CALL FUNCTION
     do.call(write_fun, write_args)
   }

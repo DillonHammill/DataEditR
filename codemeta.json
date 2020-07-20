@@ -1,5 +1,8 @@
 {
-  "@context": ["https://doi.org/10.5063/schema/codemeta-2.0", "http://schema.org"],
+  "@context": [
+    "https://doi.org/10.5063/schema/codemeta-2.0",
+    "http://schema.org"
+  ],
   "@type": "SoftwareSourceCode",
   "identifier": "DataEditR",
   "description": "Provides an interactive way to edit matrices, data.frames or \n  tabular data files in R.",
@@ -11,10 +14,9 @@
   "programmingLanguage": {
     "@type": "ComputerLanguage",
     "name": "R",
-    "version": "4.0.0",
     "url": "https://r-project.org"
   },
-  "runtimePlatform": "R version 4.0.0 (2020-04-24)",
+  "runtimePlatform": "R version 4.0.2 (2020-06-22)",
   "author": [
     {
       "@type": "Person",
@@ -93,7 +95,9 @@
       "sameAs": "https://CRAN.R-project.org/package=htmltools"
     }
   ],
-  "releaseNotes": "https://github.com/DillonHammill/dataeditR/blob/master/NEWS.md",
+  "releaseNotes": "https://github.com/DillonHammill/DataEditR/blob/master/NEWS.md",
   "readme": "https://github.com/DillonHammill/DataEditR/blob/master/README.md",
-  "fileSize": "7.28KB"
+  "fileSize": "36.531KB",
+  "contIntegration": ["https://travis-ci.com/DillonHammill/dataeditR", "https://ci.appveyor.com/project/DillonHammill/dataeditR"],
+  "developmentStatus": "https://www.repostatus.org/#active"
 }
