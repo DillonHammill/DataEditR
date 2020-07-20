@@ -116,7 +116,7 @@ write_to_csv <- function(x,
   }else{
     write.csv(x,
               file,
-              row.names = row.names, # DON'T WRITE ROW NAMES
+              row.names = row.names,
               ...)
   }
 

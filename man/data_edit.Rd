@@ -23,9 +23,9 @@ data_edit(
 )
 }
 \arguments{
-\item{x}{matrix-like object or name of a csv file to edit. An empty table can
-be created by specify the dimensions in a vector of the form \code{c(nrow,
-  ncol)}.}
+\item{x}{a matrix or data.frame object or the name of a csv file to edit. An
+empty table can be created by specify the dimensions in a vector of the
+form \code{c(nrow, ncol)}.}
 
 \item{col_bind}{additional columns to add to the data prior to loading into
 editor.}

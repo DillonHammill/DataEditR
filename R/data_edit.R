@@ -23,9 +23,9 @@
 
 #' Interactively edit data.frames, matrices or csv files
 #'
-#' @param x matrix-like object or name of a csv file to edit. An empty table can
-#'   be created by specify the dimensions in a vector of the form \code{c(nrow,
-#'   ncol)}.
+#' @param x a matrix or data.frame object or the name of a csv file to edit. An
+#'   empty table can be created by specify the dimensions in a vector of the
+#'   form \code{c(nrow, ncol)}.
 #' @param col_bind additional columns to add to the data prior to loading into
 #'   editor.
 #' @param col_edit logical indicating whether columns can be added or removed,
@@ -59,7 +59,6 @@
 #'   renderRHandsontable %>% hot_context_menu
 #' @importFrom htmltools img div span
 #' @importFrom shinythemes shinytheme
-#' @importFrom methods as
 #'
 #' @author Dillon Hammill, \email{Dillon.Hammill@anu.edu.au}
 #'
@@ -150,16 +149,27 @@ data_edit <- function(x,
   
   # ABSORB ROW NAMES
   if(!is.null(rownames(x))){
-    row_names <- TRUE
-    x <- cbind(rownames(x), x)
-    colnames(x)[1] <- " "
-    rownames(x) <- NULL # display row indices in table
-  }else{
-    row_names <- FALSE
+    # EMPTY ROW NAMES - CHARACTER(0)
+    if(length(rownames(x)) == 0){
+      row_names <- "empty"
+    # ROW INDICES
+    } else if(all(rownames(x) == seq(1, nrow(x)))) {
+      row_names <- "index"
+    # ROW NAMES SET
+    } else {
+      row_names <- "set"
+      x <- cbind(rownames(x), x)
+      colnames(x)[1] <- " "
+      rownames(x) <- NULL # display row indices in table
+    }
+  } else {
+    row_names <- "empty"
   }
   
   # COERCE TO DATA.FRAME
-  x <- as.data.frame(x)
+  if(!"data.frame" %in% data_class) {
+    x <- as.data.frame(x)
+  }
 
   # PREPARE SHINY COMPONENTS ---------------------------------------------------
 
@@ -242,6 +252,20 @@ data_edit <- function(x,
           values[["x"]] <- x_new
           # REVERT EMPTY COLUMN NAMES TO ORIGINAL - RE-RENDER
           colnames(x_new)[empty_col_names] <- old_col_names[empty_col_names]
+          values[["x"]] <- x_new
+        # ROW NAMES CANNOT BE EDITED
+        } else if("rowHeaders" %in% names(input$x_changeHeaders)){
+          # OLD ROW NAMES
+          old_row_names <- rownames(values[["x"]])
+          # NEW ROW NAMES
+          new_row_names <- unlist(input$x_changeHeaders[["rowHeaders"]])
+          # APPLY NEW ROW NAMES
+          x_new <- hot_to_r(input$x)
+          rownames(x_new) <- new_row_names
+          values[["x"]] <- x_new
+          # REVERT TO ORIGINAL ROW NAMES - RE-RENDER
+          ind <- which(!new_row_names %in% old_row_names)
+          rownames(x_new)[ind] <- old_row_names[ind]
           values[["x"]] <- x_new
         }
         # ROW NAMES - NOT IN USE
@@ -379,8 +403,10 @@ data_edit <- function(x,
     )
   }
 
-  # CLASS
-  x <- as(x, data_class)
+  # RETURN ORIGINAL CLASS
+  if("matrix" %in% data_class){
+    x <- as.matrix(x)
+  }
 
   # SAVE EDITIED DATA
   if (!is.null(save_as)) {
@@ -390,7 +416,7 @@ data_edit <- function(x,
   }
   
   # ROW NAMES - FIRST COLUMN
-  if(row_names == TRUE){
+  if(row_names == "set"){
     new_row_names <- x[, 1]
     # UNIQUE ROW NAMES
     if(length(unique(new_row_names)) != length(new_row_names)){
@@ -400,7 +426,8 @@ data_edit <- function(x,
       rownames(x) <- new_row_names
       x <- x[, -1]
     }
-  }else{
+  # EMPTY ROWNAMES - INDICES KEPT
+  }else if(row_names == "empty") {
     rownames(x) <- NULL
   }
   
