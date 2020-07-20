@@ -103,11 +103,12 @@ data_edit <- function(x,
     if(length(x) == 1) {
       read_fun <- match.fun(read_fun)
       x <- read_fun(x, ...)
-    # EMPTY MATRIX
+    # EMPTY MATRIX/DATA.FRAME
     }else if(length(x) == 2) {
       x <- matrix(rep(NA, prod(x)),
                   nrow = x[1],
                   ncol = x[2])
+      x <- as.data.frame(x)
     }
   }
 
