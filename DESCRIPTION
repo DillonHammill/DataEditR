@@ -18,8 +18,6 @@ Imports:
   shinythemes,
   rhandsontable,
   htmltools
-Suggests:
-  data.table
 License: GPL-2
 Encoding: UTF-8
 LazyData: true

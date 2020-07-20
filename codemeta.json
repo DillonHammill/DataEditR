@@ -1,0 +1,99 @@
+{
+  "@context": ["https://doi.org/10.5063/schema/codemeta-2.0", "http://schema.org"],
+  "@type": "SoftwareSourceCode",
+  "identifier": "DataEditR",
+  "description": "Provides an interactive way to edit matrices, data.frames or \n  tabular data files in R.",
+  "name": "DataEditR: Interactive Editor for Tabular Data",
+  "codeRepository": "https://github.com/DillonHammill/DataEditR",
+  "issueTracker": "https://github.com/DillonHammill/DataEditR/issues",
+  "license": "https://spdx.org/licenses/GPL-2.0",
+  "version": "0.0.1",
+  "programmingLanguage": {
+    "@type": "ComputerLanguage",
+    "name": "R",
+    "version": "4.0.0",
+    "url": "https://r-project.org"
+  },
+  "runtimePlatform": "R version 4.0.0 (2020-04-24)",
+  "author": [
+    {
+      "@type": "Person",
+      "givenName": "Dillon",
+      "familyName": "Hammill",
+      "email": "DillonHammill@anu.edu.au",
+      "@id": "https://orcid.org/0000-0002-1407-7223"
+    }
+  ],
+  "contributor": {},
+  "copyrightHolder": {},
+  "funder": {},
+  "maintainer": [
+    {
+      "@type": "Person",
+      "givenName": "Dillon",
+      "familyName": "Hammill",
+      "email": "DillonHammill@anu.edu.au",
+      "@id": "https://orcid.org/0000-0002-1407-7223"
+    }
+  ],
+  "softwareSuggestions": [],
+  "softwareRequirements": [
+    {
+      "@type": "SoftwareApplication",
+      "identifier": "R",
+      "name": "R",
+      "version": ">= 3.5.0"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "identifier": "shiny",
+      "name": "shiny",
+      "provider": {
+        "@id": "https://cran.r-project.org",
+        "@type": "Organization",
+        "name": "Comprehensive R Archive Network (CRAN)",
+        "url": "https://cran.r-project.org"
+      },
+      "sameAs": "https://CRAN.R-project.org/package=shiny"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "identifier": "shinythemes",
+      "name": "shinythemes",
+      "provider": {
+        "@id": "https://cran.r-project.org",
+        "@type": "Organization",
+        "name": "Comprehensive R Archive Network (CRAN)",
+        "url": "https://cran.r-project.org"
+      },
+      "sameAs": "https://CRAN.R-project.org/package=shinythemes"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "identifier": "rhandsontable",
+      "name": "rhandsontable",
+      "provider": {
+        "@id": "https://cran.r-project.org",
+        "@type": "Organization",
+        "name": "Comprehensive R Archive Network (CRAN)",
+        "url": "https://cran.r-project.org"
+      },
+      "sameAs": "https://CRAN.R-project.org/package=rhandsontable"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "identifier": "htmltools",
+      "name": "htmltools",
+      "provider": {
+        "@id": "https://cran.r-project.org",
+        "@type": "Organization",
+        "name": "Comprehensive R Archive Network (CRAN)",
+        "url": "https://cran.r-project.org"
+      },
+      "sameAs": "https://CRAN.R-project.org/package=htmltools"
+    }
+  ],
+  "releaseNotes": "https://github.com/DillonHammill/dataeditR/blob/master/NEWS.md",
+  "readme": "https://github.com/DillonHammill/DataEditR/blob/master/README.md",
+  "fileSize": "7.28KB"
+}

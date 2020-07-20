@@ -1,17 +1,17 @@
 ## DATA_EDIT -------------------------------------------------------------------
 
-# NOTES: 
+# NOTES:
 # - rhandsontable does not automatically resize the row names column, so
 # we put in the first column instead.
-# - ability to add or remove columns only exists when useTypes = FALSE in 
+# - ability to add or remove columns only exists when useTypes = FALSE in
 # rhandsontable.
-# - any call to hot_col will result in column add/remove capability being 
+# - any call to hot_col will result in column add/remove capability being
 # removed
-# - hot_cols only modifies columns with a set type, i.e. does nothing when 
+# - hot_cols only modifies columns with a set type, i.e. does nothing when
 # useTypes = FALSE.
 # - column alignment is supported only in hot_col which removes the ability
 # to add or remove columns.
-# - similarly the readonly flag for a column can only be set in hot_col which 
+# - similarly the readonly flag for a column can only be set in hot_col which
 # removes the ability to add or remove columns.
 
 # RESULT:
@@ -81,7 +81,8 @@
 #' \dontrun{
 #' # Edit data.frame save to csv
 #' data_edit(mtcars,
-#' save_as = "mtcars-update.csv")
+#'   save_as = "mtcars-update.csv"
+#' )
 #'
 #' # Edit csv file
 #' data_edit("mtcars-update.csv")
@@ -107,38 +108,40 @@ data_edit <- function(x,
                       write_fun = "write.csv",
                       write_args = NULL,
                       ...) {
-  
+
   # PREPARE DATA ---------------------------------------------------------------
 
   # READ IN DATA
   if (is.null(dim(x))) {
     # READ IN FILE
-    if(length(x) == 1) {
+    if (length(x) == 1) {
       # FUNCTION
       read_fun <- match.fun(read_fun)
       # ARGUMENTS
-      if(!is.null(read_args)){
-        if(!is(read_args, "list") | 
-           any(!names(read_args) %in% formalArgs(read_fun))){
+      if (!is.null(read_args)) {
+        if (!class(read_args) == "list") {
           stop("read_args must be a named list of arguments for read_fun.")
         }
         read_args <- c(list(x), read_args)
-      }else{
+      } else {
         read_args <- list(x)
       }
       # EXTRA ARGUMENTS
       extra_args <- list(...)
-      if(extra_args != 0){
-        read_args <- c(read_args, 
-                       extra_args[!names(extra_args) %in% names(read_args)])
+      if (extra_args != 0) {
+        read_args <- c(
+          read_args,
+          extra_args[!names(extra_args) %in% names(read_args)]
+        )
       }
       # CALL FUNCTION
       x <- do.call(read_fun, read_args)
-    # EMPTY MATRIX/DATA.FRAME
-    }else if(length(x) == 2) {
+      # EMPTY MATRIX/DATA.FRAME
+    } else if (length(x) == 2) {
       x <- matrix(rep(NA, prod(x)),
-                  nrow = x[1],
-                  ncol = x[2])
+        nrow = x[1],
+        ncol = x[2]
+      )
       x <- as.data.frame(x)
     }
   }
@@ -176,24 +179,24 @@ data_edit <- function(x,
       x <- cbind(x, col_bind[seq_len(nrow(x)), , drop = FALSE])
     }
   }
-  
+
   # COLUMN NAMES
-  if(length(unique(colnames(x))) != length(colnames(x))){
+  if (length(unique(colnames(x))) != length(colnames(x))) {
     stop("Column names must be unique!")
   }
-  
+
   # CLASS
   data_class <- class(x)
-  
+
   # ABSORB ROW NAMES
-  if(!is.null(rownames(x))){
+  if (!is.null(rownames(x))) {
     # EMPTY ROW NAMES - CHARACTER(0)
-    if(length(rownames(x)) == 0){
+    if (length(rownames(x)) == 0) {
       rn <- "empty"
-    # ROW INDICES
-    } else if(all(rownames(x) == seq(1, nrow(x)))) {
+      # ROW INDICES
+    } else if (all(rownames(x) == seq(1, nrow(x)))) {
       rn <- "index"
-    # ROW NAMES SET
+      # ROW NAMES SET
     } else {
       rn <- "set"
       x <- cbind(rownames(x), x)
@@ -203,9 +206,9 @@ data_edit <- function(x,
   } else {
     rn <- "empty"
   }
-  
+
   # COERCE TO DATA.FRAME
-  if(!"data.frame" %in% data_class) {
+  if (!"data.frame" %in% data_class) {
     x <- as.data.frame(x)
   }
 
@@ -235,20 +238,20 @@ data_edit <- function(x,
   }
 
   # COLUMN STRETCH
-  if(col_stretch == TRUE){
+  if (col_stretch == TRUE) {
     col_stretch <- "all"
-  }else{
+  } else {
     col_stretch <- "none"
   }
-  
+
   # ROW/COLUMN EDIT
   if (!is.null(col_options)) {
-    if(quiet == FALSE){
+    if (quiet == FALSE) {
       message("Column editing is turned off to add dropdowns or checkboxes...")
     }
     col_edit <- FALSE
   }
-  
+
   # SHINY APPLICATION ----------------------------------------------------------
 
   # DATA EDITOR
@@ -273,11 +276,11 @@ data_edit <- function(x,
       observeEvent(input$x, {
         values[["x"]] <- hot_to_r(input$x)
       })
-      
+
       # ROW/COLUMN NAME EDITS
       observeEvent(input$x_changeHeaders, {
         # COLUMN NAMES
-        if("colHeaders" %in% names(input$x_changeHeaders)){
+        if ("colHeaders" %in% names(input$x_changeHeaders)) {
           # OLD COLUMN NAMES
           old_col_names <- colnames(values[["x"]])
           # UPDATED COLUMN NAMES
@@ -291,8 +294,8 @@ data_edit <- function(x,
           # REVERT EMPTY COLUMN NAMES TO ORIGINAL - RE-RENDER
           colnames(x_new)[empty_col_names] <- old_col_names[empty_col_names]
           values[["x"]] <- x_new
-        # ROW NAMES CANNOT BE EDITED
-        } else if("rowHeaders" %in% names(input$x_changeHeaders)){
+          # ROW NAMES CANNOT BE EDITED
+        } else if ("rowHeaders" %in% names(input$x_changeHeaders)) {
           # OLD ROW NAMES
           old_row_names <- rownames(values[["x"]])
           # NEW ROW NAMES
@@ -320,18 +323,18 @@ data_edit <- function(x,
 
       # TABLE
       output$x <- renderRHandsontable({
-        
+
         # RHANDSONTABLE
         rhot <-
-            rhandsontable(values[["x"]],
-              useTypes = FALSE,
-              contextMenu = TRUE,
-              stretchH = col_stretch,
-              colHeaders = colnames(values[["x"]]),
-              rowHeaders = rownames(values[["x"]]),
-              manualColumnResize = TRUE,
-              afterOnCellMouseDown = java_script(
-                "function(event, coords, th) {
+          rhandsontable(values[["x"]],
+            useTypes = FALSE,
+            contextMenu = TRUE,
+            stretchH = col_stretch,
+            colHeaders = colnames(values[["x"]]),
+            rowHeaders = rownames(values[["x"]]),
+            manualColumnResize = TRUE,
+            afterOnCellMouseDown = java_script(
+              "function(event, coords, th) {
                         if (coords.row === -1 || coords.col === -1) {
                           let instance = this,
                           isColHeader = coords.row === -1,
@@ -393,39 +396,40 @@ data_edit <- function(x,
                           });
                         }
                       }"
-              )
-            ) %>%
-              hot_context_menu(
-                allowRowEdit = row_edit,
-                allowColEdit = col_edit
-              )
+            )
+          ) %>%
+          hot_context_menu(
+            allowRowEdit = row_edit,
+            allowColEdit = col_edit
+          )
 
-            for(z in colnames(values[["x"]])){
-              # CHECKBOX / DROPDOWN
-              if(z %in% names(col_options)){
-                # CHECKBOX
-                if(is.logical(col_options[[z]])){
-                  rhot <- hot_col(rhot,
-                                  col = z,
-                                  type = "checkbox",
-                                  source = col_options[[z]])
-                # DROPDOWN
-                }else{
-                  rhot <- hot_col(rhot,
-                                  col = z,
-                                  type = "dropdown",
-                                  source = col_options[[z]])
-                }
-              }
+        for (z in colnames(values[["x"]])) {
+          # CHECKBOX / DROPDOWN
+          if (z %in% names(col_options)) {
+            # CHECKBOX
+            if (is.logical(col_options[[z]])) {
+              rhot <- hot_col(rhot,
+                col = z,
+                type = "checkbox",
+                source = col_options[[z]]
+              )
+              # DROPDOWN
+            } else {
+              rhot <- hot_col(rhot,
+                col = z,
+                type = "dropdown",
+                source = col_options[[z]]
+              )
             }
+          }
+        }
         return(rhot)
       })
-      
+
       # MANUAL CLOSE
       observeEvent(input$save_and_close, {
         stopApp(values[["x"]])
       })
-      
     }
   )
 
@@ -442,7 +446,7 @@ data_edit <- function(x,
   }
 
   # RETURN ORIGINAL CLASS
-  if("matrix" %in% data_class){
+  if ("matrix" %in% data_class) {
     x <- as.matrix(x)
   }
 
@@ -451,44 +455,51 @@ data_edit <- function(x,
     # FUNCTION
     write_fun <- match.fun(write_fun)
     # ARGUMENTS
-    if(!is.null(write_args)){
-      if(!is(write_args, "list") | 
-         any(!names(write_args) %in% formalArgs(write_fun))){
+    if (!is.null(write_args)) {
+      if (!class(write_args) == "list") {
         stop("write_args must be a named list of arguments for write_fun.")
       }
-      write_args <- c(list(x,
-                           save_as),
-                      write_args)
-    }else{
-      write_args <- list(x,
-                         save_as)
+      write_args <- c(
+        list(
+          x,
+          save_as
+        ),
+        write_args
+      )
+    } else {
+      write_args <- list(
+        x,
+        save_as
+      )
     }
     # EXTRA ARGUMENTS
     extra_args <- list(...)
-    if(extra_args != 0){
-      write_args <- c(write_args, 
-                      extra_args[!names(extra_args) %in% names(write_args)])
+    if (extra_args != 0) {
+      write_args <- c(
+        write_args,
+        extra_args[!names(extra_args) %in% names(write_args)]
+      )
     }
     # CALL FUNCTION
     do.call(write_fun, write_args)
   }
-  
+
   # ROW NAMES - FIRST COLUMN
-  if(rn == "set"){
+  if (rn == "set") {
     new_row_names <- x[, 1]
     # UNIQUE ROW NAMES
-    if(length(unique(new_row_names)) != length(new_row_names)){
+    if (length(unique(new_row_names)) != length(new_row_names)) {
       message("Storing non-unique row names in the first column of 'x'.")
       colnames(x)[1] <- "rownames(x)"
-    }else{
+    } else {
       rownames(x) <- new_row_names
       x <- x[, -1]
     }
-  # EMPTY ROWNAMES - INDICES KEPT
-  }else if(rn == "empty") {
+    # EMPTY ROWNAMES - INDICES KEPT
+  } else if (rn == "empty") {
     rownames(x) <- NULL
   }
-  
+
   # RETURN EDITIED DATA
   return(x)
 }

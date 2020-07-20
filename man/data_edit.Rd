@@ -98,7 +98,8 @@ Interactively edit data.frames, matrices or csv files
 \dontrun{
 # Edit data.frame save to csv
 data_edit(mtcars,
-save_as = "mtcars-update.csv")
+  save_as = "mtcars-update.csv"
+)
 
 # Edit csv file
 data_edit("mtcars-update.csv")
