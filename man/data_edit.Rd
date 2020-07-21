@@ -2,7 +2,7 @@
 % Please edit documentation in R/data_edit.R
 \name{data_edit}
 \alias{data_edit}
-\title{Interactively edit data.frames, matrices or csv files}
+\title{Interactively edit data.frames, matrices or tabular data files}
 \usage{
 data_edit(
   x,
@@ -92,7 +92,7 @@ example, this becomes particularly important when specifying
 edited matrix-like object.
 }
 \description{
-Interactively edit data.frames, matrices or csv files
+Interactively edit data.frames, matrices or tabular data files
 }
 \examples{
 \dontrun{

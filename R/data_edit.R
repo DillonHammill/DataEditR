@@ -21,7 +21,7 @@
 # may be possible to handle this externally but this gets complicated when
 # columns are added or removed.
 
-#' Interactively edit data.frames, matrices or csv files
+#' Interactively edit data.frames, matrices or tabular data files
 #'
 #' @param x a matrix, data.frame, data.table or the name of a csv file to
 #'   edit.Tibble are also supported but will be coerced to data.frames. An
@@ -113,7 +113,7 @@ data_edit <- function(x,
 
   # EMPTY DATA
   if(missing(x)) {
-    x <- data.frame("V1" = NA)
+    x <- data.frame("V1" = "")
   }
   
   # READ IN DATA
@@ -137,13 +137,21 @@ data_edit <- function(x,
                      extra_args[!names(extra_args) %in% names(read_args)])
       # CALL FUNCTION
       x <- do.call(read_fun, read_args)
+      empty <- FALSE
       # EMPTY MATRIX/DATA.FRAME
     } else if (length(x) == 2) {
-      x <- matrix(rep(NA, prod(x)),
+      empty <- TRUE
+      x <- matrix(rep("", prod(x)),
         nrow = x[1],
         ncol = x[2]
       )
       x <- as.data.frame(x)
+    }
+  }else{
+    if(dim(x) == c(1,1) & df[1,1] == ""){
+      empty <- TRUE
+    }else{
+      empty <- FALSE
     }
   }
 
@@ -449,6 +457,14 @@ data_edit <- function(x,
   # RETURN ORIGINAL CLASS
   if ("matrix" %in% data_class) {
     x <- as.matrix(x)
+  }
+  
+  # ATTEMPT TO FIX CLASSES - EMPTY DATA
+  if(empty == TRUE){
+    lapply(colnames(x), function(w){
+      # INEFFICIENT BUT DOES THE JOB
+      x[, w] <<- .class_switch(x[, w])
+    })
   }
 
   # SAVE EDITIED DATA
