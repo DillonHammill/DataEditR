@@ -15,7 +15,7 @@
 # removes the ability to add or remove columns.
 
 # RESULT:
-# - cannot make any calls to hot_col execpt when col_options is used.
+# - cannot make any calls to hot_col except when col_options is used.
 # - column alignment is not supported to allow addition/removal of columns
 # - the read only flag cannot act through hot_col and so is not supported. It
 # may be possible to handle this externally but this gets complicated when
@@ -24,11 +24,12 @@
 #' Interactively edit data.frames, matrices or tabular data files
 #'
 #' @param x a matrix, data.frame, data.table or the name of a csv file to
-#'   edit.Tibble are also supported but will be coerced to data.frames. An
-#'   empty table can be created by specifyng the dimensions in a vector of the
-#'   form \code{c(nrow, ncol)}.
+#'   edit.Tibble are also supported but will be coerced to data.frames. An empty
+#'   table can be created by specifying the dimensions in a vector of the form
+#'   \code{c(nrow, ncol)}.
 #' @param col_bind additional columns to add to the data prior to loading into
-#'   editor.
+#'   editor, can be either an array containing the new data or a vector
+#'   containing the new column names for empty columns.
 #' @param col_edit logical indicating whether columns can be added or removed,
 #'   set to TRUE by default.
 #' @param col_options named list containing the options for columns that use
@@ -36,7 +37,8 @@
 #' @param col_stretch logical indicating whether columns should be stretched to
 #'   fill the full width of the display, set to FALSE by default.
 #' @param row_bind additional rows to add to the data prior to loading into
-#'   editor.
+#'   editor, can be either an array containing the new data or a vector
+#'   containing the new row names for empty rows.
 #' @param row_edit logical indicating whether rows can be added or removed, set
 #'   to TRUE by default.
 #' @param save_as name of a csv file to which the edited data should be saved.

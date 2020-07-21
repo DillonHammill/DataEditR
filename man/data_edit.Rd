@@ -28,12 +28,13 @@ data_edit(
 }
 \arguments{
 \item{x}{a matrix, data.frame, data.table or the name of a csv file to
-edit.Tibble are also supported but will be coerced to data.frames. An
-empty table can be created by specifyng the dimensions in a vector of the
-form \code{c(nrow, ncol)}.}
+edit.Tibble are also supported but will be coerced to data.frames. An empty
+table can be created by specifying the dimensions in a vector of the form
+\code{c(nrow, ncol)}.}
 
 \item{col_bind}{additional columns to add to the data prior to loading into
-editor.}
+editor, can be either an array containing the new data or a vector
+containing the new column names for empty columns.}
 
 \item{col_edit}{logical indicating whether columns can be added or removed,
 set to TRUE by default.}
@@ -45,7 +46,8 @@ dropdown menus or checkboxes.}
 fill the full width of the display, set to FALSE by default.}
 
 \item{row_bind}{additional rows to add to the data prior to loading into
-editor.}
+editor, can be either an array containing the new data or a vector
+containing the new row names for empty rows.}
 
 \item{row_edit}{logical indicating whether rows can be added or removed, set
 to TRUE by default.}
