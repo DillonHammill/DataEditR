@@ -55,6 +55,7 @@ the package vignette:
   - edited data is exported as a matrix or data.frame for use within R
   - data editor is opened in the RStudio Viewer pane by default but can
     be changed to open in a pop-up window or web browser
+  - customize appearance using a `shinythemes` theme
   - developers can add checkbox or dropdown columns for user input
   - developers can customize the data editor with their own package logo
     and title
