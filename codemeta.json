@@ -38,7 +38,32 @@
       "@id": "https://orcid.org/0000-0002-1407-7223"
     }
   ],
-  "softwareSuggestions": [],
+  "softwareSuggestions": [
+    {
+      "@type": "SoftwareApplication",
+      "identifier": "knitr",
+      "name": "knitr",
+      "provider": {
+        "@id": "https://cran.r-project.org",
+        "@type": "Organization",
+        "name": "Comprehensive R Archive Network (CRAN)",
+        "url": "https://cran.r-project.org"
+      },
+      "sameAs": "https://CRAN.R-project.org/package=knitr"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "identifier": "rmarkdown",
+      "name": "rmarkdown",
+      "provider": {
+        "@id": "https://cran.r-project.org",
+        "@type": "Organization",
+        "name": "Comprehensive R Archive Network (CRAN)",
+        "url": "https://cran.r-project.org"
+      },
+      "sameAs": "https://CRAN.R-project.org/package=rmarkdown"
+    }
+  ],
   "softwareRequirements": [
     {
       "@type": "SoftwareApplication",
@@ -97,7 +122,7 @@
   ],
   "releaseNotes": "https://github.com/DillonHammill/DataEditR/blob/master/NEWS.md",
   "readme": "https://github.com/DillonHammill/DataEditR/blob/master/README.md",
-  "fileSize": "36.531KB",
+  "fileSize": "4293.178KB",
   "contIntegration": ["https://travis-ci.com/DillonHammill/dataeditR", "https://ci.appveyor.com/project/DillonHammill/dataeditR"],
   "developmentStatus": "https://www.repostatus.org/#active"
 }

@@ -1,0 +1,31 @@
+---
+title: "DataEditR"
+output: 
+  rmarkdown::html_vignette:
+    includes:
+      in_header: logo.html
+vignette: >
+  %\VignetteIndexEntry{DataEditR}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r, echo = FALSE, eval = FALSE}
+# To create html logo to include in header
+img <- htmltools::img(src = knitr::image_uri("logo.png"), 
+                      alt = 'logo', 
+                      style = 'float:right; width:150px')
+html <- htmltools::doRenderTags(img)
+readr::write_lines(html, path = "logo.html")
+```
+
+```{r setup}
+library(DataEditR)
+```

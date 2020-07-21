@@ -1,6 +1,7 @@
 Package: DataEditR
 Title: Interactive Editor for Tabular Data
 Version: 0.0.1
+Date: 2020-07-21
 Authors@R: 
     person(given = "Dillon",
            family = "Hammill",
@@ -24,3 +25,7 @@ LazyData: true
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.1.1
 Language: en-GB
+Suggests: 
+    knitr,
+    rmarkdown
+VignetteBuilder: knitr
