@@ -16,6 +16,8 @@ before_install:
   - R -e 'install.packages("devtools")'
   
 install:
+  - R -e 'install.packages("rmarkdown")'
+  - R -e 'install.packages("knitr")'
   - R -e 'install.packages("shiny")'
   - R -e 'install.packages("shinythemes")'
   - R -e 'devtools::install_github("jrowen/rhandsontable")'
