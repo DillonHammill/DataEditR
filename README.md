@@ -17,9 +17,11 @@ status](https://ci.appveyor.com/api/projects/status/github/DillonHammill/dataedi
 Manual data entry and editing in R can be tedious, especially if you
 have limited coding experience and are accustomed to using software with
 a Graphical User Interface (GUI). **DataEditR** is an R package that
-makes it easy to enter and edit data within R, due to its convenient
-interactive GUI that supports many of the data manipulation operations
-supported by other commonly used GUI-oriented software.
+makes it easy to view, enter and edit data within R, due to its
+convenient interactive GUI that supports many of the data manipulation
+operations supported by other commonly used GUI-oriented software. If
+you are new to **DataEditR** visit
+<https://dillonhammill.github.io/DataEditR/> to get started.
 
 ## Installation
 
