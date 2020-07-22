@@ -292,6 +292,19 @@ data_edit <- function(x,
           old_col_names <- colnames(values[["x"]])
           # UPDATED COLUMN NAMES
           new_col_names <- unlist(input$x_changeHeaders[["colHeaders"]])
+          # COLUMN INDEX - COLUMNS CANNOT BE MOVED
+          col_ind <- which(old_col_names != new_col_names)
+          # CUSTOM COLUMNS - KEEP COLUMN TYPE
+          if(!is.null(names(col_options))){
+            if(any(old_col_names[col_ind] %in% names(col_options))){
+              lapply(col_ind, function(z){
+                if(old_col_names[z] %in% names(col_options)){
+                  ind <- match(old_col_names[z], names(col_options))
+                  names(col_options)[ind] <<- new_col_names[z]
+                }
+              })
+            }
+          }
           # EMPTY COLUMN NAMES
           empty_col_names <- which(unlist(lapply(new_col_names, nchar) == 0))
           # APPLY COLUMN NAMES - RENDER
@@ -299,8 +312,10 @@ data_edit <- function(x,
           colnames(x_new) <- new_col_names
           values[["x"]] <- x_new
           # REVERT EMPTY COLUMN NAMES TO ORIGINAL - RE-RENDER
-          colnames(x_new)[empty_col_names] <- old_col_names[empty_col_names]
-          values[["x"]] <- x_new
+          if(length(empty_col_names) > 0){
+            colnames(x_new)[empty_col_names] <- old_col_names[empty_col_names]
+            values[["x"]] <- x_new
+          }
           # ROW NAMES CANNOT BE EDITED
         } else if ("rowHeaders" %in% names(input$x_changeHeaders)) {
           # OLD ROW NAMES
@@ -415,17 +430,21 @@ data_edit <- function(x,
           if (z %in% names(col_options)) {
             # CHECKBOX
             if (is.logical(col_options[[z]])) {
-              rhot <- hot_col(rhot,
-                col = z,
-                type = "checkbox",
-                source = col_options[[z]]
+              rhot <- suppressWarnings(
+                hot_col(rhot,
+                  col = z,
+                  type = "checkbox",
+                  source = col_options[[z]]
+                )
               )
               # DROPDOWN
             } else {
-              rhot <- hot_col(rhot,
-                col = z,
-                type = "dropdown",
-                source = col_options[[z]]
+              rhot <- suppressWarnings(
+                hot_col(rhot,
+                  col = z,
+                  type = "dropdown",
+                  source = col_options[[z]]
+                )
               )
             }
           }
