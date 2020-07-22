@@ -36,6 +36,9 @@
 #'   dropdown menus or checkboxes.
 #' @param col_stretch logical indicating whether columns should be stretched to
 #'   fill the full width of the display, set to FALSE by default.
+#' @param col_factor logical indicating whether character columns should be
+#'   converted to factors prior to returning the edited data, set to FALSE by
+#'   default.
 #' @param row_bind additional rows to add to the data prior to loading into
 #'   editor, can be either an array containing the new data or a vector
 #'   containing the new row names for empty rows.
@@ -76,6 +79,7 @@
 #'   renderRHandsontable %>% hot_context_menu
 #' @importFrom htmltools img div span
 #' @importFrom shinythemes shinytheme
+#' @importFrom utils type.convert
 #'
 #' @author Dillon Hammill, \email{Dillon.Hammill@anu.edu.au}
 #'
@@ -96,6 +100,7 @@ data_edit <- function(x,
                       col_edit = TRUE,
                       col_options = NULL,
                       col_stretch = FALSE,
+                      col_factor = FALSE,
                       row_bind = NULL,
                       row_edit = TRUE,
                       save_as = NULL,
@@ -124,36 +129,27 @@ data_edit <- function(x,
     if (length(x) == 1) {
       # FUNCTION
       read_fun <- match.fun(read_fun)
-      # ARGUMENTS
+      # CHECK READ ARGUMENTS
       if (!is.null(read_args)) {
         if (!class(read_args) == "list") {
           stop("read_args must be a named list of arguments for read_fun.")
         }
-        read_args <- c(list(x), read_args)
-      } else {
-        read_args <- list(x)
       }
+      # READ ARGUMENTS
+      read_args <- c(list(x), read_args)
       # EXTRA ARGUMENTS
       extra_args <- list(...)
       read_args <- c(read_args, 
                      extra_args[!names(extra_args) %in% names(read_args)])
       # CALL FUNCTION
       x <- do.call(read_fun, read_args)
-      empty <- FALSE
       # EMPTY MATRIX/DATA.FRAME
     } else if (length(x) == 2) {
-      empty <- TRUE
       x <- matrix(rep("", prod(x)),
         nrow = x[1],
         ncol = x[2]
       )
       x <- as.data.frame(x)
-    }
-  }else{
-    if(dim(x) == c(1,1) & df[1,1] == ""){
-      empty <- TRUE
-    }else{
-      empty <- FALSE
     }
   }
 
@@ -161,7 +157,7 @@ data_edit <- function(x,
   if (!is.null(row_bind)) {
     # NEW EMPTY ROWS
     if (is.null(dim(row_bind))) {
-      x <- rbind(x, matrix(rep(NA, ncol(x) * length(row_bind)),
+      x <- rbind(x, matrix(rep("", ncol(x) * length(row_bind)),
         nrow = length(row_bind),
         dimnames = list(
           row_bind,
@@ -178,7 +174,7 @@ data_edit <- function(x,
   if (!is.null(col_bind)) {
     # NEW EMPTY COLUMNS
     if (is.null(dim(col_bind))) {
-      x <- cbind(x, matrix(rep(NA, nrow(x) * length(col_bind)),
+      x <- cbind(x, matrix(rep("", nrow(x) * length(col_bind)),
         ncol = length(col_bind),
         dimnames = list(
           rownames(x),
@@ -461,44 +457,6 @@ data_edit <- function(x,
     x <- as.matrix(x)
   }
   
-  # ATTEMPT TO FIX CLASSES - EMPTY DATA
-  if(empty == TRUE){
-    lapply(colnames(x), function(w){
-      # INEFFICIENT BUT DOES THE JOB
-      x[, w] <<- .class_switch(x[, w])
-    })
-  }
-
-  # SAVE EDITIED DATA
-  if (!is.null(save_as)) {
-    # FUNCTION
-    write_fun <- match.fun(write_fun)
-    # ARGUMENTS
-    if (!is.null(write_args)) {
-      if (!class(write_args) == "list") {
-        stop("write_args must be a named list of arguments for write_fun.")
-      }
-      write_args <- c(
-        list(
-          x,
-          save_as
-        ),
-        write_args
-      )
-    } else {
-      write_args <- list(
-        x,
-        save_as
-      )
-    }
-    # EXTRA ARGUMENTS
-    extra_args <- list(...)
-    write_args <- c(write_args, 
-                    extra_args[!names(extra_args) %in% names(write_args)])
-    # CALL FUNCTION
-    do.call(write_fun, write_args)
-  }
-
   # ROW NAMES - FIRST COLUMN
   if (rn == "set") {
     new_row_names <- x[, 1]
@@ -514,7 +472,30 @@ data_edit <- function(x,
   } else if (rn == "empty") {
     rownames(x) <- NULL
   }
-
+  
+  # ATTEMPT TO FIX CLASSES - EMPTY DATA
+  x <- apply(x, 2, type.convert, as.is = !col_factor)
+  
+  # SAVE EDITIED DATA
+  if (!is.null(save_as)) {
+    # FUNCTION
+    write_fun <- match.fun(write_fun)
+    # CHECK WRITE ARGUMENTS
+    if (!is.null(write_args)) {
+      if (!class(write_args) == "list") {
+        stop("write_args must be a named list of arguments for write_fun.")
+      }
+    }
+    # WRITE ARGUMENTS
+    write_args <- c(list(x, save_as), write_args)
+    # EXTRA ARGUMENTS
+    extra_args <- list(...)
+    write_args <- c(write_args, 
+                    extra_args[!names(extra_args) %in% names(write_args)])
+    # CALL FUNCTION
+    do.call(write_fun, write_args)
+  }
+  
   # RETURN EDITIED DATA
   return(x)
 }

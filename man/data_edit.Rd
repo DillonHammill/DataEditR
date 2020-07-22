@@ -10,6 +10,7 @@ data_edit(
   col_edit = TRUE,
   col_options = NULL,
   col_stretch = FALSE,
+  col_factor = FALSE,
   row_bind = NULL,
   row_edit = TRUE,
   save_as = NULL,
@@ -44,6 +45,10 @@ dropdown menus or checkboxes.}
 
 \item{col_stretch}{logical indicating whether columns should be stretched to
 fill the full width of the display, set to FALSE by default.}
+
+\item{col_factor}{logical indicating whether character columns should be
+converted to factors prior to returning the edited data, set to FALSE by
+default.}
 
 \item{row_bind}{additional rows to add to the data prior to loading into
 editor, can be either an array containing the new data or a vector
