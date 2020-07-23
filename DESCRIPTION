@@ -6,7 +6,7 @@ Authors@R:
     person(given = "Dillon",
            family = "Hammill",
            role = c("aut", "cre"),
-           email = "DillonHammill@anu.edu.au",
+           email = "Dillon.Hammill@anu.edu.au",
            comment = c(ORCID = "0000-0002-1407-7223"))
 Description: Provides an interactive interface to view, enter or edit data 
   or tabular data files in R.
