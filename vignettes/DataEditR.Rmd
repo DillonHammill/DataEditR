@@ -32,7 +32,7 @@ readr::write_lines(html, path = "logo.html")
 
 In order to get started with **DataEditR**, we will need to install the package from GitHub and load it into our current R session:
 
-```{r setup}
+```{r, eval = FALSE}
 devtools::install_github("DillonHammill/DataEditR")
 library(DataEditR)
 ```
