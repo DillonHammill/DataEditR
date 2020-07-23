@@ -33,7 +33,7 @@ install_github("DillonHammill/DataEditR")
 
 ## Usage
 
-**DataEditR** ships with a single function called `data_edit()` that allows you to interactively enter or edit data in R. The key features of the data editor are summarised below and will be explored in detail in the package vignette:
+**DataEditR** ships with a single function called `data_edit()` that allows you to interactively view, enter or edit data in R. The key features of the data editor are summarised below and will be explored in detail in the package vignette:
 
 - a quick way to view your data
 - create data.frames from scratch 
@@ -65,7 +65,7 @@ mtcars_new <- data_edit(mtcars,
 ```
 
 ```{r, echo=FALSE, fig.align="center", out.width = '100%'}
-knitr::include_graphics('man/figures/DataEditR-README.gif')
+knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEditR/master/man/figures/DataEditR/DataEditR-README.gif')
 ```
 
 ## Credits

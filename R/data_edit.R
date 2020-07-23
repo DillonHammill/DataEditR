@@ -192,6 +192,21 @@ data_edit <- function(x,
     stop("Column names must be unique!")
   }
 
+  # COLUMN OPTIONS - LOGICAL 
+  if(!is.null(col_options)){
+    lapply(names(col_options), function(z){
+      if(is.logical(type.convert(col_options[[z]]))){
+        if(!is.logical(x[, z])){
+          res <- type.convert(x[, z])
+          if(!is.logical(res)){
+            res <- rep(NA, nrow(x))
+          }
+          x[, z] <<- res
+        }
+      }
+    })
+  }
+  
   # CLASS
   data_class <- class(x)
 
@@ -493,7 +508,9 @@ data_edit <- function(x,
   }
   
   # ATTEMPT TO FIX CLASSES - EMPTY DATA
-  x <- apply(x, 2, type.convert, as.is = !col_factor)
+  lapply(colnames(x), function(z){
+    x[, z] <<- type.convert(x[,z], as.is = !col_factor)
+  })
   
   # SAVE EDITIED DATA
   if (!is.null(save_as)) {

@@ -1,0 +1,21 @@
+---
+title: "Demonstration of DataEditR"
+author: "Dillon Hammill"
+date: "`r format(Sys.time(), '%d/%m/%y')`"
+output: 
+  html_document:
+    includes:
+      in_header: logo.html
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+                      root.dir = "DataEditR-Demo")
+```
+
+## DataEditR
+
+**DataEditR** is a lightweight R package that makes it easy to interactively view, enter or edit data in R. **DataEditR** ships with a single function called `data_edit()` the use of which will be demonstrated in depth below:
+
+## 
+
