@@ -10,5 +10,5 @@
 ^pkgdown$
 ^doc$
 ^Meta$
-vignettes/DataEditR
-man/figures/DataEditR
+vignettes/DataEditR/
+man/figures/DataEditR/
