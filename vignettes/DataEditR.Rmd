@@ -189,7 +189,7 @@ str(mtcars_new)
 
 ```{r, eval = TRUE, echo = FALSE}
 mtcars_new <- cbind(rownames(mtcars), mtcars)
-colnames(mtcars_new) <- "car"
+colnames(mtcars_new)[1] <- "car"
 mtcars_new$car <- factor(mtcars_new$car)
 str(mtcars_new)
 ```
