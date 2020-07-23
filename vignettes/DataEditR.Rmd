@@ -51,7 +51,7 @@ knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEdi
 
 The data editor will open in the RStudio viewer pane by default but this can be changed to a pop-up window by setting `viewer = FALSE` as below. Both of these options have optional support for displaying the data in a web browser as well.
 
-```{r}
+```{r, eval = FALSE}
 data_edit(mtcars,
           viewer = FALSE)
 ```
@@ -168,7 +168,7 @@ Creating a data.frame from scratch as described above can be tedious, so instead
 data_edit(c(3, 3))
 ```
 
-```{r, echo=FALSE, fig.align="center", out.width = '60%'}
+```{r, echo=FALSE, fig.align="center", out.width = '40%'}
 knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-8.gif')
 ```
 
@@ -188,6 +188,8 @@ str(mtcars_new)
 ```
 
 ```{r, eval = TRUE, echo = FALSE}
+mtcars_new <- cbind(rownames(mtcars), mtcars)
+colnames(mtcars_new) <- "car"
 mtcars_new$car <- factor(mtcars_new$car)
 str(mtcars_new)
 ```
@@ -210,7 +212,7 @@ mtcars_new <- data_edit(mtcars,
 
 Checkboxes can be used to obtain TRUE or FALSE value inputs from users. The resulting data will have a value of 1 where TRUE was selected and NA for all other values.
 
-```{r}
+```{r, eval = FALSE}
 data_edit(mtcars,
           col_bind = "fast",
           col_options = list(fast = c(TRUE,FALSE)))
@@ -224,7 +226,7 @@ knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEdi
 
 Dropdown menus can be used to help prevent typing errors when set number of options are available for a column. For example, if we have a factor with levels `Treatment-A`, `Treatment-B` or `Treatment-C` it would be easier to select these options from a dropdown menu instead of having to manually type them. Dropdown menus can be added in the same way as checkboxes.
 
-```{r}
+```{r, eval = FALSE}
 # Add column for car colour
 data_edit(mtcars,
           col_bind = "col",
