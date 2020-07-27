@@ -195,13 +195,21 @@ data_edit <- function(x,
   # COLUMN OPTIONS - LOGICAL 
   if(!is.null(col_options)){
     lapply(names(col_options), function(z){
-      if(is.logical(type.convert(col_options[[z]]))){
+      col_type <- type.convert(col_options[[z]], as.is = TRUE)
+      # CHECKBOXES
+      if(is.logical(col_type)){
         if(!is.logical(x[, z])){
-          res <- type.convert(x[, z])
+          res <- type.convert(x[, z], as.is = TRUE)
           if(!is.logical(res)){
             res <- rep(NA, nrow(x))
           }
           x[, z] <<- res
+        }
+      # DROPDOWN MENUS
+      }else{
+        # NA TO EMPTY CHARACTERS
+        if(all(is.na(x[, z]))){
+          x[, z] <<- rep("", nrow(x))
         }
       }
     })
@@ -329,6 +337,10 @@ data_edit <- function(x,
           # REVERT EMPTY COLUMN NAMES TO ORIGINAL - RE-RENDER
           if(length(empty_col_names) > 0){
             colnames(x_new)[empty_col_names] <- old_col_names[empty_col_names]
+            values[["x"]] <- x_new
+          # REVERT COLUMN NAME EDITS
+          }else if(col_names == FALSE){
+            colnames(x_new) <- old_col_names
             values[["x"]] <- x_new
           }
           # ROW NAMES CANNOT BE EDITED
