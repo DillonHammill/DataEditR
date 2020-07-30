@@ -21,15 +21,21 @@
 # may be possible to handle this externally but this gets complicated when
 # columns are added or removed.
 
-#' Interactively edit data.frames, matrices or tabular data files
+#' An interactive editor for viewing, entering & editing data
+#'
+#' \code{data_edit} is a shiny application built on \code{rhandsontable} that is
+#' designed to make it easy to interactively view, enter or edit data without
+#' any coding. \code{data_edit} is also a wrapper for any reading or writing
+#' function to make it easy to interactively update data saved to file.
 #'
 #' @param x a matrix, data.frame, data.table or the name of a csv file to
 #'   edit.Tibble are also supported but will be coerced to data.frames. An empty
 #'   table can be created by specifying the dimensions in a vector of the form
 #'   \code{c(nrow, ncol)}.
 #' @param col_bind additional columns to add to the data prior to loading into
-#'   editor, can be either an array containing the new data or a vector
-#'   containing the new column names for empty columns.
+#'   editor, can be either an array containing the new data, a vector containing
+#'   the new column names for empty columns or a named list containing a vector
+#'   for each new column.
 #' @param col_edit logical indicating whether columns can be added or removed,
 #'   set to TRUE by default.
 #' @param col_options named list containing the options for columns that use
@@ -39,9 +45,12 @@
 #' @param col_factor logical indicating whether character columns should be
 #'   converted to factors prior to returning the edited data, set to FALSE by
 #'   default.
+#' @param col_names logical indicating whether column names can be edited, set
+#'   to TRUE by default.
 #' @param row_bind additional rows to add to the data prior to loading into
-#'   editor, can be either an array containing the new data or a vector
-#'   containing the new row names for empty rows.
+#'   editor, can be either an array containing the new data, a vector containing
+#'   the new row names for empty rows or a named list containing a vector for
+#'   each new column.
 #' @param row_edit logical indicating whether rows can be added or removed, set
 #'   to TRUE by default.
 #' @param save_as name of a csv file to which the edited data should be saved.
@@ -84,16 +93,15 @@
 #' @author Dillon Hammill, \email{Dillon.Hammill@anu.edu.au}
 #'
 #' @examples
-#' \dontrun{
-#' # Edit data.frame save to csv
-#' data_edit(mtcars,
-#'   save_as = "mtcars-update.csv"
-#' )
+#' if (interactive()) {
+#'   # Edit matrix & save to csv
+#'   data_edit(mtcars,
+#'     save_as = "mtcars-update.csv"
+#'   )
 #'
-#' # Edit csv file
-#' data_edit("mtcars-update.csv")
+#'   # Edit csv file
+#'   data_edit("mtcars-update.csv")
 #' }
-#'
 #' @export
 data_edit <- function(x,
                       col_bind = NULL,
@@ -101,6 +109,7 @@ data_edit <- function(x,
                       col_options = NULL,
                       col_stretch = FALSE,
                       col_factor = FALSE,
+                      col_names = TRUE,
                       row_bind = NULL,
                       row_edit = TRUE,
                       save_as = NULL,
@@ -119,10 +128,10 @@ data_edit <- function(x,
   # PREPARE DATA ---------------------------------------------------------------
 
   # EMPTY DATA
-  if(missing(x)) {
+  if (missing(x)) {
     x <- data.frame("V1" = "")
   }
-  
+
   # READ IN DATA
   if (is.null(dim(x))) {
     # READ IN FILE
@@ -139,8 +148,10 @@ data_edit <- function(x,
       read_args <- c(list(x), read_args)
       # EXTRA ARGUMENTS
       extra_args <- list(...)
-      read_args <- c(read_args, 
-                     extra_args[!names(extra_args) %in% names(read_args)])
+      read_args <- c(
+        read_args,
+        extra_args[!names(extra_args) %in% names(read_args)]
+      )
       # CALL FUNCTION
       x <- do.call(read_fun, read_args)
       # EMPTY MATRIX/DATA.FRAME
@@ -155,36 +166,67 @@ data_edit <- function(x,
 
   # BIND ROWS
   if (!is.null(row_bind)) {
-    # NEW EMPTY ROWS
+    # NEW ROWS
     if (is.null(dim(row_bind))) {
-      x <- rbind(x, matrix(rep("", ncol(x) * length(row_bind)),
-        nrow = length(row_bind),
-        dimnames = list(
-          row_bind,
-          colnames(x)
+      # ROWS AS LIST
+      if (class(row_bind) == "list") {
+        # NAMES NOT NECESSARY
+        # LENGTHS
+        ind <- which(!unlist(lapply(row_bind, length)) == ncol(x))
+        if (length(ind) > 0) {
+          for (z in ind) {
+            row_bind[[z]] <- rep(row_bind[[z]], ncol(x))
+          }
+        }
+        # MATRIX
+        row_bind <- do.call("rbind", row_bind)
+        # ROW NAMES
+      } else {
+        row_bind <- matrix(rep("", ncol(x) * length(row_bind)),
+          nrow = length(row_bind),
+          dimnames = list(
+            row_bind,
+            colnames(x)
+          )
         )
-      ))
-      # NEW ROWS
-    } else {
-      x <- rbind(x, row_bind[, seq_len(ncol(x))])
+      }
     }
+    # BIND NEW ROWS
+    x <- rbind(x, row_bind[, 1:ncol(x)])
   }
 
   # BIND COLUMNS
   if (!is.null(col_bind)) {
-    # NEW EMPTY COLUMNS
+    # NEW COLUMNS
     if (is.null(dim(col_bind))) {
-      x <- cbind(x, matrix(rep("", nrow(x) * length(col_bind)),
-        ncol = length(col_bind),
-        dimnames = list(
-          rownames(x),
-          col_bind
+      # COLUMNS AS LIST
+      if (class(col_bind) == "list") {
+        # NAMES
+        if (is.null(names(col_bind))) {
+          names(col_bind) <- paste0("V", length(col_bind))
+        }
+        # LENGTHS
+        ind <- which(!unlist(lapply(col_bind, length)) == nrow(x))
+        if (length(ind) > 0) {
+          for (z in ind) {
+            col_bind[[z]] <- rep(col_bind[[z]], nrow(x))
+          }
+        }
+        # MATRIX
+        col_bind <- do.call("cbind", col_bind)
+        # COLUMN NAMES
+      } else {
+        col_bind <- matrix(rep("", nrow(x) * length(col_bind)),
+          ncol = length(col_bind),
+          dimnames = list(
+            rownames(x),
+            col_bind
+          )
         )
-      ))
-      # NEW COLUMNS
-    } else {
-      x <- cbind(x, col_bind[seq_len(nrow(x)), , drop = FALSE])
+      }
     }
+    # BIND NEW COLUMNS
+    x <- cbind(x, col_bind[1:nrow(x), , drop = FALSE])
   }
 
   # COLUMN NAMES
@@ -192,29 +234,29 @@ data_edit <- function(x,
     stop("Column names must be unique!")
   }
 
-  # COLUMN OPTIONS - LOGICAL 
-  if(!is.null(col_options)){
-    lapply(names(col_options), function(z){
+  # COLUMN OPTIONS - LOGICAL
+  if (!is.null(col_options)) {
+    for (z in names(col_options)) {
       col_type <- type.convert(col_options[[z]], as.is = TRUE)
       # CHECKBOXES
-      if(is.logical(col_type)){
-        if(!is.logical(x[, z])){
+      if (is.logical(col_type)) {
+        if (!is.logical(x[, z])) {
           res <- type.convert(x[, z], as.is = TRUE)
-          if(!is.logical(res)){
+          if (!is.logical(res)) {
             res <- rep(NA, nrow(x))
           }
-          x[, z] <<- res
+          x[, z] <- res
         }
-      # DROPDOWN MENUS
-      }else{
+        # DROPDOWN MENUS
+      } else {
         # NA TO EMPTY CHARACTERS
-        if(all(is.na(x[, z]))){
-          x[, z] <<- rep("", nrow(x))
+        if (all(is.na(x[, z]))) {
+          x[, z] <- rep("", nrow(x))
         }
       }
-    })
+    }
   }
-  
+
   # CLASS
   data_class <- class(x)
 
@@ -318,14 +360,14 @@ data_edit <- function(x,
           # COLUMN INDEX - COLUMNS CANNOT BE MOVED
           col_ind <- which(old_col_names != new_col_names)
           # CUSTOM COLUMNS - KEEP COLUMN TYPE
-          if(!is.null(names(col_options))){
-            if(any(old_col_names[col_ind] %in% names(col_options))){
-              lapply(col_ind, function(z){
-                if(old_col_names[z] %in% names(col_options)){
+          if (!is.null(names(col_options))) {
+            if (any(old_col_names[col_ind] %in% names(col_options))) {
+              for (z in col_ind) {
+                if (old_col_names[z] %in% names(col_options)) {
                   ind <- match(old_col_names[z], names(col_options))
-                  names(col_options)[ind] <<- new_col_names[z]
+                  names(col_options)[ind] <- new_col_names[z]
                 }
-              })
+              }
             }
           }
           # EMPTY COLUMN NAMES
@@ -335,11 +377,14 @@ data_edit <- function(x,
           colnames(x_new) <- new_col_names
           values[["x"]] <- x_new
           # REVERT EMPTY COLUMN NAMES TO ORIGINAL - RE-RENDER
-          if(length(empty_col_names) > 0){
+          if (length(empty_col_names) > 0) {
             colnames(x_new)[empty_col_names] <- old_col_names[empty_col_names]
             values[["x"]] <- x_new
-          # REVERT COLUMN NAME EDITS
-          }else if(col_names == FALSE){
+            # REVERT COLUMN NAME EDITS
+          } else if (col_names == FALSE) {
+            if (quiet == FALSE) {
+              message("Column names cannot be edited.")
+            }
             colnames(x_new) <- old_col_names
             values[["x"]] <- x_new
           }
@@ -502,7 +547,7 @@ data_edit <- function(x,
   if ("matrix" %in% data_class) {
     x <- as.matrix(x)
   }
-  
+
   # ROW NAMES - FIRST COLUMN
   if (rn == "set") {
     new_row_names <- x[, 1]
@@ -518,12 +563,12 @@ data_edit <- function(x,
   } else if (rn == "empty") {
     rownames(x) <- NULL
   }
-  
+
   # ATTEMPT TO FIX CLASSES - EMPTY DATA
-  lapply(colnames(x), function(z){
-    x[, z] <<- type.convert(x[,z], as.is = !col_factor)
-  })
-  
+  for (z in colnames(x)) {
+    x[, z] <- type.convert(x[, z], as.is = !col_factor)
+  }
+
   # SAVE EDITIED DATA
   if (!is.null(save_as)) {
     # FUNCTION
@@ -538,12 +583,14 @@ data_edit <- function(x,
     write_args <- c(list(x, save_as), write_args)
     # EXTRA ARGUMENTS
     extra_args <- list(...)
-    write_args <- c(write_args, 
-                    extra_args[!names(extra_args) %in% names(write_args)])
+    write_args <- c(
+      write_args,
+      extra_args[!names(extra_args) %in% names(write_args)]
+    )
     # CALL FUNCTION
     do.call(write_fun, write_args)
   }
-  
+
   # RETURN EDITIED DATA
   return(x)
 }

@@ -2,7 +2,7 @@
 % Please edit documentation in R/data_edit.R
 \name{data_edit}
 \alias{data_edit}
-\title{Interactively edit data.frames, matrices or tabular data files}
+\title{An interactive editor for viewing, entering & editing data}
 \usage{
 data_edit(
   x,
@@ -11,6 +11,7 @@ data_edit(
   col_options = NULL,
   col_stretch = FALSE,
   col_factor = FALSE,
+  col_names = TRUE,
   row_bind = NULL,
   row_edit = TRUE,
   save_as = NULL,
@@ -34,8 +35,9 @@ table can be created by specifying the dimensions in a vector of the form
 \code{c(nrow, ncol)}.}
 
 \item{col_bind}{additional columns to add to the data prior to loading into
-editor, can be either an array containing the new data or a vector
-containing the new column names for empty columns.}
+editor, can be either an array containing the new data, a vector containing
+the new column names for empty columns or a named list containing a vector
+for each new column.}
 
 \item{col_edit}{logical indicating whether columns can be added or removed,
 set to TRUE by default.}
@@ -50,9 +52,13 @@ fill the full width of the display, set to FALSE by default.}
 converted to factors prior to returning the edited data, set to FALSE by
 default.}
 
+\item{col_names}{logical indicating whether column names can be edited, set
+to TRUE by default.}
+
 \item{row_bind}{additional rows to add to the data prior to loading into
-editor, can be either an array containing the new data or a vector
-containing the new row names for empty rows.}
+editor, can be either an array containing the new data, a vector containing
+the new row names for empty rows or a named list containing a vector for
+each new column.}
 
 \item{row_edit}{logical indicating whether rows can be added or removed, set
 to TRUE by default.}
@@ -99,19 +105,21 @@ example, this becomes particularly important when specifying
 edited matrix-like object.
 }
 \description{
-Interactively edit data.frames, matrices or tabular data files
+\code{data_edit} is a shiny application built on \code{rhandsontable} that is
+designed to make it easy to interactively view, enter or edit data without
+any coding. \code{data_edit} is also a wrapper for any reading or writing
+function to make it easy to interactively update data saved to file.
 }
 \examples{
-\dontrun{
-# Edit data.frame save to csv
-data_edit(mtcars,
-  save_as = "mtcars-update.csv"
-)
+if (interactive()) {
+  # Edit matrix & save to csv
+  data_edit(mtcars,
+    save_as = "mtcars-update.csv"
+  )
 
-# Edit csv file
-data_edit("mtcars-update.csv")
+  # Edit csv file
+  data_edit("mtcars-update.csv")
 }
-
 }
 \author{
 Dillon Hammill, \email{Dillon.Hammill@anu.edu.au}
