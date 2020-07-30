@@ -1,3 +1,11 @@
+# DataEditR 0.0.3
+
+* Add `col_names` argument to allow control over which column names can be edited by the user.
+
+# DataEditR 0.0.2
+
+* Fixes for CRAN submission.
+
 # DataEditR 0.0.1
 
 * Add `data_edit()` to allow interactive data viewing, entry and editing.
