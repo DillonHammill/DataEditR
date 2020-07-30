@@ -101,6 +101,13 @@ data_edit(mtcars)
 knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-3.gif')
 ```
 
+To prevent users from editing column names, set `col_names = FALSE` or supply the names of the columns that cannot be edited. For example, if we only wanted to prevent users from editing the name of the `mpg` column: 
+
+```{r, eval = FALSE}
+data_edit(mtcars,
+          col_names = "mpg")
+```
+
 ### 3.3 Resize columns
 
 To size columns, go to the right-hand border of the cell containing the name of that column and drag the cursor to the desired width. 

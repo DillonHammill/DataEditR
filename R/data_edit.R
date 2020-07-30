@@ -45,8 +45,9 @@
 #' @param col_factor logical indicating whether character columns should be
 #'   converted to factors prior to returning the edited data, set to FALSE by
 #'   default.
-#' @param col_names logical indicating whether column names can be edited, set
-#'   to TRUE by default.
+#' @param col_names logical indicating whether column names can be edited or a
+#'   vector of column names that cannot be edited, set to TRUE by default to
+#'   allow editing of column names.
 #' @param row_bind additional rows to add to the data prior to loading into
 #'   editor, can be either an array containing the new data, a vector containing
 #'   the new row names for empty rows or a named list containing a vector for
@@ -324,6 +325,13 @@ data_edit <- function(x,
     col_edit <- FALSE
   }
 
+  # COLUMN NAMES - INDICES THAT CANNOT BE EDITED
+  if(col_names == FALSE) {
+    col_names <- colnames(x)
+  }else if(col_names == TRUE) {
+    col_names <- NULL
+  }
+  
   # SHINY APPLICATION ----------------------------------------------------------
 
   # DATA EDITOR
@@ -381,9 +389,13 @@ data_edit <- function(x,
             colnames(x_new)[empty_col_names] <- old_col_names[empty_col_names]
             values[["x"]] <- x_new
             # REVERT COLUMN NAME EDITS
-          } else if (col_names == FALSE) {
+          } else if (length(col_names) > 0 & 
+                     old_col_names[col_ind] %in% col_names) {
             if (quiet == FALSE) {
-              message("Column names cannot be edited.")
+              message(
+                paste0(paste(old_col_names[col_ind], collapse = " & "), 
+                       " column name(s) cannot be edited.")
+                )
             }
             colnames(x_new) <- old_col_names
             values[["x"]] <- x_new

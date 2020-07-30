@@ -52,8 +52,9 @@ fill the full width of the display, set to FALSE by default.}
 converted to factors prior to returning the edited data, set to FALSE by
 default.}
 
-\item{col_names}{logical indicating whether column names can be edited, set
-to TRUE by default.}
+\item{col_names}{logical indicating whether column names can be edited or a
+vector of column names that cannot be edited, set to TRUE by default to
+allow editing of column names.}
 
 \item{row_bind}{additional rows to add to the data prior to loading into
 editor, can be either an array containing the new data, a vector containing
