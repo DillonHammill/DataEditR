@@ -8,7 +8,7 @@ Authors@R:
            role = c("aut", "cre"),
            email = "Dillon.Hammill@anu.edu.au",
            comment = c(ORCID = "0000-0002-1407-7223"))
-Description: An interactive editor built on rhandsontable to allow the 
+Description: An interactive editor built on 'rhandsontable' to allow the 
   interactive viewing, entering and editing of data in R 
   <https://dillonhammill.github.io/DataEditR/>.
 URL: https://github.com/DillonHammill/DataEditR
