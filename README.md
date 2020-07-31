@@ -9,9 +9,9 @@
 state and is being actively
 developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
 [![Travis build
-status](https://travis-ci.com/DillonHammill/dataeditR.svg?branch=master)](https://travis-ci.com/DillonHammill/dataeditR)
+status](https://travis-ci.com/DillonHammill/DataEditR.svg?branch=master)](https://travis-ci.com/DillonHammill/DataEditR)
 [![AppVeyor build
-status](https://ci.appveyor.com/api/projects/status/github/DillonHammill/dataeditR?branch=master&svg=true)](https://ci.appveyor.com/project/DillonHammill/dataeditR)
+status](https://ci.appveyor.com/api/projects/status/github/DillonHammill/DataEditR?branch=master&svg=true)](https://ci.appveyor.com/project/DillonHammill/DataEditR)
 <!-- badges: end -->
 
 Manual data entry and editing in R can be tedious, especially if you
@@ -103,7 +103,7 @@ citation("DataEditR")
 #> To cite package 'DataEditR' in publications use:
 #> 
 #>   Dillon Hammill (2020). DataEditR: An Interactive Editor for Viewing,
-#>   Entering & Editing Data. R package version 0.0.3.
+#>   Entering & Editing Data. R package version 0.0.4.
 #>   https://github.com/DillonHammill/DataEditR
 #> 
 #> A BibTeX entry for LaTeX users is
@@ -112,7 +112,7 @@ citation("DataEditR")
 #>     title = {DataEditR: An Interactive Editor for Viewing, Entering & Editing Data},
 #>     author = {Dillon Hammill},
 #>     year = {2020},
-#>     note = {R package version 0.0.3},
+#>     note = {R package version 0.0.4},
 #>     url = {https://github.com/DillonHammill/DataEditR},
 #>   }
 ```

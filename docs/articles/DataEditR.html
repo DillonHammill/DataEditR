@@ -38,7 +38,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">DataEditR</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.0.3</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.0.4</span>
       </span>
     </div>
 
@@ -174,6 +174,13 @@
           <span class="kw">col_bind</span> <span class="kw">=</span> <span class="no">new_col</span>)</pre></body></html></div>
 <p><img src="https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-6.png" width="100%" style="display: block; margin: auto;"></p>
 </div>
+<div id="read-only-columns" class="section level3">
+<h3 class="hasAnchor">
+<a href="#read-only-columns" class="anchor"></a>3.6 Read-only columns</h3>
+<p>If you would like to prevent values from being edited in certain columns, you can supply the names of the columns that cannot be edited to the <code>col_readonly</code> argument. Users will be able to edit values and the column name, but these will be reverted to the original values. For example, if we wanted to prevent the <code>mpg</code> column from being edited:</p>
+<div class="sourceCode" id="cb12"><html><body><pre class="r"><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span>(<span class="no">mtcars</span>,
+          <span class="kw">col_readonly</span> <span class="kw">=</span> <span class="st">"mpg"</span>)</pre></body></html></div>
+</div>
 </div>
 <div id="data-creation" class="section level2">
 <h2 class="hasAnchor">
@@ -183,14 +190,14 @@
 <h3 class="hasAnchor">
 <a href="#start-with-empty-data-frame" class="anchor"></a>4.1 Start with empty data.frame</h3>
 <p>If no data is supplied to <code><a href="../reference/data_edit.html">data_edit()</a></code> an empty data.frame will be constructed with a single row and column. You can then build your data.frame from scratch by adding new rows and columns and annotating the cells.</p>
-<div class="sourceCode" id="cb12"><html><body><pre class="r"><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span>()</pre></body></html></div>
+<div class="sourceCode" id="cb13"><html><body><pre class="r"><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span>()</pre></body></html></div>
 <p><img src="https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-7.gif" width="60%" style="display: block; margin: auto;"></p>
 </div>
 <div id="start-with-a-template-data-frame" class="section level3">
 <h3 class="hasAnchor">
 <a href="#start-with-a-template-data-frame" class="anchor"></a>4.2 Start with a template data.frame</h3>
 <p>Creating a data.frame from scratch as described above can be tedious, so instead we could start with a data.frame template that contains more rows or columns. To create a template data.frame, simply supply the required dimensions of the data.frame in the form <code><a href="https://rdrr.io/r/base/c.html">c(nrow, ncol)</a></code>.</p>
-<div class="sourceCode" id="cb13"><html><body><pre class="r"><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span>(<span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span>(<span class="fl">3</span>, <span class="fl">3</span>))</pre></body></html></div>
+<div class="sourceCode" id="cb14"><html><body><pre class="r"><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span>(<span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span>(<span class="fl">3</span>, <span class="fl">3</span>))</pre></body></html></div>
 <p><img src="https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-8.gif" width="40%" style="display: block; margin: auto;"></p>
 </div>
 </div>
@@ -198,7 +205,7 @@
 <h2 class="hasAnchor">
 <a href="#data-saving" class="anchor"></a>5. Data saving</h2>
 <p><code><a href="../reference/data_edit.html">data_edit()</a></code> will automatically return the edited data with appropriate column classes as an R object for use within R. Character columns are not converted to factors by default, but this can be changed by setting <code>col_factor = TRUE</code>.</p>
-<div class="sourceCode" id="cb14"><html><body><pre class="r"><span class="co"># Add character column</span>
+<div class="sourceCode" id="cb15"><html><body><pre class="r"><span class="co"># Add character column</span>
 <span class="no">mtcars_new</span> <span class="kw">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/cbind.html">cbind</a></span>(<span class="fu"><a href="https://rdrr.io/r/base/colnames.html">rownames</a></span>(<span class="no">mtcars</span>), <span class="no">mtcars</span>)
 <span class="fu"><a href="https://rdrr.io/r/base/colnames.html">colnames</a></span>(<span class="no">mtcars_new</span>) <span class="kw">&lt;-</span> <span class="st">"car"</span>
 
@@ -220,7 +227,7 @@
 #&gt;  $ gear: num  4 4 4 3 3 3 3 4 4 4 ...
 #&gt;  $ carb: num  4 4 1 1 2 1 4 2 2 4 ...</code></pre>
 <p>The edited data can also be written to a file of any format by specifying the name of the file to the <code>save_as</code> argument and specifying the name of the writing function to use through <code>write_fun</code>. The default is et to <code>write.csv</code> from the <code>utils</code> package. You can also pass any additional arguments to your write function in a named list to <code>write_args</code>.</p>
-<div class="sourceCode" id="cb16"><html><body><pre class="r"><span class="no">mtcars_new</span> <span class="kw">&lt;-</span> <span class="fu"><a href="../reference/data_edit.html">data_edit</a></span>(<span class="no">mtcars</span>,
+<div class="sourceCode" id="cb17"><html><body><pre class="r"><span class="no">mtcars_new</span> <span class="kw">&lt;-</span> <span class="fu"><a href="../reference/data_edit.html">data_edit</a></span>(<span class="no">mtcars</span>,
                         <span class="kw">save_as</span> <span class="kw">=</span> <span class="st">"mtcars.csv"</span>,
                         <span class="kw">write_fun</span> <span class="kw">=</span> <span class="st">"write.table"</span>,
                         <span class="kw">write_args</span> <span class="kw">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span>(<span class="kw">sep</span> <span class="kw">=</span> <span class="st">","</span>,
@@ -234,7 +241,7 @@
 <h3 class="hasAnchor">
 <a href="#checkboxes" class="anchor"></a>6.1 Checkboxes</h3>
 <p>Checkboxes can be used to obtain TRUE or FALSE value inputs from users. The resulting data will have a value of 1 where TRUE was selected and NA for all other values.</p>
-<div class="sourceCode" id="cb17"><html><body><pre class="r"><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span>(<span class="no">mtcars</span>,
+<div class="sourceCode" id="cb18"><html><body><pre class="r"><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span>(<span class="no">mtcars</span>,
           <span class="kw">col_bind</span> <span class="kw">=</span> <span class="st">"fast"</span>,
           <span class="kw">col_options</span> <span class="kw">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span>(<span class="kw">fast</span> <span class="kw">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span>(<span class="fl">TRUE</span>,<span class="fl">FALSE</span>)))</pre></body></html></div>
 <p><img src="https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-9.gif" width="100%" style="display: block; margin: auto;"></p>
@@ -243,7 +250,7 @@
 <h3 class="hasAnchor">
 <a href="#dropdown-menus" class="anchor"></a>6.2 Dropdown menus</h3>
 <p>Dropdown menus can be used to help prevent typing errors when set number of options are available for a column. For example, if we have a factor with levels <code>Treatment-A</code>, <code>Treatment-B</code> or <code>Treatment-C</code> it would be easier to select these options from a dropdown menu instead of having to manually type them. Dropdown menus can be added in the same way as checkboxes.</p>
-<div class="sourceCode" id="cb18"><html><body><pre class="r"><span class="co"># Add column for car colour</span>
+<div class="sourceCode" id="cb19"><html><body><pre class="r"><span class="co"># Add column for car colour</span>
 <span class="fu"><a href="../reference/data_edit.html">data_edit</a></span>(<span class="no">mtcars</span>,
           <span class="kw">col_bind</span> <span class="kw">=</span> <span class="st">"col"</span>,
           <span class="kw">col_options</span> <span class="kw">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span>(<span class="kw">col</span> <span class="kw">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span>(<span class="st">"red"</span>,
@@ -262,14 +269,14 @@
 <h3 class="hasAnchor">
 <a href="#stretch-columns-to-fill-page" class="anchor"></a>7.1 Stretch columns to fill page</h3>
 <p>If you would like to make full use of the space available to you, you can set <code>col_stretch = TRUE</code> to stretch the columns to fill the full width of the display.</p>
-<div class="sourceCode" id="cb19"><html><body><pre class="r"><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span>(<span class="no">mtcars</span>,
+<div class="sourceCode" id="cb20"><html><body><pre class="r"><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span>(<span class="no">mtcars</span>,
           <span class="kw">col_stretch</span> <span class="kw">=</span> <span class="fl">TRUE</span>)</pre></body></html></div>
 </div>
 <div id="logo-and-title" class="section level3">
 <h3 class="hasAnchor">
 <a href="#logo-and-title" class="anchor"></a>7.2 Logo and title</h3>
 <p><code><a href="../reference/data_edit.html">data_edit()</a></code> does also have support for adding a logo and/or title to the data editor. For example, if you wanted to use <code><a href="../reference/data_edit.html">data_edit()</a></code> within your own package you can customise it with your package <code>logo</code> and instructions to the user through <code>title</code>.</p>
-<div class="sourceCode" id="cb20"><html><body><pre class="r"><span class="no">car_logo</span> <span class="kw">&lt;-</span> <span class="st">'https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-Car.png'</span>
+<div class="sourceCode" id="cb21"><html><body><pre class="r"><span class="no">car_logo</span> <span class="kw">&lt;-</span> <span class="st">'https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-Car.png'</span>
 <span class="fu"><a href="../reference/data_edit.html">data_edit</a></span>(<span class="no">mtcars</span>,
           <span class="kw">logo</span> <span class="kw">=</span> <span class="no">car_logo</span>,
           <span class="kw">logo_size</span> <span class="kw">=</span> <span class="fl">100</span>,
@@ -280,7 +287,7 @@
 <h3 class="hasAnchor">
 <a href="#custom-themes" class="anchor"></a>7.3 Custom themes</h3>
 <p><code><a href="../reference/data_edit.html">data_edit()</a></code> makes use of the <code>shinythemes</code> package to customise the appearance of the data editor. You can explore the different themes by supplying the name of a valid <code>shinythemes</code> theme to the <code>theme</code> argument.</p>
-<div class="sourceCode" id="cb21"><html><body><pre class="r"><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span>(<span class="no">mtcars</span>,
+<div class="sourceCode" id="cb22"><html><body><pre class="r"><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span>(<span class="no">mtcars</span>,
           <span class="kw">theme</span> <span class="kw">=</span> <span class="st">"cosmo"</span>)</pre></body></html></div>
 <p><img src="https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-12.png" width="100%" style="display: block; margin: auto;"></p>
 </div>

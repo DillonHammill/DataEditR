@@ -48,6 +48,9 @@
 #' @param col_names logical indicating whether column names can be edited or a
 #'   vector of column names that cannot be edited, set to TRUE by default to
 #'   allow editing of column names.
+#' @param col_readonly names of columns that cannot be edited. Users will be
+#'   able to edit values but these will be reverted to the original values.
+#'   Column names for these column cannot be edited either.
 #' @param row_bind additional rows to add to the data prior to loading into
 #'   editor, can be either an array containing the new data, a vector containing
 #'   the new row names for empty rows or a named list containing a vector for
@@ -111,6 +114,7 @@ data_edit <- function(x,
                       col_stretch = FALSE,
                       col_factor = FALSE,
                       col_names = TRUE,
+                      col_readonly = NULL,
                       row_bind = NULL,
                       row_edit = TRUE,
                       save_as = NULL,
@@ -325,6 +329,14 @@ data_edit <- function(x,
     col_edit <- FALSE
   }
 
+  # READONLY COLUMNS
+  if(!is.null(col_readonly)) {
+    if(!all(col_readonly %in% colnames(x))) {
+      stop("'col_readonly' must contain valid column names.")
+    }
+    col_names <- col_readonly
+  }
+  
   # COLUMN NAMES - INDICES THAT CANNOT BE EDITED
   if(col_names == FALSE) {
     col_names <- colnames(x)
@@ -354,7 +366,12 @@ data_edit <- function(x,
 
       # DATA EDITS - INCLUDES ROW NAME EDITS
       observeEvent(input$x, {
+        # OLD VALUES
+        x_old <- values[["x"]]
         values[["x"]] <- hot_to_r(input$x)
+        if(!is.null(col_readonly)){
+          values[["x"]][, col_readonly] <- x_old[, col_readonly]
+        }
       })
 
       # ROW/COLUMN NAME EDITS
@@ -367,38 +384,41 @@ data_edit <- function(x,
           new_col_names <- unlist(input$x_changeHeaders[["colHeaders"]])
           # COLUMN INDEX - COLUMNS CANNOT BE MOVED
           col_ind <- which(old_col_names != new_col_names)
-          # CUSTOM COLUMNS - KEEP COLUMN TYPE
-          if (!is.null(names(col_options))) {
-            if (any(old_col_names[col_ind] %in% names(col_options))) {
-              for (z in col_ind) {
-                if (old_col_names[z] %in% names(col_options)) {
-                  ind <- match(old_col_names[z], names(col_options))
-                  names(col_options)[ind] <- new_col_names[z]
+          # ONLY UPDATE IF COLUMN NAMES CHANGE
+          if(length(col_ind) != 0) {
+            # CUSTOM COLUMNS - KEEP COLUMN TYPE
+            if (!is.null(names(col_options))) {
+              if (any(old_col_names[col_ind] %in% names(col_options))) {
+                for (z in col_ind) {
+                  if (old_col_names[z] %in% names(col_options)) {
+                    ind <- match(old_col_names[z], names(col_options))
+                    names(col_options)[ind] <- new_col_names[z]
+                  }
                 }
               }
             }
-          }
-          # EMPTY COLUMN NAMES
-          empty_col_names <- which(unlist(lapply(new_col_names, nchar) == 0))
-          # APPLY COLUMN NAMES - RENDER
-          x_new <- hot_to_r(input$x)
-          colnames(x_new) <- new_col_names
-          values[["x"]] <- x_new
-          # REVERT EMPTY COLUMN NAMES TO ORIGINAL - RE-RENDER
-          if (length(empty_col_names) > 0) {
-            colnames(x_new)[empty_col_names] <- old_col_names[empty_col_names]
+            # EMPTY COLUMN NAMES
+            empty_col_names <- which(unlist(lapply(new_col_names, nchar) == 0))
+            # APPLY COLUMN NAMES - RENDER
+            x_new <- hot_to_r(input$x)
+            colnames(x_new) <- new_col_names
             values[["x"]] <- x_new
-            # REVERT COLUMN NAME EDITS
-          } else if (length(col_names) > 0 & 
-                     old_col_names[col_ind] %in% col_names) {
-            if (quiet == FALSE) {
-              message(
-                paste0(paste(old_col_names[col_ind], collapse = " & "), 
-                       " column name(s) cannot be edited.")
+            # REVERT EMPTY COLUMN NAMES TO ORIGINAL - RE-RENDER
+            if (length(empty_col_names) > 0) {
+              colnames(x_new)[empty_col_names] <- old_col_names[empty_col_names]
+              values[["x"]] <- x_new
+              # PREVENT COLUMN NAME EDITS
+            } else if (length(col_names) > 0 & 
+                       old_col_names[col_ind] %in% col_names) {
+              if (quiet == FALSE) {
+                message(
+                  paste0(paste(old_col_names[col_ind], collapse = " & "), 
+                         " column name(s) cannot be edited.")
                 )
+              }
+              colnames(x_new) <- old_col_names
+              values[["x"]] <- x_new
             }
-            colnames(x_new) <- old_col_names
-            values[["x"]] <- x_new
           }
           # ROW NAMES CANNOT BE EDITED
         } else if ("rowHeaders" %in% names(input$x_changeHeaders)) {

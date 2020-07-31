@@ -83,7 +83,7 @@ function to make it easy to interactively update data saved to file." />
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">DataEditR</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.0.3</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.0.4</span>
       </span>
     </div>
 
@@ -145,6 +145,7 @@ function to make it easy to interactively update data saved to file.</p>
   <span class='kw'>col_stretch</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>,
   <span class='kw'>col_factor</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>,
   <span class='kw'>col_names</span> <span class='kw'>=</span> <span class='fl'>TRUE</span>,
+  <span class='kw'>col_readonly</span> <span class='kw'>=</span> <span class='kw'>NULL</span>,
   <span class='kw'>row_bind</span> <span class='kw'>=</span> <span class='kw'>NULL</span>,
   <span class='kw'>row_edit</span> <span class='kw'>=</span> <span class='fl'>TRUE</span>,
   <span class='kw'>save_as</span> <span class='kw'>=</span> <span class='kw'>NULL</span>,
@@ -204,6 +205,12 @@ default.</p></td>
       <td><p>logical indicating whether column names can be edited or a
 vector of column names that cannot be edited, set to TRUE by default to
 allow editing of column names.</p></td>
+    </tr>
+    <tr>
+      <th>col_readonly</th>
+      <td><p>names of columns that cannot be edited. Users will be
+able to edit values but these will be reverted to the original values.
+Column names for these column cannot be edited either.</p></td>
     </tr>
     <tr>
       <th>row_bind</th>

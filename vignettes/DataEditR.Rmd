@@ -151,6 +151,15 @@ data_edit(mtcars,
 knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-6.png')
 ```
 
+### 3.6 Read-only columns
+
+If you would like to prevent values from being edited in certain columns, you can supply the names of the columns that cannot be edited to the `col_readonly` argument. Users will be able to edit values and the column name, but these will be reverted to the original values. For example, if we wanted to prevent the `mpg` column from being edited:
+
+```{r, eval = FALSE}
+data_edit(mtcars,
+          col_readonly = "mpg")
+```
+
 ## 4. Data Creation
 
 You can also use `data_edit()` to interactively create data.frames from scratch without any coding.
