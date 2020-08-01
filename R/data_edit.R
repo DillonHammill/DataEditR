@@ -329,21 +329,21 @@ data_edit <- function(x,
     col_edit <- FALSE
   }
 
-  # READONLY COLUMNS
-  if(!is.null(col_readonly)) {
-    if(!all(col_readonly %in% colnames(x))) {
-      stop("'col_readonly' must contain valid column names.")
-    }
-    col_names <- col_readonly
-  }
-  
   # COLUMN NAMES - INDICES THAT CANNOT BE EDITED
   if(col_names == FALSE) {
     col_names <- colnames(x)
   }else if(col_names == TRUE) {
     col_names <- NULL
-  }
+  }  
   
+  # READONLY COLUMNS
+  if(!is.null(col_readonly)) {
+    if(!all(col_readonly %in% colnames(x))) {
+      stop("'col_readonly' must contain valid column names.")
+    }
+    col_names <- unique(c(col_names, col_readonly))
+  }
+
   # SHINY APPLICATION ----------------------------------------------------------
 
   # DATA EDITOR
