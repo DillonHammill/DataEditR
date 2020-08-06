@@ -1,3 +1,8 @@
+# DataEditR 0.0.5
+
+* Fix row indices when rows are added or removed.
+* Improve handling of duplicate row indices in case of accidental editing.
+
 # DataEditR 0.0.4
 
 * Add `col_readonly` argument to prevent users from editing values or column names of certain columns.
