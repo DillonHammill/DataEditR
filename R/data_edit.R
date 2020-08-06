@@ -270,6 +270,7 @@ data_edit <- function(x,
     # EMPTY ROW NAMES - CHARACTER(0)
     if (length(rownames(x)) == 0) {
       rn <- "empty"
+      rownames(x) <- 1:nrow(x)
       # ROW INDICES
     } else if (all(rownames(x) == seq(1, nrow(x)))) {
       rn <- "index"
@@ -278,10 +279,11 @@ data_edit <- function(x,
       rn <- "set"
       x <- cbind(rownames(x), x)
       colnames(x)[1] <- " "
-      rownames(x) <- NULL # display row indices in table
+      rownames(x) <- 1:nrow(x) # display row indices in table
     }
   } else {
     rn <- "empty"
+    rownames(x) <- 1:nrow(x)
   }
 
   # COERCE TO DATA.FRAME
@@ -369,6 +371,11 @@ data_edit <- function(x,
         # OLD VALUES
         x_old <- values[["x"]]
         values[["x"]] <- hot_to_r(input$x)
+        # FIX ROW INDICES
+        if(nrow(x_old) != nrow(values[["x"]])) {
+          rownames(values[["x"]]) <- 1:nrow(values[["x"]])
+        }
+        # REVERT READONLY COLUMNS
         if(!is.null(col_readonly)){
           values[["x"]][, col_readonly] <- x_old[, col_readonly]
         }
@@ -422,18 +429,21 @@ data_edit <- function(x,
           }
           # ROW NAMES CANNOT BE EDITED
         } else if ("rowHeaders" %in% names(input$x_changeHeaders)) {
+          x_old <- values[["x"]]
           # OLD ROW NAMES
           old_row_names <- rownames(values[["x"]])
           # NEW ROW NAMES
           new_row_names <- unlist(input$x_changeHeaders[["rowHeaders"]])
-          # APPLY NEW ROW NAMES
-          x_new <- hot_to_r(input$x)
-          rownames(x_new) <- new_row_names
-          values[["x"]] <- x_new
+          # DUPLICATE ROW NAMES
+          row_ind <- which(duplicated(new_row_names))
+          if(length(row_ind) > 0) {
+            new_row_names[row_ind] <- paste0(new_row_names[row_ind], "    ")
+          }
+          rownames(x_old) <- new_row_names
+          values[["x"]] <- x_old
           # REVERT TO ORIGINAL ROW NAMES - RE-RENDER
-          ind <- which(!new_row_names %in% old_row_names)
-          rownames(x_new)[ind] <- old_row_names[ind]
-          values[["x"]] <- x_new
+          rownames(x_old) <- 1:nrow(x_old)
+          values[["x"]] <- x_old
         }
         # ROW NAMES - NOT IN USE
         # } else if("rowHeaders" %in% names(input$x_changeHeaders)){
@@ -579,7 +589,7 @@ data_edit <- function(x,
   if ("matrix" %in% data_class) {
     x <- as.matrix(x)
   }
-
+  
   # ROW NAMES - FIRST COLUMN
   if (rn == "set") {
     new_row_names <- x[, 1]
