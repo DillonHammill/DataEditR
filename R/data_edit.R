@@ -99,12 +99,13 @@
 #' @examples
 #' if (interactive()) {
 #'   # Edit matrix & save to csv
+#'   file <- tempfile("mtcars-new", fileext = ".csv")
 #'   data_edit(mtcars,
-#'     save_as = "mtcars-update.csv"
+#'     save_as = file
 #'   )
 #'
 #'   # Edit csv file
-#'   data_edit("mtcars-update.csv")
+#'   data_edit(file)
 #' }
 #' @export
 data_edit <- function(x,
