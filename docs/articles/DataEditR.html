@@ -226,7 +226,7 @@
 #&gt;  $ am  : num  1 1 1 0 0 0 0 0 0 0 ...
 #&gt;  $ gear: num  4 4 4 3 3 3 3 4 4 4 ...
 #&gt;  $ carb: num  4 4 1 1 2 1 4 2 2 4 ...</code></pre>
-<p>The edited data can also be written to a file of any format by specifying the name of the file to the <code>save_as</code> argument and specifying the name of the writing function to use through <code>write_fun</code>. The default is et to <code>write.csv</code> from the <code>utils</code> package. You can also pass any additional arguments to your write function in a named list to <code>write_args</code>.</p>
+<p>The edited data can also be written to a file of any format by specifying the name of the file to the <code>save_as</code> argument and specifying the name of the writing function to use through <code>write_fun</code>. The default is to use <code>write.csv</code> from the <code>utils</code> package. You can also pass any additional arguments to your write function in a named list to <code>write_args</code>.</p>
 <div class="sourceCode" id="cb17"><html><body><pre class="r"><span class="no">mtcars_new</span> <span class="kw">&lt;-</span> <span class="fu"><a href="../reference/data_edit.html">data_edit</a></span>(<span class="no">mtcars</span>,
                         <span class="kw">save_as</span> <span class="kw">=</span> <span class="st">"mtcars.csv"</span>,
                         <span class="kw">write_fun</span> <span class="kw">=</span> <span class="st">"write.table"</span>,

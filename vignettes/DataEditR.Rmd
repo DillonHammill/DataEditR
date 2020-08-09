@@ -210,7 +210,7 @@ mtcars_new$car <- factor(mtcars_new$car)
 str(mtcars_new)
 ```
 
-The edited data can also be written to a file of any format by specifying the name of the file to the `save_as` argument and specifying the name of the writing function to use through `write_fun`. The default is et to `write.csv` from the `utils` package. You can also pass any additional arguments to your write function in a named list to `write_args`.
+The edited data can also be written to a file of any format by specifying the name of the file to the `save_as` argument and specifying the name of the writing function to use through `write_fun`. The default is to use `write.csv` from the `utils` package. You can also pass any additional arguments to your write function in a named list to `write_args`.
 
 ```{r, eval = FALSE}
 mtcars_new <- data_edit(mtcars,
