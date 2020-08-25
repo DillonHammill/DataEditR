@@ -140,36 +140,48 @@ data_edit <- function(x,
 
   # READ IN DATA
   if (is.null(dim(x))) {
-    # READ IN FILE
-    if (length(x) == 1) {
-      # FUNCTION
-      read_fun <- match.fun(read_fun)
-      # CHECK READ ARGUMENTS
-      if (!is.null(read_args)) {
-        if (!class(read_args) == "list") {
-          stop("read_args must be a named list of arguments for read_fun.")
+    # FILE/COLUMN NAMES
+    if(is.character(x)) {
+      # FILE NAME - SINGLE + EXTENSION
+      if(length(x) == 1 & all(nchar(file_ext(x)) != 0)) {
+        # FUNCTION
+        read_fun <- match.fun(read_fun)
+        # CHECK READ ARGUMENTS
+        if (!is.null(read_args)) {
+          if (!class(read_args) == "list") {
+            stop("read_args must be a named list of arguments for read_fun.")
+          }
         }
+        # READ ARGUMENTS
+        read_args <- c(list(x), read_args)
+        # EXTRA ARGUMENTS
+        extra_args <- list(...)
+        read_args <- c(
+          read_args,
+          extra_args[!names(extra_args) %in% names(read_args)]
+        )
+        # CALL FUNCTION
+        x <- do.call(read_fun, read_args)
+      # COLUMN NAMES  
+      } else {
+        x <- data.frame(
+          structure(rep(list(""), length(x)),
+                    names = x),
+          check.names = FALSE,
+          stringsAsFactors =  FALSE
+        )
       }
-      # READ ARGUMENTS
-      read_args <- c(list(x), read_args)
-      # EXTRA ARGUMENTS
-      extra_args <- list(...)
-      read_args <- c(
-        read_args,
-        extra_args[!names(extra_args) %in% names(read_args)]
-      )
-      # CALL FUNCTION
-      x <- do.call(read_fun, read_args)
-      # EMPTY MATRIX/DATA.FRAME
-    } else if (length(x) == 2) {
-      x <- matrix(rep("", prod(x)),
-        nrow = x[1],
-        ncol = x[2]
-      )
-      x <- as.data.frame(x)
+    # DIMENSIONS
+    } else if(is.numeric(x)) {
+      x <- data.frame(
+        structure(rep(list(rep("", x[1])), x[2]),
+                  names = paste0("V", seq_len(x[2]))),
+        check.names = FALSE,
+        stringsAsFactors =  FALSE
+        )
     }
   }
-
+  
   # BIND ROWS
   if (!is.null(row_bind)) {
     # NEW ROWS
@@ -585,7 +597,7 @@ data_edit <- function(x,
       quiet = TRUE
     )
   }
-
+  
   # RETURN ORIGINAL CLASS
   if ("matrix" %in% data_class) {
     x <- as.matrix(x)

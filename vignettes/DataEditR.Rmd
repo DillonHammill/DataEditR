@@ -30,11 +30,16 @@ readr::write_lines(html, path = "logo.html")
 
 ## Preparation
 
-In order to get started with **DataEditR**, we will need to install the package from GitHub and load it into our current R session:
+In order to get started with **DataEditR**, we will need to install the package from CRAN and load it into our current R session:
 
 ```{r, eval = FALSE}
-devtools::install_github("DillonHammill/DataEditR")
+install.packages("DataEditR")
 library(DataEditR)
+```
+
+If you would like to use the development version of **DataEditR** it can be installed directly from GitHub:
+```{r, eval = FALSE}
+devtools::install_github("DillonHammill/DataEditR")
 ```
 
 ## 1. Data Visualisation
@@ -186,6 +191,12 @@ data_edit(c(3, 3))
 
 ```{r, echo=FALSE, fig.align="center", out.width = '40%'}
 knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-8.gif')
+```
+
+Alternatively, you can pass a vector of column names to create a data.frame template with pre-defined column names. You will need to install the development version **DataEditR** from GitHub to use this feature.
+
+```{r, eval = FALSE}
+data_edit(c("Player", "Age", "Titles"))
 ```
 
 ## 5. Data saving

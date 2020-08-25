@@ -1,7 +1,7 @@
 Package: DataEditR
 Title: An Interactive Editor for Viewing, Entering & Editing Data
-Version: 0.0.5
-Date: 2020-07-30
+Version: 0.0.6
+Date: 2020-08-25
 Authors@R: 
     person(given = "Dillon",
            family = "Hammill",

@@ -1,3 +1,7 @@
+# DataEditR 0.0.6
+
+* Add ability to pass column names to `data_edit()` to construct a template data.frame with pre-defined column names.
+
 # DataEditR 0.0.5
 
 * Fix row indices when rows are added or removed.
