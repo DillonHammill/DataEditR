@@ -80,6 +80,7 @@ dataInputUI <- function(id,
 #' @rdname dataInput
 #' @export
 dataInputServer <- function(id, 
+                            data = NULL,
                             read_fun = "read.csv",
                             read_args = NULL) {
   
@@ -87,6 +88,7 @@ dataInputServer <- function(id,
   moduleServer(id, function(input, 
                             output, 
                             session){
+    
     # DATA INPUT
     data_input <- reactive({
       eval(parse(text = input$data))
@@ -161,7 +163,7 @@ dataInputServer <- function(id,
 #'
 #' @importFrom shiny reactive reactiveValues observe observeEvent moduleServer
 #' @importFrom rhandsontable rhandsontable hot_to_r hot_context_menu hot_col
-#'   renderRHandsontable
+#'   renderRHandsontable rHandsontableOutput
 #'
 #' @examples 
 #' if(interactive()) {
