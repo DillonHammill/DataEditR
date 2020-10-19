@@ -6,7 +6,7 @@
 \alias{dataInputServer}
 \title{Shiny module for data input}
 \usage{
-dataInputUI(id, cellWidths = c("50\%", "50\%"))
+dataInputUI(id, cellWidths = c("50\%", "48\%"))
 
 dataInputServer(id, read_fun = "read.csv", read_args = NULL)
 }
@@ -51,7 +51,7 @@ if(interactive()) {
     })
 
   }
-  
+
   shinyApp(ui, server)
 
 }

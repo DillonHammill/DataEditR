@@ -6,27 +6,31 @@
 \alias{dataOutputServer}
 \title{Shiny module for data output}
 \usage{
-dataOutputUI(id, cellWidths = c("60\%", "38\%"))
+dataOutputUI(id)
 
 dataOutputServer(
   id,
-  data = reactive(NULL),
+  data = NULL,
   save_as = NULL,
   write_fun = "write.csv",
-  write_args = NULL,
-  ...
+  write_args = NULL
 )
 }
 \arguments{
 \item{id}{unique identifier for the module to prevent namespace clashes when
 making multiple calls to this shiny module.}
 
-\item{cellWidths}{a vector of length 2 to control the relative widths of the
-\code{textInput} and \code{actionButton}, set to \code{c("60\%", "38\%")}
-by default to optimise user interface for \code{\link{data_edit}}.}
-
 \item{data}{an object of class data.frame wrapped in \code{reactive} to be
 saved to file.}
+
+\item{save_as}{name of the file to which the data should be saved, overrides
+input file path if supplied.}
+
+\item{write_fun}{name of the function to use when writing the data to file,
+set to \code{"write.csv"} by default.}
+
+\item{write_args}{a named list of additional arguments to pass to
+\code{write_fun} when reading in files.}
 }
 \description{
 Shiny module for data output
@@ -36,8 +40,10 @@ if(interactive()) {
 
   library(shiny)
   library(rhandsontable)
+  library(shinyjs)
 
   ui <- fluidPage(
+    useShinyjs(),
     dataInputUI("input1"),
     dataOutputUI("output1"),
     rHandsontableOutput("data1")
@@ -54,12 +60,12 @@ if(interactive()) {
         rhandsontable(data_input1())
       }
     })
-    
+
     dataOutputServer("output1",
                      data = data_input1)
 
   }
-  
+
   shinyApp(ui, server)
 
 }
