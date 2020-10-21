@@ -474,7 +474,6 @@ dataEditServer <- function(id,
           values$row_names <- "empty"
           rownames(data_to_edit) <- 1:nrow(data_to_edit)
         }
-        print(data_to_edit)
         # DATA RENDER TABLE
         return(data_to_edit)
       } else {
