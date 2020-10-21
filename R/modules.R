@@ -455,23 +455,21 @@ dataEditServer <- function(id,
         
         # ABSORB ROW NAMES -------------------------------------------------------
         
+        # ROW NAMES
         if (!is.null(rownames(data_to_edit))) {
           # EMPTY ROW NAMES - CHARACTER(0)
           if (length(rownames(data_to_edit)) == 0) {
-            values$row_names <- "empty"
             rownames(data_to_edit) <- 1:nrow(data_to_edit)
-            # ROW INDICES
-          } else if (all(rownames(data_to_edit) == seq(1, nrow(data_to_edit)))) {
-            values$row_names <- "index"
-            # ROW NAMES SET
+          # NUMERIC ROW NAMES
+          } else if(all(!is.na(suppressWarnings(as.numeric(rownames(data_to_edit)))))) {
+            rownames(data_to_edit) <- 1:nrow(data_to_edit)
+          # CHARACTER ROW NAMES
           } else {
-            values$row_names <- "set"
             data_to_edit <- cbind(rownames(data_to_edit), data_to_edit)
             colnames(data_to_edit)[1] <- " "
             rownames(data_to_edit) <- 1:nrow(data_to_edit) # display row indices in table
           }
         } else {
-          values$row_names <- "empty"
           rownames(data_to_edit) <- 1:nrow(data_to_edit)
         }
         # DATA RENDER TABLE
@@ -491,6 +489,8 @@ dataEditServer <- function(id,
       # OLD VALUES
       x_old <- values$x
       values$x <- hot_to_r(input$x)
+      # COLUMN ADDED
+      if(ncol(values$x) > ncol(x_old))
       # FIX ROW INDICES
       if(nrow(x_old) != nrow(values$x)) {
         rownames(values$x) <- 1:nrow(values$x)
