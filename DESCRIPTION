@@ -1,7 +1,7 @@
 Package: DataEditR
 Title: An Interactive Editor for Viewing, Entering & Editing Data
-Version: 0.0.6
-Date: 2020-08-25
+Version: 0.0.7
+Date: 2020-10-21
 Authors@R: 
     person(given = "Dillon",
            family = "Hammill",
@@ -20,6 +20,7 @@ Imports:
   shinyjs,
   shinythemes,
   rhandsontable,
+  rstudioapi,
   htmltools, 
   miniUI
 License: GPL-2

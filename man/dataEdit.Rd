@@ -21,6 +21,8 @@ dataEditServer(
   row_bind = NULL,
   row_edit = TRUE,
   quiet = FALSE,
+  read_fun = "read.csv",
+  read_args = NULL,
   ...
 )
 }
@@ -67,6 +69,12 @@ each new column.}
 
 \item{row_edit}{logical indicating whether rows can be added or removed, set
 to TRUE by default.}
+
+\item{read_fun}{name of the function to use to read in the data when a file
+is selected, set to \code{read.csv} by default.}
+
+\item{read_args}{a named list of additional arguments to pass to
+\code{read_fun} when reading in files.}
 
 \item{...}{additional arguments passed to
 \code{\link[rhandsontabe:rhandsontable]{rhandsontable}}.}

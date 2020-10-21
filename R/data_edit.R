@@ -62,16 +62,18 @@
 #' @param title optional title to include above the data editor.
 #' @param logo optional package logo to include in title above the data editor,
 #'   must be supplied as path to logo png.
-#' @param logo_size width of the logo in pixels, set to 100 pixels by default.
+#' @param logo_size width of the logo in pixels, set to 30 pixels by default.
 #' @param logo_side can be either \code{"left"} or \code{"right"} to determine
 #'   the position of the logo relative to the title, set to \code{"left"} by
 #'   default.
 #' @param viewer can be either \code{"dialog"}, \code{"browser"} or
 #'   \code{"pane"} to open the application in a dialog box, browser or RStudio
 #'   viewer pane. Set to \code{"dialog"} by default.
+#' @param viewer_height numeric to control the height of the viewer in pixels
+#'   when \code{viewer} is set to \code{"dialog"}, set 800 by default.
+#' @param viewer_width numeric to control the width of the viewer in pixels when
+#'   \code{viewer} is set to \code{"dialog"}, set to 1200 by default.
 #' @param theme valid shinytheme name, set to "yeti" by default.
-#' @param quiet logical indicating whether messages should be suppressed, set to
-#'   FALSE by default.
 #' @param read_fun name of the function to use to read in the data when \code{x}
 #'   is the name of a file, set to \code{read.csv} by default.
 #' @param read_args a named list of additional arguments to pass to
@@ -82,12 +84,19 @@
 #'   accepts the file name supplied to \code{save_as}.
 #' @param write_args a named list of additional arguments to pass to
 #'   \code{write_fun}.
+#' @param quiet logical indicating whether messages should be suppressed, set to
+#'   FALSE by default.
+#' @param hide logical indicating whether the \code{dataInput} and
+#'   \code{dataOutput} modules should be visible to the user within the
+#'   application. If \code{hide = FALSE} and \code{save_as} is specified, the
+#'   edited data will be written to file after the application is closed.
 #'
 #' @return the edited data as a matrix or data.frame.
 #'
 #' @importFrom rstudioapi getActiveDocumentContext
 #' @importFrom htmltools img span
 #' @importFrom shiny runGadget dialogViewer browserViewer paneViewer splitLayout
+#'   addResourcePath
 #' @importFrom shinyjs useShinyjs
 #' @importFrom shinythemes shinytheme
 #' @importFrom miniUI miniPage gadgetTitleBar
@@ -115,25 +124,41 @@ data_edit <- function(x = NULL,
                       save_as = NULL,
                       title = NULL,
                       logo = NULL,
-                      logo_size = 100,
+                      logo_size = 30,
                       logo_side = "left",
                       viewer = "dialog",
+                      viewer_height = 800,
+                      viewer_width = 1200,
                       theme = "yeti",
-                      quiet = FALSE,
                       read_fun = "read.csv",
                       read_args = NULL,
                       write_fun = "write.csv",
                       write_args = NULL,
+                      quiet = FALSE,
+                      hide = FALSE,
                       ...) {
+  
+  # PREPARE DATA ---------------------------------------------------------------
+  
+  # RSTUDIO ADDIN/DATA
+  context <- getActiveDocumentContext()
+  if(nzchar(context$selection[[1]]$text)) {
+    data <- context$selection[[1]]$text
+  } else {
+    if(!is.null(dim(x))) {
+      data <- as.character(substitute(x))
+    } else {
+      data <- x
+    }
+  }
   
   # PREPARE SHINY COMPONENTS ---------------------------------------------------
   
   # DATAEDITR LOGO
   if(is.null(logo)) {
-    logo <- system.file(
-      "extdata",
-      "logo.png",
-      package = "DataEditR"
+    logo <- paste0(
+      "https://raw.githubusercontent.com/DillonHammill/DataEditR/master",
+      "/vignettes/logo.png"
     )
   }
   
@@ -194,32 +219,33 @@ data_edit <- function(x = NULL,
                      session) {
     
     # DATA INPUT
-    data_to_edit <- dataInputServer("input-1",
-                                    data = x,
-                                    read_fun = read_fun,
-                                    read_args = read_args)
-    
+    data_input <- dataInputServer("input-1",
+                                  data = data,
+                                  read_fun = read_fun,
+                                  read_args = read_args,
+                                  hide = hide)
     
     # DATA EDIT
-    data_to_edit <- dataEditServer("edit-1",
-                                   data = data_to_edit,
-                                   col_bind = col_bind,
-                                   col_edit = col_edit,
-                                   col_options = col_options,
-                                   col_stretch = col_stretch,
-                                   col_names = col_names,
-                                   col_readonly = col_readonly,
-                                   col_factor = col_factor,
-                                   row_bind = row_bind,
-                                   row_edit = row_edit,
-                                   quiet = quiet)
+    data_update <- dataEditServer("edit-1",
+                                data = data_input,
+                                col_bind = col_bind,
+                                col_edit = col_edit,
+                                col_options = col_options,
+                                col_stretch = col_stretch,
+                                col_names = col_names,
+                                col_readonly = col_readonly,
+                                col_factor = col_factor,
+                                row_bind = row_bind,
+                                row_edit = row_edit,
+                                quiet = quiet)
     
     # DATA OUTPUT
     dataOutputServer("output-1",
-                     data = data_to_edit,
+                     data = data_update,
                      save_as = save_as,
                      write_fun = write_fun,
-                     write_args = write_args)
+                     write_args = write_args,
+                     hide = hide)
     
     # CANCEL
     observeEvent(input$cancel, {
@@ -228,7 +254,7 @@ data_edit <- function(x = NULL,
     
     # DONE
     observeEvent(input$done, {
-      stopApp(data_to_edit())
+      stopApp(data_update())
     })
     
   }
@@ -236,8 +262,8 @@ data_edit <- function(x = NULL,
   # DIALOG
   if(viewer == "dialog") {
     viewer <- dialogViewer("DataEditR",
-                           width = 1000,
-                           height = 800)
+                           width = viewer_width,
+                           height = viewer_height)
   # BROWSER  
   } else if (viewer == "browser") {
     viewer <- browserViewer()
@@ -247,12 +273,26 @@ data_edit <- function(x = NULL,
   }
   
   # RUN APPLICATION
-  x <- runGadget(ui,
-                 server,
-                 viewer = viewer,
-                 stopOnCancel = FALSE)
+  x_edit <- runGadget(ui,
+                      server,
+                      viewer = viewer,
+                      stopOnCancel = FALSE)
+  
+  # SAVE AS
+  if(!is.null(x_edit)) {
+    if(!hide & !is.null(save_as)) {
+      do.call(
+        write_fun,
+        c(list(x_edit, save_as), write_args)
+      )
+    }
+  }
   
   # RETURN DATA
-  return(x)
+  if(is.null(x_edit)) {
+    return(x)
+  } else {
+    return(x_edit)
+  }
   
 }

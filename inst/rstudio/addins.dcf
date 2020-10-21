@@ -1,0 +1,4 @@
+Name: data_edit
+Description: Interactive Data Editor
+Binding: data_edit
+Interactive: true

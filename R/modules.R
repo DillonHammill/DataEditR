@@ -7,13 +7,19 @@
 #' @param cellWidths a vector of length 2 to control the relative widths of the
 #'   \code{fileInput} and \code{textInput}, set to \code{c("50\%", "50\%")} by
 #'   default.
+#' @param data can be either the name of a dataset or file as a character string
+#'   (e.g. "mtcars" or "mtcars.csv") or a vector column names (e.g. c("A", "B",
+#'   "C")) or template dimensions (e.g. c(10,10)).
 #' @param read_fun name of the function to use to read in the data when a file
 #'   is selected, set to \code{read.csv} by default.
 #' @param read_args a named list of additional arguments to pass to
 #'   \code{read_fun} when reading in files.
+#' @param hide logical indicating whether the data input user interface should
+#'   be hidden from the user, set to FALSE by default.
 #'
 #' @importFrom shiny fluidRow splitLayout textInput fileInput NS moduleServer
 #'   reactive updateTextInput observeEvent
+#' @importFrom shinyjs hidden show
 #'
 #' @author Dillon Hammill, \email{Dillon.Hammill@anu.edu.au}
 #'
@@ -57,16 +63,20 @@ dataInputUI <- function(id,
   # USER INTERFACE
   list(
     splitLayout(
-      fileInput(
-        NS(id, "file"),
-        "Upload data to edit:",
-        width = "100%"
+      hidden(
+        fileInput(
+          NS(id, "file"),
+          "Upload data to edit:",
+          width = "100%"
+        )
       ),
-      textInput(
-        NS(id, "data"),
-        "Data to edit:",
-        value = "",
-        width = "100%"
+      hidden(
+        textInput(
+          NS(id, "data"),
+          "Data to edit:",
+          value = "",
+          width = "100%"
+        )
       ),
       cellWidths = cellWidths,
       cellArgs = list(style = paste0("padding-left: 10px;",
@@ -82,23 +92,77 @@ dataInputUI <- function(id,
 dataInputServer <- function(id, 
                             data = NULL,
                             read_fun = "read.csv",
-                            read_args = NULL) {
+                            read_args = NULL,
+                            hide = FALSE) {
   
   # SERVER
   moduleServer(id, function(input, 
                             output, 
                             session){
     
+    # UPLOADED DATA
+    upload <- NULL # prevent global assignment below
+    
+    # HIDE USER INTERFACE
+    if(!hide) {
+      show("file")
+      show("data")
+    }
+    
+    # CHECK
+    if(!is.null(dim(data))) {
+      stop("'data' should be passed as a vector!")
+    }
+    # DATA - FILE OR NAME
+    if(is.character(data) & 
+       length(data) == 1) {
+      # FILE NAME
+      if(nzchar(file_ext(data))) {
+        upload <- do.call(
+          read_fun,
+          c(list(data), read_args)
+        )
+        updateTextInput(
+          session,
+          "data",
+          value = "upload"
+        )
+        # DATASET NAME
+      } else {
+        updateTextInput(
+          session,
+          "data",
+          value = data
+        )
+      }
+      # DIMENSIONS/COLUMN NAMES/NULL
+    } else {
+      template <- data_template(
+        data,
+        read_fun,
+        read_args
+      )
+      updateTextInput(
+        session,
+        "data",
+        value = "template"
+      )
+    }
+    
     # DATA INPUT
     data_input <- reactive({
-      eval(parse(text = input$data))
+      tryCatch(
+        eval(parse(text = input$data)),
+        error = function(e){
+          return(NULL)}
+        )
     })
     
     # FILE INPUT
     observeEvent(input$file, {
       if(!is.null(input$file)) {
         read_args <- c(list(input$file$datapath), read_args)
-        upload <- do.call(read_fun, read_args)
+        upload <<- do.call(read_fun, read_args)
         # FLUSH DATA INPUT
         updateTextInput(
           session,
@@ -156,6 +220,10 @@ dataInputServer <- function(id,
 #'   each new column.
 #' @param row_edit logical indicating whether rows can be added or removed, set
 #'   to TRUE by default.
+#' @param read_fun name of the function to use to read in the data when a file
+#'   is selected, set to \code{read.csv} by default.
+#' @param read_args a named list of additional arguments to pass to
+#'   \code{read_fun} when reading in files.
 #' @param ... additional arguments passed to
 #'   \code{\link[rhandsontabe:rhandsontable]{rhandsontable}}.
 #'
@@ -163,7 +231,7 @@ dataInputServer <- function(id,
 #'
 #' @importFrom shiny reactive reactiveValues observe observeEvent moduleServer
 #' @importFrom rhandsontable rhandsontable hot_to_r hot_context_menu hot_col
-#'   renderRHandsontable rHandsontableOutput
+#'   renderRHandsontable rHandsontableOutput %>%
 #'
 #' @examples 
 #' if(interactive()) {
@@ -214,6 +282,8 @@ dataEditServer <- function(id,
                            row_bind = NULL,
                            row_edit = TRUE,
                            quiet = FALSE,
+                           read_fun = "read.csv",
+                           read_args = NULL,
                            ...) {
   
   # COLUMN STRETCH
@@ -238,211 +308,179 @@ dataEditServer <- function(id,
                             output,
                             session) {
     
-    # MODULE OPTIONS -----------------------------------------------------------
+    # PREPARE DATA -------------------------------------------------------------
     
-    mod_opts <- reactiveValues(data_class = NULL,
-                               row_names = NULL,
-                               col_names = NULL)
-    
-    # PREPARE DATA
+    # STORAGE
+    values <- reactiveValues(x = NULL, # trigger table render
+                             data_class = NULL, # original class
+                             col_names = NULL) # columns cannot be edited
+
+    # DATA
     data_to_edit <- reactive({
       
-      # PREPARE DATA -----------------------------------------------------------
-      
-      # EMPTY/DIMENSIONS/COLUMN NAMES
-      if(is.null(dim(data()))) {
-        # EMPTY - 10 x 10 grid
-        if(is.null(data())) {
-          data_to_edit <- data.frame(
-            matrix(rep("", 100),
-                   ncol = 10,
-                   nrow = 10,
-                   dimnames = list(NULL,
-                                   paste0("V", 1:10))),
-            stringsAsFactors = FALSE,
-            check.names = FALSE
-          )
-        # DIMENSIONS
-        } else if(is.numeric(data())) {
-          dims <- rep(data(), length.out = 2)
-          data_to_edit <- data.frame(
-            structure(
-              rep(list(rep("", dims[1])), dims[2]),
-              names = paste0("V", seq_len(dims[2]))
-            ),
-            stringsAsFactors = FALSE,
-            check.names = FALSE
-          )
-        # COLUMN NAMES
-        } else if(is.character(data())) {
-          data_to_edit <- data.frame(
-            structure(
-              rep(list(""), length(data())),
-              names = data()
-            ),
-            stringsAsFactors = FALSE
-          )
-        # UNSUPPORTED DATA TYPE  
-        } else {
-          stop(
-            paste0(
-              "'data' should be a rective array or vector containing",
-              "dimensions or column names!"
-            )
-          )
-        }
-      # ARRAY
+      # INITIALISE REACTIVE VALUES
+      if(!is.reactive(data)) {
+        data_to_edit <- data
       } else {
         data_to_edit <- data()
       }
-      
-      # BIND ROWS --------------------------------------------------------------
-      
-      if (!is.null(row_bind)) {
-        # NEW ROWS
-        if (is.null(dim(row_bind))) {
-          # ROWS AS LIST
-          if (class(row_bind) == "list") {
-            # NAMES NOT NECESSARY
-            # LENGTHS
-            ind <- which(!unlist(lapply(row_bind, length)) == ncol(data_to_edit))
-            if (length(ind) > 0) {
-              for (z in ind) {
-                row_bind[[z]] <- rep(row_bind[[z]], ncol(data_to_edit))
+      # INPUT & FORMAT DATA
+      if(!is.null(data_to_edit)) {
+        
+        # DATA INPUT -----------------------------------------------------------
+        data_to_edit <- data_template(data_to_edit,
+                                      read_fun = read_fun,
+                                      read_args = read_args)
+        
+        # BIND ROWS ------------------------------------------------------------
+        
+        if (!is.null(row_bind)) {
+          # NEW ROWS
+          if (is.null(dim(row_bind))) {
+            # ROWS AS LIST
+            if (class(row_bind) == "list") {
+              # NAMES NOT NECESSARY
+              # LENGTHS
+              ind <- which(!unlist(lapply(row_bind, length)) == ncol(data_to_edit))
+              if (length(ind) > 0) {
+                for (z in ind) {
+                  row_bind[[z]] <- rep(row_bind[[z]], ncol(data_to_edit))
+                }
               }
+              # MATRIX
+              row_bind <- do.call("rbind", row_bind)
+              # ROW NAMES
+            } else {
+              row_bind <- matrix(rep("", ncol(data_to_edit) * length(row_bind)),
+                                 nrow = length(row_bind),
+                                 dimnames = list(
+                                   row_bind,
+                                   colnames(data_to_edit)
+                                 )
+              )
             }
-            # MATRIX
-            row_bind <- do.call("rbind", row_bind)
-            # ROW NAMES
-          } else {
-            row_bind <- matrix(rep("", ncol(data_to_edit) * length(row_bind)),
-                               nrow = length(row_bind),
-                               dimnames = list(
-                                 row_bind,
-                                 colnames(data_to_edit)
-                               )
-            )
           }
+          # BIND NEW ROWS
+          data_to_edit <- rbind(data_to_edit, row_bind[, 1:ncol(data_to_edit)])
         }
-        # BIND NEW ROWS
-        data_to_edit <- rbind(data_to_edit, row_bind[, 1:ncol(data_to_edit)])
-      }
-      
-      # BIND COLUMNS -----------------------------------------------------------
-      
-      if (!is.null(col_bind)) {
-        # NEW COLUMNS
-        if (is.null(dim(col_bind))) {
-          # COLUMNS AS LIST
-          if (class(col_bind) == "list") {
-            # NAMES
-            if (is.null(names(col_bind))) {
-              names(col_bind) <- paste0("V", length(col_bind))
-            }
-            # LENGTHS
-            ind <- which(!unlist(lapply(col_bind, length)) == nrow(data_to_edit))
-            if (length(ind) > 0) {
-              for (z in ind) {
-                col_bind[[z]] <- rep(col_bind[[z]], nrow(data_to_edit))
+        
+        # BIND COLUMNS -----------------------------------------------------------
+        
+        if (!is.null(col_bind)) {
+          # NEW COLUMNS
+          if (is.null(dim(col_bind))) {
+            # COLUMNS AS LIST
+            if (class(col_bind) == "list") {
+              # NAMES
+              if (is.null(names(col_bind))) {
+                names(col_bind) <- paste0("V", length(col_bind))
               }
+              # LENGTHS
+              ind <- which(!unlist(lapply(col_bind, length)) == nrow(data_to_edit))
+              if (length(ind) > 0) {
+                for (z in ind) {
+                  col_bind[[z]] <- rep(col_bind[[z]], nrow(data_to_edit))
+                }
+              }
+              # MATRIX
+              col_bind <- do.call("cbind", col_bind)
+              # COLUMN NAMES
+            } else {
+              col_bind <- matrix(rep("", nrow(data_to_edit) * length(col_bind)),
+                                 ncol = length(col_bind),
+                                 dimnames = list(
+                                   rownames(data_to_edit),
+                                   col_bind
+                                 )
+              )
             }
-            # MATRIX
-            col_bind <- do.call("cbind", col_bind)
-            # COLUMN NAMES
-          } else {
-            col_bind <- matrix(rep("", nrow(data_to_edit) * length(col_bind)),
-                               ncol = length(col_bind),
-                               dimnames = list(
-                                 rownames(data_to_edit),
-                                 col_bind
-                               )
-            )
           }
-        }
-        # BIND NEW COLUMNS
-        data_to_edit <- cbind(data_to_edit, 
+          # BIND NEW COLUMNS
+          data_to_edit <- cbind(data_to_edit,
                               col_bind[1:nrow(data_to_edit), , drop = FALSE])
-      }
-      
-      # COLUMN NAMES -----------------------------------------------------------
-      
-      # CHECK
-      if(any(duplicated(colnames(data_to_edit)))) {
-        stop("Column names must be unique!")
-      }
-      
-      # COLUMN NAMES
-      if(all(is.logical(col_names))) {
-        if(!col_names) {
-          mod_opts$col_names <- colnames(data_to_edit)
         }
-      } else {
-        mod_opts$col_names <- col_names
-      }
-
-      # READONLY COLUMNS
-      if(!is.null(col_readonly)) {
-        if(!all(col_readonly %in% colnames(data_to_edit))) {
-          stop("'col_readonly' must contain valid column names.")
+        
+        # COLUMN NAMES -----------------------------------------------------------
+        
+        # CHECK
+        if(any(duplicated(colnames(data_to_edit)))) {
+          stop("Column names must be unique!")
         }
-        mod_opts$col_names <- unique(c(col_names, col_readonly))
-      }
-      
-      # COLUMN OPTIONS ---------------------------------------------------------
-      
-      if (!is.null(col_options)) {
-        for (z in names(col_options)) {
-          col_type <- type.convert(col_options[[z]], as.is = TRUE)
-          # CHECKBOXES
-          if (is.logical(col_type)) {
-            if (!is.logical(data_to_edit[, z])) {
-              res <- type.convert(data_to_edit[, z], as.is = TRUE)
-              if (!is.logical(res)) {
-                res <- rep(NA, nrow(data_to_edit))
+        
+        # COLUMN NAMES
+        if(all(is.logical(col_names))) {
+          if(!col_names) {
+            values$col_names <- colnames(data_to_edit)
+          }
+        } else {
+          values$col_names <- col_names
+        }
+        
+        # READONLY COLUMNS
+        if(!is.null(col_readonly)) {
+          if(!all(col_readonly %in% colnames(data_to_edit))) {
+            stop("'col_readonly' must contain valid column names.")
+          }
+          values$col_names <- unique(c(col_names, col_readonly))
+        }
+        
+        # COLUMN OPTIONS ---------------------------------------------------------
+        
+        if (!is.null(col_options)) {
+          for (z in names(col_options)) {
+            col_type <- type.convert(col_options[[z]], as.is = TRUE)
+            # CHECKBOXES
+            if (is.logical(col_type)) {
+              if (!is.logical(data_to_edit[, z])) {
+                res <- type.convert(data_to_edit[, z], as.is = TRUE)
+                if (!is.logical(res)) {
+                  res <- rep(NA, nrow(data_to_edit))
+                }
+                data_to_edit[, z] <- res
               }
-              data_to_edit[, z] <- res
-            }
-            # DROPDOWN MENUS
-          } else {
-            # NA TO EMPTY CHARACTERS
-            if (all(is.na(data_to_edit[, z]))) {
-              data_to_edit[, z] <- rep("", nrow(data_to_edit))
+              # DROPDOWN MENUS
+            } else {
+              # NA TO EMPTY CHARACTERS
+              if (all(is.na(data_to_edit[, z]))) {
+                data_to_edit[, z] <- rep("", nrow(data_to_edit))
+              }
             }
           }
         }
-      }
-      
-      # ABSORB ROW NAMES -------------------------------------------------------
-      
-      if (!is.null(rownames(data_to_edit))) {
-        # EMPTY ROW NAMES - CHARACTER(0)
-        if (length(rownames(data_to_edit)) == 0) {
-          mod_opts$row_names <- "empty"
-          rownames(data_to_edit) <- 1:nrow(data_to_edit)
-          # ROW INDICES
-        } else if (all(rownames(data_to_edit) == seq(1, nrow(data_to_edit)))) {
-          mod_opts$row_names <- "index"
-          # ROW NAMES SET
+        
+        # DATA CLASS -------------------------------------------------------------
+        
+        # MOVE ABOVE ROW NAMES CHUNK
+        data_to_edit_class <- class(data_to_edit) 
+        
+        # ABSORB ROW NAMES -------------------------------------------------------
+        
+        if (!is.null(rownames(data_to_edit))) {
+          # EMPTY ROW NAMES - CHARACTER(0)
+          if (length(rownames(data_to_edit)) == 0) {
+            values$row_names <- "empty"
+            rownames(data_to_edit) <- 1:nrow(data_to_edit)
+            # ROW INDICES
+          } else if (all(rownames(data_to_edit) == seq(1, nrow(data_to_edit)))) {
+            values$row_names <- "index"
+            # ROW NAMES SET
+          } else {
+            values$row_names <- "set"
+            data_to_edit <- cbind(rownames(data_to_edit), data_to_edit)
+            colnames(data_to_edit)[1] <- " "
+            rownames(data_to_edit) <- 1:nrow(data_to_edit) # display row indices in table
+          }
         } else {
-          mod_opts$row_names <- "set"
-          data_to_edit <- cbind(rownames(data_to_edit), data_to_edit)
-          colnames(data_to_edit)[1] <- " "
-          rownames(data_to_edit) <- 1:nrow(data_to_edit) # display row indices in table
+          values$row_names <- "empty"
+          rownames(data_to_edit) <- 1:nrow(data_to_edit)
         }
+        print(data_to_edit)
+        # DATA RENDER TABLE
+        return(data_to_edit)
       } else {
-        mod_opts$row_names <- "empty"
-        rownames(data_to_edit) <- 1:nrow(data_to_edit)
+        return(NULL)
       }
-      
-      # DATA -------------------------------------------------------------------
-      
-      mod_opts$data_class <- class(data_to_edit) # assign
-      return(data_to_edit)
-      
     })
-    
-    # STORE EDITED VALUES
-    values <- reactiveValues(x = NULL)  
     
     # UPDATE VALUES
     observe({
@@ -452,15 +490,15 @@ dataEditServer <- function(id,
     # DATA EDITS - INCLUDES ROW NAME EDITS
     observeEvent(input$x, {
       # OLD VALUES
-      x_old <- values[["x"]]
-      values[["x"]] <- hot_to_r(input$x)
+      x_old <- values$x
+      values$x <- hot_to_r(input$x)
       # FIX ROW INDICES
-      if(nrow(x_old) != nrow(values[["x"]])) {
-        rownames(values[["x"]]) <- 1:nrow(values[["x"]])
+      if(nrow(x_old) != nrow(values$x)) {
+        rownames(values$x) <- 1:nrow(values$x)
       }
       # REVERT READONLY COLUMNS
       if(!is.null(col_readonly)){
-        values[["x"]][, col_readonly] <- x_old[, col_readonly]
+        values$x[, col_readonly] <- x_old[, col_readonly]
       }
     })
     
@@ -469,7 +507,7 @@ dataEditServer <- function(id,
       # COLUMN NAMES
       if ("colHeaders" %in% names(input$x_changeHeaders)) {
         # OLD COLUMN NAMES
-        old_col_names <- colnames(values[["x"]])
+        old_col_names <- colnames(values$x)
         # UPDATED COLUMN NAMES
         new_col_names <- unlist(input$x_changeHeaders[["colHeaders"]])
         # COLUMN INDEX - COLUMNS CANNOT BE MOVED
@@ -492,14 +530,14 @@ dataEditServer <- function(id,
           # APPLY COLUMN NAMES - RENDER
           x_new <- hot_to_r(input$x)
           colnames(x_new) <- new_col_names
-          values[["x"]] <- x_new
+          values$x <- x_new
           # REVERT EMPTY COLUMN NAMES TO ORIGINAL - RE-RENDER
           if (length(empty_col_names) > 0) {
             colnames(x_new)[empty_col_names] <- old_col_names[empty_col_names]
-            values[["x"]] <- x_new
+            values$x <- x_new
             # PREVENT COLUMN NAME EDITS
-          } else if (length(mod_opts$col_names) > 0 & 
-                     old_col_names[col_ind] %in% mod_opts$col_names) {
+          } else if (length(values$col_names) > 0 & 
+                     old_col_names[col_ind] %in% values$col_names) {
             if (quiet == FALSE) {
               message(
                 paste0(paste(old_col_names[col_ind], collapse = " & "), 
@@ -507,14 +545,14 @@ dataEditServer <- function(id,
               )
             }
             colnames(x_new) <- old_col_names
-            values[["x"]] <- x_new
+            values$x <- x_new
           }
         }
         # ROW NAMES CANNOT BE EDITED
       } else if ("rowHeaders" %in% names(input$x_changeHeaders)) {
-        x_old <- values[["x"]]
+        x_old <- values$x
         # OLD ROW NAMES
-        old_row_names <- rownames(values[["x"]])
+        old_row_names <- rownames(values$x)
         # NEW ROW NAMES
         new_row_names <- unlist(input$x_changeHeaders[["rowHeaders"]])
         # DUPLICATE ROW NAMES
@@ -523,10 +561,10 @@ dataEditServer <- function(id,
           new_row_names[row_ind] <- paste0(new_row_names[row_ind], "    ")
         }
         rownames(x_old) <- new_row_names
-        values[["x"]] <- x_old
+        values$x <- x_old
         # REVERT TO ORIGINAL ROW NAMES - RE-RENDER
         rownames(x_old) <- 1:nrow(x_old)
-        values[["x"]] <- x_old
+        values$x <- x_old
       }
       # ROW NAMES - NOT IN USE
       # } else if("rowHeaders" %in% names(input$x_changeHeaders)){
@@ -544,15 +582,15 @@ dataEditServer <- function(id,
     output$x <- renderRHandsontable({
       
       # RHANDSONTABLE
-      if(!is.null(values[["x"]])) {
+      if(!is.null(values$x)) {
         
         rhot <-
-          rhandsontable(values[["x"]],
+          rhandsontable(values$x,
                         useTypes = FALSE,
                         contextMenu = TRUE,
                         stretchH = col_stretch,
-                        colHeaders = colnames(values[["x"]]),
-                        rowHeaders = rownames(values[["x"]]),
+                        colHeaders = colnames(values$x),
+                        rowHeaders = rownames(values$x),
                         manualColumnResize = TRUE,
                         ...,
                         afterOnCellMouseDown = java_script(
@@ -625,7 +663,7 @@ dataEditServer <- function(id,
             allowColEdit = col_edit
           )
         
-        for (z in colnames(values[["x"]])) {
+        for (z in colnames(values$x)) {
           # CHECKBOX / DROPDOWN
           if (z %in% names(col_options)) {
             # CHECKBOX
@@ -657,32 +695,9 @@ dataEditServer <- function(id,
     # RETURN DATA
     return(
       reactive({
-        data_to_return <- values$x
-        # CLASS
-        if("matrix" %in% mod_opts$data_class) {
-          data_to_return <- as.matrix(data_to_return)
-        }
-        # ROW NAMES
-        if (mod_opts$row_names == "set") {
-          new_row_names <- data_to_return[, 1]
-          # UNIQUE ROW NAMES
-          if (length(unique(new_row_names)) != length(new_row_names)) {
-            message("Storing non-unique row names in the first column of 'x'.")
-            colnames(data_to_return)[1] <- "rownames(x)"
-          } else {
-            rownames(data_to_return) <- new_row_names
-            data_to_return <- data_to_return[, -1]
-          }
-          # EMPTY ROWNAMES - INDICES KEPT
-        } else if (mod_opts$row_names == "empty") {
-          rownames(data_to_return) <- NULL
-        }
-        # COLUMN CLASSES
-        for (z in colnames(data_to_return)) {
-          data_to_return[, z] <- type.convert(data_to_return[, z], 
-                                              as.is = !col_factor)
-        }
-        data_to_return
+        data_format(values$x,
+                    values$data_class,
+                    col_factor = col_factor)
       })
     )
     
@@ -706,7 +721,8 @@ dataEditServer <- function(id,
 #'   \code{write_fun} when reading in files.
 #'
 #' @importFrom shiny downloadButton downloadHandler reactive moduleServer
-#' @importFrom shinyjs disable enable
+#'   is.reactive
+#' @importFrom shinyjs disable enable hidden show
 #'
 #' @author Dillon Hammill, \email{Dillon.Hammill@anu.edu.au}
 #'
@@ -752,10 +768,12 @@ NULL
 #' @export
 dataOutputUI <- function(id) {
   
-  downloadButton(
-    NS(id, "save"),
-    label = "Save",
-    style = "margin-top: 35px; margin-left: 0px;"
+  hidden(
+    downloadButton(
+      NS(id, "save"),
+      label = "Save",
+      style = "margin-top: 35px; margin-left: 0px;"
+    )
   )
   
 }
@@ -763,31 +781,43 @@ dataOutputUI <- function(id) {
 #' @rdname dataOutput
 #' @export
 dataOutputServer <- function(id,
-                             data = NULL,
+                             data = reactive(NULL),
                              save_as = NULL,
                              write_fun = "write.csv",
-                             write_args = NULL) {
+                             write_args = NULL,
+                             hide = FALSE) {
   
+  # SERVER  
   moduleServer(id, function(input, 
                             output, 
                             session){
     
+    # HIDE USER INTERFACE
+    if(!hide) {
+      show("save")
+    }
+    
+    # VALUES
+    values <- reactiveValues(data = NULL)
+    
     # DISABLE/ENABLE SAVE
     observe({
-      if(is.null(data())) {
+      # UPDATE REACTIVE VALUES
+      if(!is.reactive(data)) {
+        values$data <- data
+      } else {
+        values$data <- data()
+      }
+      # DISABLE/ENABLE BUTTON
+      if(is.null(values$data)) {
         disable("save")
       } else {
         enable("save")
-      }
-    })
-    
-    # PREPARE DATA
-    data_to_save <- reactive({
-      if(!nzchar(colnames(data())[1])) {
-        rownames(data()) <- data()[, 1]
-        data()[, -1]
-      } else {
-        data()
+        # FORMAT
+        if(!nzchar(colnames(values$data)[1])) {
+          rownames(values$data) <- values$data[, 1]
+          values$data <- values$data[, -1]
+        }
       }
     })
     
@@ -795,7 +825,6 @@ dataOutputServer <- function(id,
     output$save <- downloadHandler(
       
       filename = function() {
-        
         if(!is.null(save_as)) {
           save_as
         } else {
@@ -806,16 +835,11 @@ dataOutputServer <- function(id,
             ".csv"
           )
         }
-        
       },
-      
       content = function(file) {
-        
-        write_args <- c(list(data(), file), write_args)
+        write_args <- c(list(values$data, file), write_args)
         do.call(write_fun, write_args)
-        
       }
-      
     )
     
   })

@@ -10,10 +10,11 @@ dataOutputUI(id)
 
 dataOutputServer(
   id,
-  data = NULL,
+  data = reactive(NULL),
   save_as = NULL,
   write_fun = "write.csv",
-  write_args = NULL
+  write_args = NULL,
+  hide = FALSE
 )
 }
 \arguments{

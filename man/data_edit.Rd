@@ -19,15 +19,18 @@ data_edit(
   save_as = NULL,
   title = NULL,
   logo = NULL,
-  logo_size = 100,
+  logo_size = 30,
   logo_side = "left",
   viewer = "dialog",
+  viewer_height = 800,
+  viewer_width = 1200,
   theme = "yeti",
-  quiet = FALSE,
   read_fun = "read.csv",
   read_args = NULL,
   write_fun = "write.csv",
   write_args = NULL,
+  quiet = FALSE,
+  hide = FALSE,
   ...
 )
 }
@@ -79,7 +82,7 @@ to TRUE by default.}
 \item{logo}{optional package logo to include in title above the data editor,
 must be supplied as path to logo png.}
 
-\item{logo_size}{width of the logo in pixels, set to 100 pixels by default.}
+\item{logo_size}{width of the logo in pixels, set to 30 pixels by default.}
 
 \item{logo_side}{can be either \code{"left"} or \code{"right"} to determine
 the position of the logo relative to the title, set to \code{"left"} by
@@ -89,10 +92,13 @@ default.}
 \code{"pane"} to open the application in a dialog box, browser or RStudio
 viewer pane. Set to \code{"dialog"} by default.}
 
-\item{theme}{valid shinytheme name, set to "yeti" by default.}
+\item{viewer_height}{numeric to control the height of the viewer in pixels
+when \code{viewer} is set to \code{"dialog"}, set 800 by default.}
 
-\item{quiet}{logical indicating whether messages should be suppressed, set to
-FALSE by default.}
+\item{viewer_width}{numeric to control the width of the viewer in pixels when
+\code{viewer} is set to \code{"dialog"}, set to 1200 by default.}
+
+\item{theme}{valid shinytheme name, set to "yeti" by default.}
 
 \item{read_fun}{name of the function to use to read in the data when \code{x}
 is the name of a file, set to \code{read.csv} by default.}
@@ -107,6 +113,14 @@ accepts the file name supplied to \code{save_as}.}
 
 \item{write_args}{a named list of additional arguments to pass to
 \code{write_fun}.}
+
+\item{quiet}{logical indicating whether messages should be suppressed, set to
+FALSE by default.}
+
+\item{hide}{logical indicating whether the \code{dataInput} and
+\code{dataOutput} modules should be visible to the user within the
+application. If \code{hide = FALSE} and \code{save_as} is specified, the
+edited data will be written to file after the application is closed.}
 }
 \value{
 the edited data as a matrix or data.frame.

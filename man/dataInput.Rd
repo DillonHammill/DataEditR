@@ -8,7 +8,13 @@
 \usage{
 dataInputUI(id, cellWidths = c("50\%", "48\%"))
 
-dataInputServer(id, read_fun = "read.csv", read_args = NULL)
+dataInputServer(
+  id,
+  data = NULL,
+  read_fun = "read.csv",
+  read_args = NULL,
+  hide = FALSE
+)
 }
 \arguments{
 \item{id}{unique identifier for the module to prevent namespace clashes when
@@ -18,11 +24,18 @@ making multiple calls to this shiny module.}
 \code{fileInput} and \code{textInput}, set to \code{c("50\%", "50\%")} by
 default.}
 
+\item{data}{can be either the name of a dataset or file as a character string
+(e.g. "mtcars" or "mtcars.csv") or a vector column names (e.g. c("A", "B",
+"C")) or template dimensions (e.g. c(10,10)).}
+
 \item{read_fun}{name of the function to use to read in the data when a file
 is selected, set to \code{read.csv} by default.}
 
 \item{read_args}{a named list of additional arguments to pass to
 \code{read_fun} when reading in files.}
+
+\item{hide}{logical indicating whether the data input user interface should
+be hidden from the user, set to FALSE by default.}
 }
 \description{
 Shiny module for data input
