@@ -94,7 +94,7 @@
 #' @return the edited data as a matrix or data.frame.
 #'
 #' @importFrom rstudioapi getActiveDocumentContext
-#' @importFrom htmltools img span
+#' @importFrom htmltools img span br
 #' @importFrom shiny runGadget dialogViewer browserViewer paneViewer splitLayout
 #'   addResourcePath
 #' @importFrom shinyjs useShinyjs
@@ -210,7 +210,8 @@ data_edit <- function(x = NULL,
       dataOutputUI("output-1"),
       cellWidths = c("65%", "35%")
     ),
-    dataEditUI("edit-1")
+    dataEditUI("edit-1"),
+    br()
   )
   
   # SERVER
