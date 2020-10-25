@@ -90,7 +90,8 @@ default.}
 
 \item{viewer}{can be either \code{"dialog"}, \code{"browser"} or
 \code{"pane"} to open the application in a dialog box, browser or RStudio
-viewer pane. Set to \code{"dialog"} by default.}
+viewer pane. First letter abbreviations are allowed, set to \code{"dialog"}
+by default.}
 
 \item{viewer_height}{numeric to control the height of the viewer in pixels
 when \code{viewer} is set to \code{"dialog"}, set 800 by default.}

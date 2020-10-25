@@ -68,7 +68,8 @@
 #'   default.
 #' @param viewer can be either \code{"dialog"}, \code{"browser"} or
 #'   \code{"pane"} to open the application in a dialog box, browser or RStudio
-#'   viewer pane. Set to \code{"dialog"} by default.
+#'   viewer pane. First letter abbreviations are allowed, set to \code{"dialog"}
+#'   by default.
 #' @param viewer_height numeric to control the height of the viewer in pixels
 #'   when \code{viewer} is set to \code{"dialog"}, set 800 by default.
 #' @param viewer_width numeric to control the width of the viewer in pixels when
@@ -261,15 +262,19 @@ data_edit <- function(x = NULL,
   }
   
   # DIALOG
-  if(viewer == "dialog") {
+  if(grepl("^d", viewer, ignore.case = TRUE)){
     viewer <- dialogViewer("DataEditR",
                            width = viewer_width,
                            height = viewer_height)
   # BROWSER  
-  } else if (viewer == "browser") {
+  } else if (grepl("^b", viewer, ignore.case = TRUE)) {
     viewer <- browserViewer()
   # VIEWER PANE  
-  } else if (viewer == "pane") {
+  } else if (grepl("^v", viewer, ignore.case = TRUE) |
+             grepl("^p", viewer, ignore.case = TRUE)) {
+    viewer <- paneViewer()
+  # UNSUPPORTED VIEWER  
+  } else {
     viewer <- paneViewer()
   }
   
