@@ -97,10 +97,10 @@
 #' @importFrom rstudioapi getActiveDocumentContext
 #' @importFrom htmltools img span br
 #' @importFrom shiny runGadget dialogViewer browserViewer paneViewer splitLayout
-#'   addResourcePath
+#'  fluidPage
 #' @importFrom shinyjs useShinyjs
 #' @importFrom shinythemes shinytheme
-#' @importFrom miniUI miniPage gadgetTitleBar
+#' @importFrom miniUI gadgetTitleBar
 #'
 #' @author Dillon Hammill, \email{Dillon.Hammill@anu.edu.au}
 #'
@@ -201,18 +201,34 @@ data_edit <- function(x = NULL,
   # SHINY APPLICATION ----------------------------------------------------------
   
   # USER INTERFACE
-  ui <- miniPage(
+  ui <- fluidPage(
     title,
     theme = shinytheme(theme),
     useShinyjs(),
-    splitLayout(
-      dataInputUI("input-1",
-                  cellWidths = c("50%", "48%")),
-      dataOutputUI("output-1"),
-      cellWidths = c("65%", "35%")
+    fluidRow(
+      column(
+        12,
+        div(
+          # style = "padding-bottom: 0px;",
+          splitLayout(
+            dataInputUI("input1",
+                        cellWidths = c("50%", "48%")),
+            dataOutputUI("output1"),
+            cellWidths = c("65%", "35%")
+          )
+        )
+      )
     ),
-    dataEditUI("edit-1"),
-    br()
+    fluidRow(
+      column(
+        12,
+        div(
+          # style = "padding-top: 0px;",
+          dataEditUI("edit1"),
+          br()
+        )
+      )
+    )
   )
   
   # SERVER
@@ -221,14 +237,14 @@ data_edit <- function(x = NULL,
                      session) {
     
     # DATA INPUT
-    data_input <- dataInputServer("input-1",
+    data_input <- dataInputServer("input1",
                                   data = data,
                                   read_fun = read_fun,
                                   read_args = read_args,
                                   hide = hide)
     
     # DATA EDIT
-    data_update <- dataEditServer("edit-1",
+    data_update <- dataEditServer("edit1",
                                 data = data_input,
                                 col_bind = col_bind,
                                 col_edit = col_edit,
@@ -242,7 +258,7 @@ data_edit <- function(x = NULL,
                                 quiet = quiet)
     
     # DATA OUTPUT
-    dataOutputServer("output-1",
+    dataOutputServer("output1",
                      data = data_update,
                      save_as = save_as,
                      write_fun = write_fun,
