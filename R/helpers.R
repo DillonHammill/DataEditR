@@ -84,7 +84,7 @@ data_format <- function(data,
   # FORMAT
   if(!is.null(data)) {
     # ROWNAMES
-    if(!nzchar(colnames(data)[1])) {
+    if(!nzchar(trimws(colnames(data)[1]))) {
       new_row_names <- data[, 1]
       # UNIQUE ROW NAMES
       if (length(unique(new_row_names)) != length(new_row_names)) {
