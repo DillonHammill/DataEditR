@@ -91,13 +91,16 @@
 #'   \code{dataOutput} modules should be visible to the user within the
 #'   application. If \code{hide = FALSE} and \code{save_as} is specified, the
 #'   edited data will be written to file after the application is closed.
+#' @param code logical indicating whether the code required to generate the
+#'   edited data should be printed to the console, set to \code{FALSE} by
+#'   default.
 #'
 #' @return the edited data as a matrix or data.frame.
 #'
 #' @importFrom rstudioapi getActiveDocumentContext
 #' @importFrom htmltools img span br
 #' @importFrom shiny runGadget dialogViewer browserViewer paneViewer splitLayout
-#'  fluidPage
+#'   fluidPage
 #' @importFrom shinyjs useShinyjs
 #' @importFrom shinythemes shinytheme
 #' @importFrom miniUI gadgetTitleBar
@@ -137,6 +140,7 @@ data_edit <- function(x = NULL,
                       write_args = NULL,
                       quiet = FALSE,
                       hide = FALSE,
+                      code = FALSE,
                       ...) {
   
   # PREPARE DATA ---------------------------------------------------------------
@@ -314,6 +318,10 @@ data_edit <- function(x = NULL,
   if(is.null(x_edit)) {
     return(x)
   } else {
+    # CODE
+    if(code) {
+      dput(x_edit)
+    }
     return(x_edit)
   }
   

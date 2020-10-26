@@ -31,6 +31,7 @@ data_edit(
   write_args = NULL,
   quiet = FALSE,
   hide = FALSE,
+  code = FALSE,
   ...
 )
 }
@@ -122,6 +123,10 @@ FALSE by default.}
 \code{dataOutput} modules should be visible to the user within the
 application. If \code{hide = FALSE} and \code{save_as} is specified, the
 edited data will be written to file after the application is closed.}
+
+\item{code}{logical indicating whether the code required to generate the
+edited data should be printed to the console, set to \code{FALSE} by
+default.}
 }
 \value{
 the edited data as a matrix or data.frame.
