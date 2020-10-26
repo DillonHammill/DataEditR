@@ -813,7 +813,7 @@ dataOutputServer <- function(id,
       } else {
         enable("save")
         # FORMAT
-        if(!nzchar(colnames(values$data)[1])) {
+        if(!nzchar(trimws(colnames(values$data)[1]))) {
           rownames(values$data) <- values$data[, 1]
           values$data <- values$data[, -1]
         }
