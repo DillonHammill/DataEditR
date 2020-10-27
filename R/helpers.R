@@ -88,6 +88,17 @@ data_format <- function(data,
     # ROWNAMES
     if(!nzchar(trimws(colnames(data)[1]))) {
       new_row_names <- data[, 1]
+      # PROTECT AGAINST NA ROW NAMES
+      ind <- which(is.na(new_row_names))
+      if(length(ind) > 0) {
+        new_row_names[ind] <- rev(
+          seq(
+            nrow(data), 
+            nrow(data) - length(ind) + 1, 
+            -1
+          )
+        )
+      }
       # UNIQUE ROW NAMES
       if (length(unique(new_row_names)) != length(new_row_names)) {
         message("Storing non-unique row names in the first column of data.")
