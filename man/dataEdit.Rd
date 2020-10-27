@@ -79,7 +79,7 @@ is selected, set to \code{read.csv} by default.}
 \code{read_fun} when reading in files.}
 
 \item{...}{additional arguments passed to
-\code{\link[rhandsontabe:rhandsontable]{rhandsontable}}.}
+\code{\link[rhandsontable:rhandsontable]{rhandsontable}}.}
 }
 \description{
 Shiny module for data editing

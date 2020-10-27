@@ -226,7 +226,7 @@ dataInputServer <- function(id,
 #'   \code{read_fun} when reading in files.
 #' @param quiet logical to suppress warnings when using \code{col_options}.
 #' @param ... additional arguments passed to
-#'   \code{\link[rhandsontabe:rhandsontable]{rhandsontable}}.
+#'   \code{\link[rhandsontable:rhandsontable]{rhandsontable}}.
 #'
 #' @author Dillon Hammill, \email{Dillon.Hammill@anu.edu.au}
 #'
