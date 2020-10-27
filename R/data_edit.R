@@ -94,13 +94,14 @@
 #' @param code logical indicating whether the code required to generate the
 #'   edited data should be printed to the console, set to \code{FALSE} by
 #'   default.
+#' @param ... not in use.
 #'
 #' @return the edited data as a matrix or data.frame.
 #'
 #' @importFrom rstudioapi getActiveDocumentContext
-#' @importFrom htmltools img span br
+#' @importFrom htmltools img span br div
 #' @importFrom shiny runGadget dialogViewer browserViewer paneViewer splitLayout
-#'   fluidPage
+#'   fluidPage column stopApp
 #' @importFrom shinyjs useShinyjs
 #' @importFrom shinythemes shinytheme
 #' @importFrom miniUI gadgetTitleBar

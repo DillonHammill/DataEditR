@@ -224,6 +224,7 @@ dataInputServer <- function(id,
 #'   is selected, set to \code{read.csv} by default.
 #' @param read_args a named list of additional arguments to pass to
 #'   \code{read_fun} when reading in files.
+#' @param quiet logical to suppress warnings when using \code{col_options}.
 #' @param ... additional arguments passed to
 #'   \code{\link[rhandsontabe:rhandsontable]{rhandsontable}}.
 #'
@@ -491,13 +492,20 @@ dataEditServer <- function(id,
       x_new <- hot_to_r(input$x)
       # ROW NAMES CANNOT BE NA
       if(nrow(x_new) > nrow(x_old)){
-        # ROW NAMES
-        rownames(x_new) <- 1:nrow(x_new)
         # ROW ADDED - NA ROW NAME
         if(!nzchar(trimws(colnames(x_new)[1]))) {
           x_new[is.na(x_new[, 1]), 1] <- nrow(x_new)
         }
+        # CUSTOM COLUMNS - USE DEFAULT OPTION
+        if(!is.null(col_options)) {
+          x_new[rownames(x_new) == nrow(x_new),
+                colnames(x_new) %in% names(col_options)] <-
+            unlist(lapply(col_options, `[[`, 1))
+        }
+        # ROW NAMES/INDICES ORDERED
+        rownames(x_new) <- 1:nrow(x_new)
       }
+      print(x_new)
       # RENDER
       values$x <- x_new
       # REVERT READONLY COLUMNS
@@ -723,6 +731,8 @@ dataEditServer <- function(id,
 #'   set to \code{"write.csv"} by default.
 #' @param write_args a named list of additional arguments to pass to
 #'   \code{write_fun} when reading in files.
+#' @param hide logical indicating whether the data input user interface should
+#'   be hidden from the user, set to FALSE by default.
 #'
 #' @importFrom shiny downloadButton downloadHandler reactive moduleServer
 #'   is.reactive

@@ -32,6 +32,9 @@ set to \code{"write.csv"} by default.}
 
 \item{write_args}{a named list of additional arguments to pass to
 \code{write_fun} when reading in files.}
+
+\item{hide}{logical indicating whether the data input user interface should
+be hidden from the user, set to FALSE by default.}
 }
 \description{
 Shiny module for data output

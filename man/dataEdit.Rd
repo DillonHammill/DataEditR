@@ -70,6 +70,8 @@ each new column.}
 \item{row_edit}{logical indicating whether rows can be added or removed, set
 to TRUE by default.}
 
+\item{quiet}{logical to suppress warnings when using \code{col_options}.}
+
 \item{read_fun}{name of the function to use to read in the data when a file
 is selected, set to \code{read.csv} by default.}
 

@@ -76,6 +76,8 @@ data_template <- function(x = NULL,
 #'
 #' @author Dillon Hammill, \email{Dillon.Hammill@anu.edu.au}
 #'
+#' @importFrom utils type.convert
+#'
 #' @noRd
 data_format <- function(data,
                         data_class = NULL,
