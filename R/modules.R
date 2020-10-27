@@ -488,13 +488,18 @@ dataEditServer <- function(id,
     observeEvent(input$x, {
       # OLD VALUES
       x_old <- values$x
-      values$x <- hot_to_r(input$x)
-      # COLUMN ADDED
-      if(ncol(values$x) > ncol(x_old))
-      # FIX ROW INDICES
-      if(nrow(x_old) != nrow(values$x)) {
-        rownames(values$x) <- 1:nrow(values$x)
+      x_new <- hot_to_r(input$x)
+      # ROW NAMES CANNOT BE NA
+      if(nrow(x_new) > nrow(x_old)){
+        # ROW NAMES
+        rownames(x_new) <- 1:nrow(x_new)
+        # ROW ADDED - NA ROW NAME
+        if(!nzchar(trimws(colnames(x_new)[1]))) {
+          x_new[is.na(x_new[, 1]), 1] <- nrow(x_new)
+        }
       }
+      # RENDER
+      values$x <- x_new
       # REVERT READONLY COLUMNS
       if(!is.null(col_readonly)){
         values$x[, col_readonly] <- x_old[, col_readonly]
@@ -540,7 +545,7 @@ dataEditServer <- function(id,
             if (quiet == FALSE) {
               message(
                 paste0(paste(old_col_names[col_ind], collapse = " & "), 
-                       " column name(s) cannot be edited.")
+                       " column(s) are readonly and cannot be edited.")
               )
             }
             colnames(x_new) <- old_col_names
