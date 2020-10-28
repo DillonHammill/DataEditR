@@ -237,7 +237,7 @@ mtcars_new <- data_edit(mtcars,
 
 ### 6.1 Checkboxes
 
-Checkboxes can be used to obtain TRUE or FALSE value inputs from users. The resulting data will have a value of TRUE or FALSE based on user input.
+Checkboxes can be used to obtain TRUE or FALSE value inputs from users. The resulting data will have a value of TRUE or NA based on user input.
 
 ```{r, eval = FALSE}
 data_edit(mtcars,
