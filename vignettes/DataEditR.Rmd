@@ -54,18 +54,18 @@ data_edit(mtcars)
 knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-1.png')
 ```
 
-The data editor will open in the RStudio viewer pane by default but this can be changed to a pop-up window by setting `viewer = FALSE` as below. Both of these options have optional support for displaying the data in a web browser as well.
+The data editor will open in an RStudio `"dialog"` box by default, but can be optionally displayed in the RStudio viewer pane or a web browser by setting `viewer` to `"viewer"` or `"browser"` respectively.
 
 ```{r, eval = FALSE}
 data_edit(mtcars,
-          viewer = FALSE)
+          viewer = "browser")
 ```
 
-The data editor will automatically move row names inside the table so that the row indices can be displayed on the left hand side. Once you are finished exploring the data, you can close the data editor by hitting the `Save & Close` button in the top left corner.
+The data editor will automatically move row names inside the table so that the row indices can be displayed on the left hand side to aid navigation. Once you are finished exploring the data, you can close the data editor by hitting the `Done` button in the top right corner. If you wish to cancel all changes made to the data, you can select the `Cancel` button in the top left corner and the unedited data will be returned.
 
 ## 2. Data Import
 
-`data_edit()` can all read in any form tabular data from file for viewing and editing. By default `data_edit()` will use `read.csv` from the `utils` package to read in files, but this can be changed to any reading function by supplying the name of the function to the `read_fun` argument. If you need to pass any additional arguments to your reading function, these can be supplied as a named list to the `read_args` argument. The data will be returned by `data_edit()` once the `Save & Close` button has been clicked.
+`data_edit()` uses the `dataInput` module to read in any form tabular data from file for viewing and editing. By default `data_edit()` will use `read.csv` from the `utils` package to read in files, but this can be changed to any reading function by supplying the name of the function to the `read_fun` argument. If you need to pass any additional arguments to your reading function, these can be supplied as a named list to the `read_args` argument.
 
 ```{r, eval = FALSE}
 mtcars <- data_edit("mtcars.csv",
@@ -80,7 +80,7 @@ head(mtcars)
 
 ## 3. Data Manipulation
 
-`data_edit()` has a variety of interactive data manipulation tools to edit your data. We will explore the use of each of these tools below:
+`data_edit()` uses the `dataEdit` module to provide a variety of interactive data manipulation tools to edit your data. We will explore the use of each of these tools below:
 
 ### 3.1 Addition or removal of rows or columns
 
@@ -169,21 +169,19 @@ data_edit(mtcars,
 
 You can also use `data_edit()` to interactively create data.frames from scratch without any coding.
 
-### 4.1 Start with empty data.frame
+### 4.1 Start with empty template
 
-If no data is supplied to `data_edit()` an empty data.frame will be constructed with a single row and column. You can then build your data.frame from scratch by adding new rows and columns and annotating the cells.
+If no data is supplied to `data_edit()` an empty data.frame will be constructed with 10 rows and columns. You can then build your data.frame from scratch by adding new rows and columns and annotating the cells.
 
 ```{r, eval = FALSE}
 data_edit()
 ```
 
 ```{r, echo=FALSE, fig.align="center", out.width = '60%'}
-knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-7.gif')
+knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-7.png')
 ```
 
-### 4.2 Start with a template data.frame
-
-Creating a data.frame from scratch as described above can be tedious, so instead we could start with a data.frame template that contains more rows or columns. To create a template data.frame, simply supply the required dimensions of the data.frame in the form `c(nrow, ncol)`.
+The dimensions of the template can be controlled by supplying a vector of the form `c(nrow, ncol)` to indicate the number of rows and columns to use. 
 
 ```{r, eval = FALSE}
 data_edit(c(3, 3))
@@ -193,7 +191,9 @@ data_edit(c(3, 3))
 knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-8.gif')
 ```
 
-Alternatively, you can pass a vector of column names to create a data.frame template with pre-defined column names. You will need to install the development version **DataEditR** from GitHub to use this feature.
+### 4.2 Start with a labelled template
+
+Alternatively, you can pass a vector of column names to create a data.frame template with pre-defined column names. 
 
 ```{r, eval = FALSE}
 data_edit(c("Player", "Age", "Titles"))
@@ -221,7 +221,7 @@ mtcars_new$car <- factor(mtcars_new$car)
 str(mtcars_new)
 ```
 
-The edited data can also be written to a file of any format by specifying the name of the file to the `save_as` argument and specifying the name of the writing function to use through `write_fun`. The default is to use `write.csv` from the `utils` package. You can also pass any additional arguments to your write function in a named list to `write_args`.
+The edited data can also be written to a file of any format by specifying the name of the file to the `save_as` argument and specifying the name of the writing function to use through `write_fun`. The default is to use `write.csv` from the `utils` package. You can also pass any additional arguments to your write function in a named list to `write_args`. The data will be written to file when the `Save` button is selected.
 
 ```{r, eval = FALSE}
 mtcars_new <- data_edit(mtcars,
@@ -237,7 +237,7 @@ mtcars_new <- data_edit(mtcars,
 
 ### 6.1 Checkboxes
 
-Checkboxes can be used to obtain TRUE or FALSE value inputs from users. The resulting data will have a value of TRUE or NA based on user input.
+Checkboxes can be used to obtain TRUE or FALSE value inputs from users. The resulting data will have a value of TRUE or FALSE based on user input.
 
 ```{r, eval = FALSE}
 data_edit(mtcars,
