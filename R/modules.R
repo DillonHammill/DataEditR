@@ -674,6 +674,7 @@ dataEditServer <- function(id,
             allowColEdit = col_edit
           )
         
+        # CUSTOM COLUMNS
         for (z in colnames(values$x)) {
           # CHECKBOX / DROPDOWN
           if (z %in% names(col_options)) {
