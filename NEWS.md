@@ -1,3 +1,16 @@
+# DataEditR 0.0.7
+
+* Create `dataInput`, `dataEdit` and `dataOutput` modules.
+* Create RStudio addin to interactively edit data.
+* Update user interface to allow interactive file selection or input of R data objects.
+* Add new viewer options to open the data editor in a `dialog` box, `browser` or RStudio `viewer` pane. This can be controlled through the `viewer` argument and has been set to use a `dialog` box by default. Additional arguments `viewer_height` and `viewer_width` have been added to allow control over the dimensions of `dialog` boxes.
+* Add a cancel button in top left to return data unchanged.
+* Add new `hide` argument to optionally display the `dataInput` and `dataOutput` modules. This functionality requires the `shinyjs` package. The `hide` argument allows users to maximize the space available to display the data and also prevent users from interacting with these modules. It is still possible to save data to file when `dataOutput` module is not visible, by simply supplying the file name to the `save_as` argument of `data_edit()`.
+* Improve handling of row names with the `dataEdit` module.
+* Add helper function to handle generation of templates based on inputs to `data_edit()` to make it easier to create data.frames from scratch. The default template size has been increased to be a 10 x 10 grid.
+* Add `logo_side` argument to control whether the logo should be placed on the `left` or `right` of the title.
+* Add new `code` argument to `data_edit()` to print the code required to create the edited data to the console.
+
 # DataEditR 0.0.6
 
 * Add ability to pass column names to `data_edit()` to construct a template data.frame with pre-defined column names.
