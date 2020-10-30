@@ -18,7 +18,7 @@
 #'   be hidden from the user, set to FALSE by default.
 #'
 #' @importFrom shiny fluidRow splitLayout textInput fileInput NS moduleServer
-#'   reactive updateTextInput observeEvent
+#'   reactive updateTextInput observeEvent eventReactive
 #' @importFrom shinyjs hidden show
 #'
 #' @author Dillon Hammill, \email{Dillon.Hammill@anu.edu.au}
@@ -150,7 +150,7 @@ dataInputServer <- function(id,
     }
     
     # DATA INPUT
-    data_input <- reactive({
+    data_input <- eventReactive(input$data, {
       tryCatch(
         eval(parse(text = input$data)),
         error = function(e){
@@ -160,10 +160,12 @@ dataInputServer <- function(id,
     
     # FILE INPUT
     observeEvent(input$file, {
+      # FILE
       if(!is.null(input$file)) {
+        # READ ARGUMENTS
         read_args <- c(list(input$file$datapath), read_args)
         upload <<- do.call(read_fun, read_args)
-        # FLUSH DATA INPUT
+        # FLUSH DATA INPUT - PREVIOUS FILE UPLOAD
         updateTextInput(
           session,
           "data",
@@ -177,9 +179,7 @@ dataInputServer <- function(id,
         )
       }
     })
-    
     return(data_input)
-    
   })
   
 }
@@ -854,6 +854,247 @@ dataOutputServer <- function(id,
         write_args <- c(list(values$data, file), write_args)
         do.call(write_fun, write_args)
       }
+    )
+    
+  })
+  
+}
+
+## DATA SELECT -----------------------------------------------------------------
+
+#' Shiny module for selecting data
+#'
+#' @param id unique identifier for the module to prevent namespace clashes when
+#'   making multiple calls to this shiny module.
+#' @param data an array wrapped in \code{reactive()} containing the data to be
+#'   filtered.
+#'
+#' @importFrom shiny icon is.reactive actionButton NS reactive moduleServer
+#'   reactiveValues observe observeEvent showModal modalDialog tagList renderUI
+#'   uiOutput removeModal
+#' @importFrom shinyBS bsButton updateButton
+#'
+#' @author Dillon Hammill, \email{Dillon.Hammill@anu.edu.au}
+#'
+#' @examples
+#' if(interactive()) {
+#'
+#'   library(shiny)
+#'   library(rhandsontable)
+#'   library(shinyjs)
+#'
+#'   ui <- fluidPage(
+#'     useShinyjs(),
+#'     dataInputUI("input1"),
+#'     dataSelectUI("select1"),
+#'     dataOutputUI("output1"),
+#'     rHandsontableOutput("data1")
+#'   )
+#'
+#'   server <- function(input,
+#'                      output,
+#'                      session) {
+#'
+#'     data_input <- dataInputServer("input1")
+#'
+#'     data_select <- dataSelectServer("select1",
+#'     data = data_input)
+#'
+#'     output$data1 <- renderRHandsontable({
+#'       if(!is.null(data_select())) {
+#'         rhandsontable(data_select())
+#'       }
+#'     })
+#'
+#'     dataOutputServer("output1",
+#'                      data = data_select)
+#'
+#'   }
+#'
+#'   shinyApp(ui, server)
+#'
+#' }
+#'
+#' @name dataSelect
+NULL
+
+#' @rdname dataSelect
+#' @export
+dataSelectUI <- function(id) {
+  
+  actionButton(
+    NS(id, "select"),
+    "Select",
+    icon = icon("crosshairs"),
+    style = "margin-top: 35px; margin-left: 0px;"
+  )
+  
+}
+
+#' @rdname dataSelect
+#' @export
+dataSelectServer <- function(id,
+                             data = reactive(NULL)) {
+  
+  moduleServer(id, function(input, output, session) {
+    
+    # NAMESPACE
+    ns <- session$ns
+    
+    # OBJECTS
+    buttons <- list()
+    button_observers <- list()
+
+    # REACTIVE DATA
+    values <- reactiveValues(data = NULL,
+                             subset = NULL)
+    
+    # DATA VALUES
+    observe({
+      # DATA
+      if(!is.reactive(data)) {
+        values$data <- data
+      } else {
+        values$data <- data()
+      }
+      # RESET BUTTONS
+      if(!is.null(values$data)) {
+        buttons <<- structure(
+          rep(list(FALSE), ncol(values$data)),
+          names = paste0("button-", 1:ncol(values$data))
+        )
+      } else {
+        buttons <<- list()
+      }
+      # RESET BUTTON OBSERVERS
+      button_observers <<- list()
+    })
+    
+    # DATA SUBSET
+    observe({
+      values$subset <- values$data
+    })
+    
+    # BUTTONS
+    output$buttons <- renderUI({
+      # BUTTON FOR EACH COLUM NAME
+      lapply(1:ncol(values$data), function(z){
+        # BUTTON
+        button_name <- paste0("button-", z)
+        # CREATE OBSERVER
+        if(is.null(button_observers[[button_name]])) {
+          button_observers[[button_name]] <<- observeEvent(input[[button_name]], {
+            buttons[[button_name]] <<- input[[button_name]]
+            if(buttons[[button_name]] == TRUE) {
+              updateButton(
+                session,
+                ns(button_name),
+                colnames(values$data)[z],
+                block = FALSE,
+                style = "success"
+              )
+            } else if(buttons[[button_name]] == FALSE) {
+              updateButton(
+                session,
+                ns(button_name),
+                colnames(values$data)[z],
+                block = FALSE,
+                style = "danger"
+              )
+            }
+          })
+        }
+        # CREATE RED BUTTON
+        bsButton(
+          ns(button_name),
+          colnames(values$data)[z],
+          type = "toggle",
+          block = FALSE,
+          style = "danger"
+        )
+      })
+    })
+    
+    # FILTER UI
+    observeEvent(input$select, {
+      # POPUP DIALOG BOX
+      showModal(
+        modalDialog(
+          title = "Column Selector",
+          footer = tagList(
+            actionButton(
+              ns("select_all"),
+              "Select All"
+            ),
+            actionButton(
+              ns("select_none"),
+              "Select None"
+            ),
+            actionButton(
+              ns("close"),
+              "Close",
+              icon = icon("eject", lib = "glyphicon")
+              )
+          ),
+          # BUTTON ARRAY
+          uiOutput(ns("buttons")),
+          easyClose = TRUE
+        )
+      )
+    })
+    
+    # SELECT ALL
+    observeEvent(input$select_all, {
+
+      # UPDATE BUTTONS
+      lapply(1:ncol(values$data), function(z){
+        updateButton(
+          session,
+          ns(paste0("button-", z)),
+          label = colnames(values$data)[z],
+          value = TRUE,
+          block = FALSE
+        )
+      })
+
+    })
+
+    # SELECT NONE
+    observeEvent(input$select_none, {
+      
+      # UPDATE BUTTONS
+      lapply(1:ncol(values$data), function(z){
+        updateButton(
+          session,
+          ns(paste0("button-", z)),
+          label = colnames(values$data)[z],
+          value = FALSE,
+          block = FALSE
+        )
+      })
+
+    })
+    
+    # UPDATE & FILTER
+    observeEvent(input$close, {
+      
+      # BUTTONS - SELECTED COLUMNS
+      cols <- colnames(values$data)[
+        as.numeric(gsub("^button-", "", names(buttons[buttons == TRUE])))]
+      
+      # RESTRICT COLUMNS
+      if(length(cols) != 0) {
+        values$subset <- values$data[, cols, drop = FALSE]
+      }
+      
+      # CLOSE POPUP
+      removeModal()
+      
+    })
+    
+    # RETURN FILTERED DATA
+    return(
+      reactive({values$subset})
     )
     
   })

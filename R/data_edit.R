@@ -21,6 +21,14 @@
 # may be possible to handle this externally but this gets complicated when
 # columns are added or removed.
 
+# DEBUGGING:
+# - options(shiny.reactlog=TRUE) 
+# - launch app
+# - CTRL + F3
+
+# SHINY NOTES
+# - DO NOT USE DOTS IN IDs! (e.g. Sepal.Width)
+
 #' An interactive editor for viewing, entering and editing data
 #'
 #' code{data_edit} is a shiny application built on \code{rhandsontable} that is
