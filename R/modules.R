@@ -24,8 +24,7 @@
 #' @author Dillon Hammill, \email{Dillon.Hammill@anu.edu.au}
 #'
 #' @examples
-#' if(interactive()) {
-#'
+#' if (interactive()) {
 #'   library(shiny)
 #'   library(rhandsontable)
 #'
@@ -37,29 +36,25 @@
 #'   server <- function(input,
 #'                      output,
 #'                      session) {
-#'
 #'     data_input1 <- dataInputServer("input1")
 #'
 #'     output$data1 <- renderRHandsontable({
-#'       if(!is.null(data_input1())) {
+#'       if (!is.null(data_input1())) {
 #'         rhandsontable(data_input1())
 #'       }
 #'     })
-#'
 #'   }
 #'
 #'   shinyApp(ui, server)
-#'
 #' }
-#'
 #' @name dataInput
 NULL
 
 #' @rdname dataInput
 #' @export
-dataInputUI <- function(id, 
+dataInputUI <- function(id,
                         cellWidths = c("50%", "48%")) {
-  
+
   # USER INTERFACE
   list(
     splitLayout(
@@ -79,45 +74,46 @@ dataInputUI <- function(id,
         )
       ),
       cellWidths = cellWidths,
-      cellArgs = list(style = paste0("padding-left: 10px;",
-                                     "padding-top: 10px;",
-                                     "padding-right: 0px;"))
+      cellArgs = list(style = paste0(
+        "padding-left: 10px;",
+        "padding-top: 10px;",
+        "padding-right: 0px;"
+      ))
     )
   )
-
 }
 
 #' @rdname dataInput
 #' @export
-dataInputServer <- function(id, 
+dataInputServer <- function(id,
                             data = NULL,
                             read_fun = "read.csv",
                             read_args = NULL,
                             hide = FALSE) {
-  
+
   # SERVER
-  moduleServer(id, function(input, 
-                            output, 
-                            session){
-    
+  moduleServer(id, function(input,
+                            output,
+                            session) {
+
     # UPLOADED DATA
     upload <- NULL # prevent global assignment below
-    
+
     # HIDE USER INTERFACE
-    if(!hide) {
+    if (!hide) {
       show("file")
       show("data")
     }
-    
+
     # CHECK
-    if(!is.null(dim(data))) {
+    if (!is.null(dim(data))) {
       stop("'data' should be passed as a vector!")
     }
     # DATA - FILE OR NAME
-    if(is.character(data) & 
-       length(data) == 1) {
+    if (is.character(data) &
+      length(data) == 1) {
       # FILE NAME
-      if(nzchar(file_ext(data))) {
+      if (nzchar(file_ext(data))) {
         upload <- do.call(
           read_fun,
           c(list(data), read_args)
@@ -148,20 +144,21 @@ dataInputServer <- function(id,
         value = "template"
       )
     }
-    
+
     # DATA INPUT
     data_input <- eventReactive(input$data, {
       tryCatch(
         eval(parse(text = input$data)),
-        error = function(e){
-          return(NULL)}
-        )
+        error = function(e) {
+          return(NULL)
+        }
+      )
     })
-    
+
     # FILE INPUT
     observeEvent(input$file, {
       # FILE
-      if(!is.null(input$file)) {
+      if (!is.null(input$file)) {
         # READ ARGUMENTS
         read_args <- c(list(input$file$datapath), read_args)
         upload <<- do.call(read_fun, read_args)
@@ -181,7 +178,6 @@ dataInputServer <- function(id,
     })
     return(data_input)
   })
-  
 }
 
 ## DATA EDITING MODULE ---------------------------------------------------------
@@ -234,39 +230,35 @@ dataInputServer <- function(id,
 #' @importFrom rhandsontable rhandsontable hot_to_r hot_context_menu hot_col
 #'   renderRHandsontable rHandsontableOutput %>%
 #'
-#' @examples 
-#' if(interactive()) {
-#' 
+#' @examples
+#' if (interactive()) {
 #'   ui <- fluidPage(
 #'     dataInputUI("input-1"),
 #'     dataOutputUI("output-1"),
 #'     dataEditUI("edit-1")
 #'   )
-#'   
+#'
 #'   server <- function(input, output, session) {
-#'   
 #'     data_to_edit <- dataInputServer("input-1")
 #'     data_to_edit <- dataEditServer("edit-1",
-#'     data  = data_to_edit)
-#'     dataOutputServer("output-1", 
-#'     data = data_to_edit)
-#'   
+#'       data = data_to_edit
+#'     )
+#'     dataOutputServer("output-1",
+#'       data = data_to_edit
+#'     )
 #'   }
-#'   
-#'   shinyApp(ui, server)
-#' 
-#' }
 #'
+#'   shinyApp(ui, server)
+#' }
 #' @name dataEdit
 NULL
 
 #' @rdname dataEdit
 #' @export
 dataEditUI <- function(id) {
-  
+
   # USER INTERFACE
   rHandsontableOutput(NS(id, "x"))
-
 }
 
 #' @rdname dataEdit
@@ -286,55 +278,58 @@ dataEditServer <- function(id,
                            read_fun = "read.csv",
                            read_args = NULL,
                            ...) {
-  
+
   # COLUMN STRETCH
-  if(col_stretch) {
+  if (col_stretch) {
     col_stretch <- "all"
   } else {
     col_stretch <- "name"
   }
-  
+
   # COLUMN EDIT - CUSTOM COLUMN WARNING
-  if(!is.null(col_options)) {
-    if(!quiet) {
+  if (!is.null(col_options)) {
+    if (!quiet) {
       message(
         "Column editing is turned off to add dropdowns or checkboxes..."
       )
       col_edit <- FALSE
     }
   }
-  
+
   # SERVER
   moduleServer(id, function(input,
                             output,
                             session) {
-    
+
     # PREPARE DATA -------------------------------------------------------------
-    
+
     # STORAGE
-    values <- reactiveValues(x = NULL, # trigger table render
-                             data_class = NULL, # original class
-                             col_names = NULL) # columns cannot be edited
+    values <- reactiveValues(
+      x = NULL, # trigger table render
+      data_class = NULL, # original class
+      col_names = NULL
+    ) # columns cannot be edited
 
     # DATA
     data_to_edit <- reactive({
-      
+
       # INITIALISE REACTIVE VALUES
-      if(!is.reactive(data)) {
+      if (!is.reactive(data)) {
         data_to_edit <- data
       } else {
         data_to_edit <- data()
       }
       # INPUT & FORMAT DATA
-      if(!is.null(data_to_edit)) {
-        
+      if (!is.null(data_to_edit)) {
+
         # DATA INPUT -----------------------------------------------------------
         data_to_edit <- data_template(data_to_edit,
-                                      read_fun = read_fun,
-                                      read_args = read_args)
-        
+          read_fun = read_fun,
+          read_args = read_args
+        )
+
         # BIND ROWS ------------------------------------------------------------
-        
+
         if (!is.null(row_bind)) {
           # NEW ROWS
           if (is.null(dim(row_bind))) {
@@ -353,20 +348,20 @@ dataEditServer <- function(id,
               # ROW NAMES
             } else {
               row_bind <- matrix(rep("", ncol(data_to_edit) * length(row_bind)),
-                                 nrow = length(row_bind),
-                                 dimnames = list(
-                                   row_bind,
-                                   colnames(data_to_edit)
-                                 )
+                nrow = length(row_bind),
+                dimnames = list(
+                  row_bind,
+                  colnames(data_to_edit)
+                )
               )
             }
           }
           # BIND NEW ROWS
           data_to_edit <- rbind(data_to_edit, row_bind[, 1:ncol(data_to_edit)])
         }
-        
+
         # BIND COLUMNS -----------------------------------------------------------
-        
+
         if (!is.null(col_bind)) {
           # NEW COLUMNS
           if (is.null(dim(col_bind))) {
@@ -388,45 +383,47 @@ dataEditServer <- function(id,
               # COLUMN NAMES
             } else {
               col_bind <- matrix(rep("", nrow(data_to_edit) * length(col_bind)),
-                                 ncol = length(col_bind),
-                                 dimnames = list(
-                                   rownames(data_to_edit),
-                                   col_bind
-                                 )
+                ncol = length(col_bind),
+                dimnames = list(
+                  rownames(data_to_edit),
+                  col_bind
+                )
               )
             }
           }
           # BIND NEW COLUMNS
-          data_to_edit <- cbind(data_to_edit,
-                              col_bind[1:nrow(data_to_edit), , drop = FALSE])
+          data_to_edit <- cbind(
+            data_to_edit,
+            col_bind[1:nrow(data_to_edit), , drop = FALSE]
+          )
         }
-        
+
         # COLUMN NAMES -----------------------------------------------------------
-        
+
         # CHECK
-        if(any(duplicated(colnames(data_to_edit)))) {
+        if (any(duplicated(colnames(data_to_edit)))) {
           stop("Column names must be unique!")
         }
-        
+
         # COLUMN NAMES
-        if(all(is.logical(col_names))) {
-          if(!col_names) {
+        if (all(is.logical(col_names))) {
+          if (!col_names) {
             values$col_names <- colnames(data_to_edit)
           }
         } else {
           values$col_names <- col_names
         }
-        
+
         # READONLY COLUMNS
-        if(!is.null(col_readonly)) {
-          if(!all(col_readonly %in% colnames(data_to_edit))) {
+        if (!is.null(col_readonly)) {
+          if (!all(col_readonly %in% colnames(data_to_edit))) {
             stop("'col_readonly' must contain valid column names.")
           }
           values$col_names <- unique(c(col_names, col_readonly))
         }
-        
+
         # COLUMN OPTIONS ---------------------------------------------------------
-        
+
         if (!is.null(col_options)) {
           for (z in names(col_options)) {
             col_type <- type.convert(col_options[[z]], as.is = TRUE)
@@ -448,23 +445,23 @@ dataEditServer <- function(id,
             }
           }
         }
-        
+
         # DATA CLASS -------------------------------------------------------------
-        
+
         # MOVE ABOVE ROW NAMES CHUNK
-        data_to_edit_class <- class(data_to_edit) 
-        
+        data_to_edit_class <- class(data_to_edit)
+
         # ABSORB ROW NAMES -------------------------------------------------------
-        
+
         # ROW NAMES
         if (!is.null(rownames(data_to_edit))) {
           # EMPTY ROW NAMES - CHARACTER(0)
           if (length(rownames(data_to_edit)) == 0) {
             rownames(data_to_edit) <- 1:nrow(data_to_edit)
-          # NUMERIC ROW NAMES
-          } else if(all(!is.na(suppressWarnings(as.numeric(rownames(data_to_edit)))))) {
+            # NUMERIC ROW NAMES
+          } else if (all(!is.na(suppressWarnings(as.numeric(rownames(data_to_edit)))))) {
             rownames(data_to_edit) <- 1:nrow(data_to_edit)
-          # CHARACTER ROW NAMES
+            # CHARACTER ROW NAMES
           } else {
             data_to_edit <- cbind(rownames(data_to_edit), data_to_edit)
             colnames(data_to_edit)[1] <- " "
@@ -479,25 +476,25 @@ dataEditServer <- function(id,
         return(NULL)
       }
     })
-    
+
     # UPDATE VALUES
     observe({
       values$x <- data_to_edit()
     })
-    
+
     # DATA EDITS - INCLUDES ROW NAME EDITS
     observeEvent(input$x, {
       # OLD VALUES
       x_old <- values$x
       x_new <- hot_to_r(input$x)
       # NA ROW NAMES - MATCH DATA_FORMAT()
-      if(!nzchar(trimws(colnames(x_new)[1]))) {
+      if (!nzchar(trimws(colnames(x_new)[1]))) {
         ind <- which(is.na(x_new[, 1]))
-        if(length(ind) > 0) {
+        if (length(ind) > 0) {
           x_new[ind, 1] <- rev(
             seq(
-              nrow(x_new), 
-              nrow(x_new) - length(ind) + 1, 
+              nrow(x_new),
+              nrow(x_new) - length(ind) + 1,
               -1
             )
           )
@@ -508,11 +505,11 @@ dataEditServer <- function(id,
       # RENDER
       values$x <- x_new
       # REVERT READONLY COLUMNS
-      if(!is.null(col_readonly)){
+      if (!is.null(col_readonly)) {
         values$x[, col_readonly] <- x_old[, col_readonly]
       }
     })
-    
+
     # ROW/COLUMN NAME EDITS
     observeEvent(input$x_changeHeaders, {
       # COLUMN NAMES
@@ -524,7 +521,7 @@ dataEditServer <- function(id,
         # COLUMN INDEX - COLUMNS CANNOT BE MOVED
         col_ind <- which(old_col_names != new_col_names)
         # ONLY UPDATE IF COLUMN NAMES CHANGE
-        if(length(col_ind) != 0) {
+        if (length(col_ind) != 0) {
           # CUSTOM COLUMNS - KEEP COLUMN TYPE
           if (!is.null(names(col_options))) {
             if (any(old_col_names[col_ind] %in% names(col_options))) {
@@ -547,12 +544,14 @@ dataEditServer <- function(id,
             colnames(x_new)[empty_col_names] <- old_col_names[empty_col_names]
             values$x <- x_new
             # PREVENT COLUMN NAME EDITS
-          } else if (length(values$col_names) > 0 & 
-                     old_col_names[col_ind] %in% values$col_names) {
+          } else if (length(values$col_names) > 0 &
+            old_col_names[col_ind] %in% values$col_names) {
             if (quiet == FALSE) {
               message(
-                paste0(paste(old_col_names[col_ind], collapse = " & "), 
-                       " column(s) are readonly and cannot be edited.")
+                paste0(
+                  paste(old_col_names[col_ind], collapse = " & "),
+                  " column(s) are readonly and cannot be edited."
+                )
               )
             }
             colnames(x_new) <- old_col_names
@@ -568,7 +567,7 @@ dataEditServer <- function(id,
         new_row_names <- unlist(input$x_changeHeaders[["rowHeaders"]])
         # DUPLICATE ROW NAMES
         row_ind <- which(duplicated(new_row_names))
-        if(length(row_ind) > 0) {
+        if (length(row_ind) > 0) {
           new_row_names[row_ind] <- paste0(new_row_names[row_ind], "    ")
         }
         rownames(x_old) <- new_row_names
@@ -588,24 +587,23 @@ dataEditServer <- function(id,
       #   values[["x"]] <- mat
       # }
     })
-    
+
     # TABLE
     output$x <- renderRHandsontable({
-      
+
       # RHANDSONTABLE
-      if(!is.null(values$x)) {
-        
+      if (!is.null(values$x)) {
         rhot <-
           rhandsontable(values$x,
-                        useTypes = FALSE,
-                        contextMenu = TRUE,
-                        stretchH = col_stretch,
-                        colHeaders = colnames(values$x),
-                        rowHeaders = rownames(values$x),
-                        manualColumnResize = TRUE,
-                        ...,
-                        afterOnCellMouseDown = java_script(
-                          "function(event, coords, th) {
+            useTypes = FALSE,
+            contextMenu = TRUE,
+            stretchH = col_stretch,
+            colHeaders = colnames(values$x),
+            rowHeaders = rownames(values$x),
+            manualColumnResize = TRUE,
+            ...,
+            afterOnCellMouseDown = java_script(
+              "function(event, coords, th) {
                         if (coords.row === -1 || coords.col === -1) {
                           let instance = this,
                           isColHeader = coords.row === -1,
@@ -667,13 +665,13 @@ dataEditServer <- function(id,
                           });
                         }
                       }"
-                        )
+            )
           ) %>%
           hot_context_menu(
             allowRowEdit = row_edit,
             allowColEdit = col_edit
           )
-        
+
         # CUSTOM COLUMNS
         for (z in colnames(values$x)) {
           # CHECKBOX / DROPDOWN
@@ -682,18 +680,18 @@ dataEditServer <- function(id,
             if (is.logical(col_options[[z]])) {
               rhot <- suppressWarnings(
                 hot_col(rhot,
-                        col = z,
-                        type = "checkbox",
-                        source = col_options[[z]]
+                  col = z,
+                  type = "checkbox",
+                  source = col_options[[z]]
                 )
               )
               # DROPDOWN
             } else {
               rhot <- suppressWarnings(
                 hot_col(rhot,
-                        col = z,
-                        type = "dropdown",
-                        source = col_options[[z]]
+                  col = z,
+                  type = "dropdown",
+                  source = col_options[[z]]
                 )
               )
             }
@@ -701,20 +699,18 @@ dataEditServer <- function(id,
         }
         return(rhot)
       }
-      
     })
-    
+
     # RETURN DATA
     return(
       reactive({
         data_format(values$x,
-                    values$data_class,
-                    col_factor = col_factor)
+          values$data_class,
+          col_factor = col_factor
+        )
       })
     )
-    
   })
-  
 }
 
 ## DATA OUTPUT MODULE ----------------------------------------------------------
@@ -741,8 +737,7 @@ dataEditServer <- function(id,
 #' @author Dillon Hammill, \email{Dillon.Hammill@anu.edu.au}
 #'
 #' @examples
-#' if(interactive()) {
-#'
+#' if (interactive()) {
 #'   library(shiny)
 #'   library(rhandsontable)
 #'   library(shinyjs)
@@ -757,31 +752,27 @@ dataEditServer <- function(id,
 #'   server <- function(input,
 #'                      output,
 #'                      session) {
-#'
 #'     data_input1 <- dataInputServer("input1")
 #'
 #'     output$data1 <- renderRHandsontable({
-#'       if(!is.null(data_input1())) {
+#'       if (!is.null(data_input1())) {
 #'         rhandsontable(data_input1())
 #'       }
 #'     })
 #'
 #'     dataOutputServer("output1",
-#'                      data = data_input1)
-#'
+#'       data = data_input1
+#'     )
 #'   }
 #'
 #'   shinyApp(ui, server)
-#'
 #' }
-#'
 #' @name dataOutput
 NULL
 
 #' @rdname dataOutput
 #' @export
 dataOutputUI <- function(id) {
-  
   hidden(
     downloadButton(
       NS(id, "save"),
@@ -789,7 +780,6 @@ dataOutputUI <- function(id) {
       style = "margin-top: 35px; margin-left: 0px;"
     )
   )
-  
 }
 
 #' @rdname dataOutput
@@ -800,52 +790,52 @@ dataOutputServer <- function(id,
                              write_fun = "write.csv",
                              write_args = NULL,
                              hide = FALSE) {
-  
-  # SERVER  
-  moduleServer(id, function(input, 
-                            output, 
-                            session){
-    
+
+  # SERVER
+  moduleServer(id, function(input,
+                            output,
+                            session) {
+
     # HIDE USER INTERFACE
-    if(!hide) {
+    if (!hide) {
       show("save")
     }
-    
+
     # VALUES
     values <- reactiveValues(data = NULL)
-    
+
     # DISABLE/ENABLE SAVE
     observe({
       # UPDATE REACTIVE VALUES
-      if(!is.reactive(data)) {
+      if (!is.reactive(data)) {
         values$data <- data
       } else {
         values$data <- data()
       }
       # DISABLE/ENABLE BUTTON
-      if(is.null(values$data)) {
+      if (is.null(values$data)) {
         disable("save")
       } else {
         enable("save")
         # FORMAT
-        if(!nzchar(trimws(colnames(values$data)[1]))) {
+        if (!nzchar(trimws(colnames(values$data)[1]))) {
           rownames(values$data) <- values$data[, 1]
           values$data <- values$data[, -1]
         }
       }
     })
-    
+
     # SAVE DATA
     output$save <- downloadHandler(
-      
       filename = function() {
-        if(!is.null(save_as)) {
+        if (!is.null(save_as)) {
           save_as
         } else {
           paste0(
-            paste(format(Sys.time(), '%Y%m%d'),
-                  "data",
-                  sep = "-"),
+            paste(format(Sys.time(), "%Y%m%d"),
+              "data",
+              sep = "-"
+            ),
             ".csv"
           )
         }
@@ -855,9 +845,7 @@ dataOutputServer <- function(id,
         do.call(write_fun, write_args)
       }
     )
-    
   })
-  
 }
 
 ## DATA SELECT -----------------------------------------------------------------
@@ -870,15 +858,15 @@ dataOutputServer <- function(id,
 #'   filtered.
 #'
 #' @importFrom shiny icon is.reactive actionButton NS reactive moduleServer
-#'   reactiveValues observe observeEvent showModal modalDialog tagList renderUI
-#'   uiOutput removeModal
+#'   reactiveValues observe observeEvent showModal modalDialog tagList insertUI
+#'   removeUI removeModal
 #' @importFrom shinyBS bsButton updateButton
+#' @importFrom htmltools tags
 #'
 #' @author Dillon Hammill, \email{Dillon.Hammill@anu.edu.au}
 #'
 #' @examples
-#' if(interactive()) {
-#'
+#' if (interactive()) {
 #'   library(shiny)
 #'   library(rhandsontable)
 #'   library(shinyjs)
@@ -894,27 +882,25 @@ dataOutputServer <- function(id,
 #'   server <- function(input,
 #'                      output,
 #'                      session) {
-#'
 #'     data_input <- dataInputServer("input1")
 #'
 #'     data_select <- dataSelectServer("select1",
-#'     data = data_input)
+#'       data = data_input
+#'     )
 #'
 #'     output$data1 <- renderRHandsontable({
-#'       if(!is.null(data_select())) {
+#'       if (!is.null(data_select())) {
 #'         rhandsontable(data_select())
 #'       }
 #'     })
 #'
 #'     dataOutputServer("output1",
-#'                      data = data_select)
-#'
+#'       data = data_select
+#'     )
 #'   }
 #'
 #'   shinyApp(ui, server)
-#'
 #' }
-#'
 #' @name dataSelect
 NULL
 
@@ -922,6 +908,7 @@ NULL
 #' @export
 dataSelectUI <- function(id) {
   
+  # USER INTERFACE
   actionButton(
     NS(id, "select"),
     "Select",
@@ -936,29 +923,32 @@ dataSelectUI <- function(id) {
 dataSelectServer <- function(id,
                              data = reactive(NULL)) {
   
+  # SERVER
   moduleServer(id, function(input, output, session) {
-    
+
     # NAMESPACE
     ns <- session$ns
-    
+
     # OBJECTS
     buttons <- list()
     button_observers <- list()
 
     # REACTIVE DATA
-    values <- reactiveValues(data = NULL,
-                             subset = NULL)
-    
+    values <- reactiveValues(
+      data = NULL,
+      subset = NULL
+    )
+
     # DATA VALUES
     observe({
       # DATA
-      if(!is.reactive(data)) {
+      if (!is.reactive(data)) {
         values$data <- data
       } else {
         values$data <- data()
       }
       # RESET BUTTONS
-      if(!is.null(values$data)) {
+      if (!is.null(values$data)) {
         buttons <<- structure(
           rep(list(FALSE), ncol(values$data)),
           names = paste0("button-", 1:ncol(values$data))
@@ -969,54 +959,176 @@ dataSelectServer <- function(id,
       # RESET BUTTON OBSERVERS
       button_observers <<- list()
     })
-    
+
     # DATA SUBSET
     observe({
       values$subset <- values$data
     })
-    
-    # BUTTONS
-    output$buttons <- renderUI({
-      # BUTTON FOR EACH COLUM NAME
-      lapply(1:ncol(values$data), function(z){
-        # BUTTON
-        button_name <- paste0("button-", z)
-        # CREATE OBSERVER
-        if(is.null(button_observers[[button_name]])) {
-          button_observers[[button_name]] <<- observeEvent(input[[button_name]], {
-            buttons[[button_name]] <<- input[[button_name]]
-            if(buttons[[button_name]] == TRUE) {
-              updateButton(
-                session,
-                ns(button_name),
-                colnames(values$data)[z],
-                block = FALSE,
-                style = "success"
+
+    # SELECT UI
+    observeEvent(input$select, {
+
+      # COLUMN SELECTOR
+      if (!is.null(values$data)) {
+
+        # CREATE BUTTONS
+        lapply(1:ncol(values$data), function(z) {
+          # BUTTON
+          button_name <- paste0("button-", z)
+          # CREATE OBSERVER
+          if (is.null(button_observers[[button_name]])) {
+            button_observers[[button_name]] <<- observeEvent(input[[button_name]], {
+              buttons[[button_name]] <<- input[[button_name]]
+              if (buttons[[button_name]] == TRUE) {
+                updateButton(
+                  session,
+                  ns(button_name),
+                  colnames(values$data)[z],
+                  block = FALSE,
+                  style = "success"
+                )
+              } else if (buttons[[button_name]] == FALSE) {
+                updateButton(
+                  session,
+                  ns(button_name),
+                  colnames(values$data)[z],
+                  block = FALSE,
+                  style = "danger"
+                )
+              }
+            })
+          }
+          # CREATE RED BUTTON
+          insertUI(
+            selector = paste0("#", ns("placeholder")),
+            ui = bsButton(
+              ns(button_name),
+              colnames(values$data)[z],
+              type = "toggle",
+              block = FALSE,
+              style = "danger"
+            )
+          )
+        })
+
+        # POPUP DIALOG BOX
+        showModal(
+          modalDialog(
+            title = "Select Columns:",
+            footer = tagList(
+              actionButton(
+                ns("select_all"),
+                "Select All"
+              ),
+              actionButton(
+                ns("select_none"),
+                "Select None"
+              ),
+              actionButton(
+                ns("close"),
+                "Close",
+                icon = icon("eject", lib = "glyphicon")
               )
-            } else if(buttons[[button_name]] == FALSE) {
-              updateButton(
-                session,
-                ns(button_name),
-                colnames(values$data)[z],
-                block = FALSE,
-                style = "danger"
-              )
-            }
-          })
-        }
-        # CREATE RED BUTTON
-        bsButton(
-          ns(button_name),
-          colnames(values$data)[z],
-          type = "toggle",
-          block = FALSE,
-          style = "danger"
+            ),
+            # BUTTON ARRAY
+            tags$div(id = ns("placeholder")),
+            easyClose = TRUE
+          )
+        )
+      }
+    })
+
+    # SELECT ALL
+    observeEvent(input$select_all, {
+
+      # UPDATE BUTTONS
+      lapply(1:ncol(values$data), function(z) {
+        updateButton(
+          session,
+          ns(paste0("button-", z)),
+          label = colnames(values$data)[z],
+          value = TRUE,
+          block = FALSE
         )
       })
     })
-    
+
+    # SELECT NONE
+    observeEvent(input$select_none, {
+
+      # UPDATE BUTTONS
+      lapply(1:ncol(values$data), function(z) {
+        updateButton(
+          session,
+          ns(paste0("button-", z)),
+          label = colnames(values$data)[z],
+          value = FALSE,
+          block = FALSE
+        )
+      })
+    })
+
+    # UPDATE & SELECT
+    observeEvent(input$close, {
+
+      # BUTTONS - SELECTED COLUMNS
+      cols <- colnames(values$data)[
+        as.numeric(gsub("^button-", "", names(buttons[buttons == TRUE])))
+      ]
+
+      # RESTRICT COLUMNS
+      if (length(cols) != 0) {
+        values$subset <- values$data[, cols, drop = FALSE]
+      }
+
+      # REMOVE BUTTONS
+      lapply(names(buttons), function(z) {
+        removeUI(
+          selector = z
+        )
+      })
+
+      # CLOSE POPUP
+      removeModal()
+    })
+
+    # RETURN FSELECTED DATA
+    return(
+      reactive({
+        values$subset
+      })
+    )
+  })
+}
+
+## DATA FILTER -----------------------------------------------------------------
+
+#' Shiny module for filtering data
+#'
+#' @importFrom shiny actionButton NS moduleServer
+#'
+#' @name dataFilter
+NULL
+
+#' @rdname dataFilter
+#' @noRd
+dataFilterUI <- function(id) {
+  actionButton(
+    NS(id, "filter"),
+    "Filter",
+    icon = icon("filter"),
+    style = "margin-top: 35px; margin-left: 0px;"
+  )
+}
+
+#' @rdname dataFilter
+#' @noRd
+dataFilterServer <- function(id) {
+  moduleServer(id, function(input, output, session) {
+
     # FILTER UI
-    observeEvent(input$select, {
+    observeEvent(input$filter, {
+
       # POPUP DIALOG BOX
       showModal(
         modalDialog(
@@ -1034,7 +1146,7 @@ dataSelectServer <- function(id,
               ns("close"),
               "Close",
               icon = icon("eject", lib = "glyphicon")
-              )
+            )
           ),
           # BUTTON ARRAY
           uiOutput(ns("buttons")),
@@ -1042,61 +1154,5 @@ dataSelectServer <- function(id,
         )
       )
     })
-    
-    # SELECT ALL
-    observeEvent(input$select_all, {
-
-      # UPDATE BUTTONS
-      lapply(1:ncol(values$data), function(z){
-        updateButton(
-          session,
-          ns(paste0("button-", z)),
-          label = colnames(values$data)[z],
-          value = TRUE,
-          block = FALSE
-        )
-      })
-
-    })
-
-    # SELECT NONE
-    observeEvent(input$select_none, {
-      
-      # UPDATE BUTTONS
-      lapply(1:ncol(values$data), function(z){
-        updateButton(
-          session,
-          ns(paste0("button-", z)),
-          label = colnames(values$data)[z],
-          value = FALSE,
-          block = FALSE
-        )
-      })
-
-    })
-    
-    # UPDATE & FILTER
-    observeEvent(input$close, {
-      
-      # BUTTONS - SELECTED COLUMNS
-      cols <- colnames(values$data)[
-        as.numeric(gsub("^button-", "", names(buttons[buttons == TRUE])))]
-      
-      # RESTRICT COLUMNS
-      if(length(cols) != 0) {
-        values$subset <- values$data[, cols, drop = FALSE]
-      }
-      
-      # CLOSE POPUP
-      removeModal()
-      
-    })
-    
-    # RETURN FILTERED DATA
-    return(
-      reactive({values$subset})
-    )
-    
   })
-  
 }

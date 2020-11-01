@@ -40,8 +40,7 @@ be hidden from the user, set to FALSE by default.}
 Shiny module for data output
 }
 \examples{
-if(interactive()) {
-
+if (interactive()) {
   library(shiny)
   library(rhandsontable)
   library(shinyjs)
@@ -56,24 +55,21 @@ if(interactive()) {
   server <- function(input,
                      output,
                      session) {
-
     data_input1 <- dataInputServer("input1")
 
     output$data1 <- renderRHandsontable({
-      if(!is.null(data_input1())) {
+      if (!is.null(data_input1())) {
         rhandsontable(data_input1())
       }
     })
 
     dataOutputServer("output1",
-                     data = data_input1)
-
+      data = data_input1
+    )
   }
 
   shinyApp(ui, server)
-
 }
-
 }
 \author{
 Dillon Hammill, \email{Dillon.Hammill@anu.edu.au}

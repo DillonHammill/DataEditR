@@ -85,28 +85,25 @@ is selected, set to \code{read.csv} by default.}
 Shiny module for data editing
 }
 \examples{
-if(interactive()) {
-
+if (interactive()) {
   ui <- fluidPage(
     dataInputUI("input-1"),
     dataOutputUI("output-1"),
     dataEditUI("edit-1")
   )
-  
+
   server <- function(input, output, session) {
-  
     data_to_edit <- dataInputServer("input-1")
     data_to_edit <- dataEditServer("edit-1",
-    data  = data_to_edit)
-    dataOutputServer("output-1", 
-    data = data_to_edit)
-  
+      data = data_to_edit
+    )
+    dataOutputServer("output-1",
+      data = data_to_edit
+    )
   }
-  
+
   shinyApp(ui, server)
-
 }
-
 }
 \author{
 Dillon Hammill, \email{Dillon.Hammill@anu.edu.au}

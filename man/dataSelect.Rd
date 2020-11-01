@@ -21,8 +21,7 @@ filtered.}
 Shiny module for selecting data
 }
 \examples{
-if(interactive()) {
-
+if (interactive()) {
   library(shiny)
   library(rhandsontable)
   library(shinyjs)
@@ -38,27 +37,25 @@ if(interactive()) {
   server <- function(input,
                      output,
                      session) {
-
     data_input <- dataInputServer("input1")
 
     data_select <- dataSelectServer("select1",
-    data = data_input)
+      data = data_input
+    )
 
     output$data1 <- renderRHandsontable({
-      if(!is.null(data_select())) {
+      if (!is.null(data_select())) {
         rhandsontable(data_select())
       }
     })
 
     dataOutputServer("output1",
-                     data = data_select)
-
+      data = data_select
+    )
   }
 
   shinyApp(ui, server)
-
 }
-
 }
 \author{
 Dillon Hammill, \email{Dillon.Hammill@anu.edu.au}
