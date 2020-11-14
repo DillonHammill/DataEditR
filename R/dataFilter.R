@@ -6,6 +6,8 @@
 #'   making multiple calls to this shiny module.
 #' @param data an array wrapped in \code{reactive()} containing the data to be
 #'   filtered.
+#' @param hide logical indicating whether the data sfiltering user interface
+#'   should be hidden from the user, set to FALSE by default.
 #'
 #' @return a list of reactive objects containing the filtered \code{data} and
 #'   indices for filtered \code{rows}.
@@ -13,7 +15,7 @@
 #' @importFrom shiny actionButton NS icon moduleServer reactive reactiveValues
 #'   observe is.reactive observeEvent showModal modalDialog updateSelectizeInput
 #'   removeUI insertUI selectInput selectizeInput removeModal updateSelectInput
-#' @importFrom shinyjs inlineCSS useShinyjs
+#' @importFrom shinyjs inlineCSS useShinyjs hidden show
 #' @importFrom htmltools tagList
 #'
 #' @author Dillon Hammill, \email{Dillon.Hammill@anu.edu.au}
@@ -59,24 +61,33 @@ NULL
 dataFilterUI <- function(id) {
   
   # USER INTERFACE
-  actionButton(
-    NS(id, "filter"),
-    "Filter",
-    icon = icon("filter"),
-    style = "margin-top: 35px; margin-left: 0px;"
+  hidden(
+    actionButton(
+      NS(id, "filter"),
+      "Filter",
+      icon = icon("filter"),
+      style = "margin-top: 35px; margin-left: 0px;"
+    )
   )
+
 }
 
 #' @rdname dataFilter
 #' @export
 dataFilterServer <- function(id,
-                             data = reactive(NULL)) {
+                             data = reactive(NULL),
+                             hide = FALSE) {
   
   # SERVER
   moduleServer(id, function(input, output, session) {
     
     # NAMESPACE
     ns <- session$ns
+    
+    # HIDE USER INTERFACE
+    if (!hide) {
+      show("filter")
+    }
     
     # VALUES
     values <- reactiveValues(

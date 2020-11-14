@@ -6,6 +6,8 @@
 #'   making multiple calls to this shiny module.
 #' @param data an array wrapped in \code{reactive()} containing the data to be
 #'   filtered.
+#' @param hide logical indicating whether the data selection user interface
+#'   should be hidden from the user, set to FALSE by default.
 #'
 #' @return a list of reactive objects containing the filtered \code{data} and
 #'   indices for selected \code{columns}.
@@ -15,6 +17,7 @@
 #'   removeUI removeModal
 #' @importFrom shinyBS bsButton updateButton
 #' @importFrom htmltools tags
+#' @importFrom shinyjs hidden show
 #'
 #' @author Dillon Hammill, \email{Dillon.Hammill@anu.edu.au}
 #'
@@ -62,24 +65,33 @@ NULL
 dataSelectUI <- function(id) {
   
   # USER INTERFACE
-  actionButton(
-    NS(id, "select"),
-    "Select",
-    icon = icon("crosshairs"),
-    style = "margin-top: 35px; margin-left: 0px;"
+  hidden(
+    actionButton(
+      NS(id, "select"),
+      "Select",
+      icon = icon("crosshairs"),
+      style = "margin-top: 35px; margin-left: 0px;"
+    )
   )
+
 }
 
 #' @rdname dataSelect
 #' @export
 dataSelectServer <- function(id,
-                             data = reactive(NULL)) {
+                             data = reactive(NULL),
+                             hide = FALSE) {
   
   # SERVER
   moduleServer(id, function(input, output, session) {
     
     # NAMESPACE
     ns <- session$ns
+    
+    # HIDE USER INTERFACE
+    if (!hide) {
+      show("select")
+    }
     
     # OBJECTS
     button_observers <- list()

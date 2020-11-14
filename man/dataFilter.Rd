@@ -8,7 +8,7 @@
 \usage{
 dataFilterUI(id)
 
-dataFilterServer(id, data = reactive(NULL))
+dataFilterServer(id, data = reactive(NULL), hide = FALSE)
 }
 \arguments{
 \item{id}{unique identifier for the module to prevent namespace clashes when
@@ -16,6 +16,9 @@ making multiple calls to this shiny module.}
 
 \item{data}{an array wrapped in \code{reactive()} containing the data to be
 filtered.}
+
+\item{hide}{logical indicating whether the data sfiltering user interface
+should be hidden from the user, set to FALSE by default.}
 }
 \value{
 a list of reactive objects containing the filtered \code{data} and
