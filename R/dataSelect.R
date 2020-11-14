@@ -7,6 +7,9 @@
 #' @param data an array wrapped in \code{reactive()} containing the data to be
 #'   filtered.
 #'
+#' @return a list of reactive objects containing the filtered \code{data} and
+#'   indices for selected \code{columns}.
+#'
 #' @importFrom shiny icon is.reactive actionButton NS reactive moduleServer
 #'   reactiveValues observe observeEvent showModal modalDialog tagList insertUI
 #'   removeUI removeModal
@@ -245,9 +248,10 @@ dataSelectServer <- function(id,
     
     # RETURN FSELECTED DATA
     return(
-      reactive({
-        values$subset
-      })
+      list(
+        data = reactive({values$subset}),
+        columns = reactive({which(unlist(values$select))})
+      )
     )
   })
 }

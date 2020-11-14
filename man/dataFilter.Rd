@@ -17,6 +17,10 @@ making multiple calls to this shiny module.}
 \item{data}{an array wrapped in \code{reactive()} containing the data to be
 filtered.}
 }
+\value{
+a list of reactive objects containing the filtered \code{data} and
+indices for filtered \code{rows}.
+}
 \description{
 Shiny module for filtering data
 }

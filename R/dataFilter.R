@@ -7,6 +7,9 @@
 #' @param data an array wrapped in \code{reactive()} containing the data to be
 #'   filtered.
 #'
+#' @return a list of reactive objects containing the filtered \code{data} and
+#'   indices for filtered \code{rows}.
+#'
 #' @importFrom shiny actionButton NS icon moduleServer reactive reactiveValues
 #'   observe is.reactive observeEvent showModal modalDialog updateSelectizeInput
 #'   removeUI insertUI selectInput selectizeInput removeModal updateSelectInput
@@ -78,8 +81,9 @@ dataFilterServer <- function(id,
     # VALUES
     values <- reactiveValues(
       data = NULL,
-      data_filter = NULL,
-      filters = list()
+      subset = NULL,
+      filters = list(),
+      rows = NULL
     )
     
     # OBJECTS
@@ -541,81 +545,85 @@ dataFilterServer <- function(id,
     observeEvent(input$close, {
       
       # DATA TO FILTER
-      data_filter <- values$data
+      subset <- values$data
       
       # FILTER DATA
       if(length(values$filters) != 0) {
-        lapply(names(values$filters), function(z) {
-          
-          col <- values$filters[[z]]$column
-          logic <- values$filters[[z]]$logic
-          levels <- values$filters[[z]]$levels
-          vals <- data_filter[, col]
-          
-          # NUMERIC LEVELS
-          if (is.numeric(vals)) {
-            levels <- as.numeric(levels)
-          }
-          
-          # LEVELS REQUIRED
-          if (!is.null(levels)) {
-            # EQUAL
-            if (logic == "equal") {
-              data_filter <<- data_filter[data_filter[, col] %in% levels, ]
-              # NOT EQUAL
-            } else if (logic == "not equal") {
-              data_filter <<- data_filter[!data_filter[, col] %in% levels, ]
-              # GREATER THAN
-            } else if (logic == "greater than") {
-              data_filter <<- data_filter[data_filter[, col] > levels, ]
-              # LESS THAN
-            } else if (logic == "less than") {
-              data_filter <<- data_filter[data_filter[, col] < levels, ]
-              # GREATER THAN OR EQUAL
-            } else if (logic == "greater than or equal") {
-              data_filter <<- data_filter[data_filter[, col] >= levels, ]
-              # LESS THAN OR EQUAL
-            } else if (logic == "less than or equal") {
-              data_filter <<- data_filter[data_filter[, col] <= levels, ]
-              # BETWEEN | NOT BETWEEN
-            } else if (logic %in% c("between", "not between")) {
-              ind <- which(
-                data_filter[, col] > levels[1] &
-                  data_filter[, col] < levels[2]
-              )
-              # BETWEEN
-              if (logic == "between") {
-                data_filter <<- data_filter[ind, ]
-                # NOT BETWEEN
-              } else if (logic == "not between") {
-                data_filter <<- data_filter[-ind, ]
-              }
-              # CONTAINS | NOT CONTAINS
-            } else if (logic %in% c("contain", "not contain")) {
-              ind <- unique(
-                unlist(
-                  lapply(levels, function(z) {
-                    which(grepl(z, data_filter[, col]))
-                  })
-                )
-              )
-              # CONTAIN
-              if (logic == "contain") {
-                data_filter <<- data_filter[ind, ]
-                # NOT CONTAIN
-              } else if (logic == "not contain") {
-                data_filter <<- data_filter[-ind, ]
-              }
+        
+        # FILTER INDICES - ENTIRE DATASET
+        ind <- unlist(
+          lapply(names(values$filters), function(z) {
+            
+            col <- values$filters[[z]]$column
+            logic <- values$filters[[z]]$logic
+            levels <- values$filters[[z]]$levels
+            vals <- subset[, col]
+            
+            # NUMERIC LEVELS
+            if (is.numeric(vals)) {
+              levels <- as.numeric(levels)
             }
-            # REMOVE FILTERS WITHOUT LEVELS
-          } else {
-            values$filters[[z]] <<- NULL
-          }
-        })
+            
+            # LEVELS REQUIRED
+            if (!is.null(levels)) {
+              # EQUAL
+              if (logic == "equal") {
+                return(which(values$data[, col] %in% levels))
+                # NOT EQUAL
+              } else if (logic == "not equal") {
+                return(which(!values$data[, col] %in% levels))
+                # GREATER THAN
+              } else if (logic == "greater than") {
+                return(which(values$data[, col] > levels))
+                # LESS THAN
+              } else if (logic == "less than") {
+                return(which(values$data[, col] < levels))
+                # GREATER THAN OR EQUAL
+              } else if (logic == "greater than or equal") {
+                return(which(values$data[, col] >= levels))
+                # LESS THAN OR EQUAL
+              } else if (logic == "less than or equal") {
+                return(which(values$data[, col] <= levels))
+                # BETWEEN | NOT BETWEEN
+              } else if (logic %in% c("between", "not between")) {
+                ind <- which(
+                  values$data[, col] > levels[1] &
+                    values$data[, col] < levels[2]
+                )
+                # BETWEEN
+                if (logic == "between") {
+                  return(ind)
+                  # NOT BETWEEN
+                } else if (logic == "not between") {
+                  return(seq_len(ncol(values$data))[-ind])
+                }
+                # CONTAINS | NOT CONTAINS
+              } else if (logic %in% c("contain", "not contain")) {
+                ind <- unique(
+                  unlist(
+                    lapply(levels, function(z) {
+                      which(grepl(z, subset[, col]))
+                    })
+                  )
+                )
+                # CONTAIN
+                if (logic == "contain") {
+                  return(ind)
+                  # NOT CONTAIN
+                } else if (logic == "not contain") {
+                  return(seq_len(ncol(values$data))[-ind])
+                }
+              }
+              # REMOVE FILTERS WITHOUT LEVELS
+            } else {
+              return(NULL)
+            }
+            
+          })
+        )
+        values$rows <- ind[duplicated(ind)] # intersection
+        values$subset <- values$data[values$rows, ]
       }
-      
-      # ASSIGN FILTERED DATA
-      values$data_filter <- data_filter
       
       # CLOSE POPUP
       removeModal()
@@ -623,9 +631,10 @@ dataFilterServer <- function(id,
     
     # FILTERED DATA
     return(
-      reactive({
-        values$data_filter
-      })
+      list(
+        data = reactive({values$subset}),
+        rows = reactive({values$rows})
+      )
     )
   })
 }
