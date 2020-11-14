@@ -1,0 +1,253 @@
+## DATA SELECT -----------------------------------------------------------------
+
+#' Shiny module for selecting data
+#'
+#' @param id unique identifier for the module to prevent namespace clashes when
+#'   making multiple calls to this shiny module.
+#' @param data an array wrapped in \code{reactive()} containing the data to be
+#'   filtered.
+#'
+#' @importFrom shiny icon is.reactive actionButton NS reactive moduleServer
+#'   reactiveValues observe observeEvent showModal modalDialog tagList insertUI
+#'   removeUI removeModal
+#' @importFrom shinyBS bsButton updateButton
+#' @importFrom htmltools tags
+#'
+#' @author Dillon Hammill, \email{Dillon.Hammill@anu.edu.au}
+#'
+#' @examples
+#' if (interactive()) {
+#'   library(shiny)
+#'   library(rhandsontable)
+#'   library(shinyjs)
+#'
+#'   ui <- fluidPage(
+#'     useShinyjs(),
+#'     dataInputUI("input1"),
+#'     dataSelectUI("select1"),
+#'     dataOutputUI("output1"),
+#'     rHandsontableOutput("data1")
+#'   )
+#'
+#'   server <- function(input,
+#'                      output,
+#'                      session) {
+#'     data_input <- dataInputServer("input1")
+#'
+#'     data_select <- dataSelectServer("select1",
+#'       data = data_input
+#'     )
+#'
+#'     output$data1 <- renderRHandsontable({
+#'       if (!is.null(data_select())) {
+#'         rhandsontable(data_select())
+#'       }
+#'     })
+#'
+#'     dataOutputServer("output1",
+#'       data = data_select
+#'     )
+#'   }
+#'
+#'   shinyApp(ui, server)
+#' }
+#' @name dataSelect
+NULL
+
+#' @rdname dataSelect
+#' @export
+dataSelectUI <- function(id) {
+  
+  # USER INTERFACE
+  actionButton(
+    NS(id, "select"),
+    "Select",
+    icon = icon("crosshairs"),
+    style = "margin-top: 35px; margin-left: 0px;"
+  )
+}
+
+#' @rdname dataSelect
+#' @export
+dataSelectServer <- function(id,
+                             data = reactive(NULL)) {
+  
+  # SERVER
+  moduleServer(id, function(input, output, session) {
+    
+    # NAMESPACE
+    ns <- session$ns
+    
+    # OBJECTS
+    button_observers <- list()
+    
+    # REACTIVE DATA
+    values <- reactiveValues(
+      data = NULL,
+      subset = NULL,
+      select = list()
+    )
+    
+    # DATA
+    observe({
+      if (!is.reactive(data)) {
+        values$data <- data
+      } else {
+        values$data <- data()
+      }
+      # RESET FILTERS - NEW DATA
+      values$select <- list()
+    })
+    
+    # SELECT UI
+    observeEvent(input$select, {
+      
+      # MODAL DIALOG
+      showModal(
+        modalDialog(
+          title = "Select Columns:",
+          footer = tagList(
+            actionButton(
+              ns("select_all"),
+              "Select All"
+            ),
+            actionButton(
+              ns("select_none"),
+              "Select None"
+            ),
+            actionButton(
+              ns("close"),
+              "Close",
+              icon = icon("eject", lib = "glyphicon")
+            )
+          ),
+          # BUTTON ARRAY
+          tags$div(id = ns("placeholder")),
+          easyClose = TRUE
+        )
+      )
+      
+      # COLUMN SELECTOR
+      if (!is.null(values$data)) {
+        
+        # CREATE BUTTONS
+        lapply(1:ncol(values$data), function(z) {
+          # BUTTON
+          button_name <- paste0("button-", z)
+          # COLUMN
+          column_name <- colnames(values$data)[z]
+          # CREATE SELECTION
+          if(!column_name %in% names(values$select)) {
+            values$select[[column_name]] <<- FALSE
+          }
+          # CREATE OBSERVER
+          if (is.null(button_observers[[button_name]])) {
+            button_observers[[button_name]] <<- observeEvent(input[[button_name]], {
+              # COLUMN NAME FROM BUTTON NAME
+              column_name <- colnames(values$data)[
+                as.numeric(gsub("button-", "", button_name))]
+              # BUTTON TURNED ON
+              if(values$select[[column_name]] == FALSE) {
+                values$select[[column_name]] <<- TRUE
+                updateButton(
+                  session,
+                  ns(button_name),
+                  column_name,
+                  block = FALSE,
+                  style = "success"
+                )
+              # BUTTON TURNED OFF
+              } else if(values$select[[column_name]] == TRUE) {
+                values$select[[column_name]] <<- FALSE
+                updateButton(
+                  session,
+                  ns(button_name),
+                  column_name,
+                  block = FALSE,
+                  style = "danger"
+                )
+              }
+            })
+          }
+          # CREATE RED BUTTON
+          insertUI(
+            selector = paste0("#", ns("placeholder")),
+            ui = bsButton(
+              ns(button_name),
+              column_name,
+              block = FALSE,
+              style = ifelse(values$select[[column_name]],
+                             "success",
+                             "danger"),
+              outline = "2px black;"
+            )
+          )
+        })
+        
+      }
+    })
+    
+    # SELECT ALL
+    observeEvent(input$select_all, {
+      
+      # UPDATE BUTTONS
+      lapply(1:ncol(values$data), function(z) {
+        values$select[[colnames(values$data)[z]]] <- TRUE
+        updateButton(
+          session,
+          ns(paste0("button-", z)),
+          label = colnames(values$data)[z],
+          style = "success",
+          block = FALSE
+        )
+      })
+      
+    })
+    
+    # SELECT NONE
+    observeEvent(input$select_none, {
+      
+      # UPDATE BUTTONS
+      lapply(1:ncol(values$data), function(z) {
+        values$select[[colnames(values$data)[z]]] <- FALSE
+        updateButton(
+          session,
+          ns(paste0("button-", z)),
+          label = colnames(values$data)[z],
+          style = "danger",
+          block = FALSE
+        )
+      })
+      
+    })
+    
+    # UPDATE & SELECT
+    observeEvent(input$close, {
+      
+      # SELECTIONS
+      if(length(values$select) > 0 & 
+         !all(values$select == FALSE)) {
+        
+        # SELECTED COLUMNS
+        cols <- names(values$select[values$select == TRUE])
+        
+        # RESTRICT COLUMNS
+        if(length(cols) > 0) {
+          values$subset <- values$data[, cols, drop = FALSE]
+        }
+        
+      }
+      
+      # CLOSE POPUP
+      removeModal()
+      
+    })
+    
+    # RETURN FSELECTED DATA
+    return(
+      reactive({
+        values$subset
+      })
+    )
+  })
+}

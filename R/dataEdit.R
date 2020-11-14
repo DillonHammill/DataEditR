@@ -1,185 +1,3 @@
-## DATA INPUT MODULE -----------------------------------------------------------
-
-#' Shiny module for data input
-#'
-#' @param id unique identifier for the module to prevent namespace clashes when
-#'   making multiple calls to this shiny module.
-#' @param cellWidths a vector of length 2 to control the relative widths of the
-#'   \code{fileInput} and \code{textInput}, set to \code{c("50\%", "50\%")} by
-#'   default.
-#' @param data can be either the name of a dataset or file as a character string
-#'   (e.g. "mtcars" or "mtcars.csv") or a vector column names (e.g. c("A", "B",
-#'   "C")) or template dimensions (e.g. c(10,10)).
-#' @param read_fun name of the function to use to read in the data when a file
-#'   is selected, set to \code{read.csv} by default.
-#' @param read_args a named list of additional arguments to pass to
-#'   \code{read_fun} when reading in files.
-#' @param hide logical indicating whether the data input user interface should
-#'   be hidden from the user, set to FALSE by default.
-#'
-#' @importFrom shiny fluidRow splitLayout textInput fileInput NS moduleServer
-#'   reactive updateTextInput observeEvent eventReactive
-#' @importFrom shinyjs hidden show
-#'
-#' @author Dillon Hammill, \email{Dillon.Hammill@anu.edu.au}
-#'
-#' @examples
-#' if (interactive()) {
-#'   library(shiny)
-#'   library(rhandsontable)
-#'
-#'   ui <- fluidPage(
-#'     dataInputUI("input1"),
-#'     rHandsontableOutput("data1")
-#'   )
-#'
-#'   server <- function(input,
-#'                      output,
-#'                      session) {
-#'     data_input1 <- dataInputServer("input1")
-#'
-#'     output$data1 <- renderRHandsontable({
-#'       if (!is.null(data_input1())) {
-#'         rhandsontable(data_input1())
-#'       }
-#'     })
-#'   }
-#'
-#'   shinyApp(ui, server)
-#' }
-#' @name dataInput
-NULL
-
-#' @rdname dataInput
-#' @export
-dataInputUI <- function(id,
-                        cellWidths = c("50%", "48%")) {
-
-  # USER INTERFACE
-  list(
-    splitLayout(
-      hidden(
-        fileInput(
-          NS(id, "file"),
-          "Upload data to edit:",
-          width = "100%"
-        )
-      ),
-      hidden(
-        textInput(
-          NS(id, "data"),
-          "Data to edit:",
-          value = "",
-          width = "100%"
-        )
-      ),
-      cellWidths = cellWidths,
-      cellArgs = list(style = paste0(
-        "padding-left: 10px;",
-        "padding-top: 10px;",
-        "padding-right: 0px;"
-      ))
-    )
-  )
-}
-
-#' @rdname dataInput
-#' @export
-dataInputServer <- function(id,
-                            data = NULL,
-                            read_fun = "read.csv",
-                            read_args = NULL,
-                            hide = FALSE) {
-
-  # SERVER
-  moduleServer(id, function(input,
-                            output,
-                            session) {
-
-    # UPLOADED DATA
-    upload <- NULL # prevent global assignment below
-
-    # HIDE USER INTERFACE
-    if (!hide) {
-      show("file")
-      show("data")
-    }
-
-    # CHECK
-    if (!is.null(dim(data))) {
-      stop("'data' should be passed as a vector!")
-    }
-    # DATA - FILE OR NAME
-    if (is.character(data) &
-      length(data) == 1) {
-      # FILE NAME
-      if (nzchar(file_ext(data))) {
-        upload <- do.call(
-          read_fun,
-          c(list(data), read_args)
-        )
-        updateTextInput(
-          session,
-          "data",
-          value = "upload"
-        )
-        # DATASET NAME
-      } else {
-        updateTextInput(
-          session,
-          "data",
-          value = data
-        )
-      }
-      # DIMENSIONS/COLUMN NAMES/NULL
-    } else {
-      template <- data_template(
-        data,
-        read_fun,
-        read_args
-      )
-      updateTextInput(
-        session,
-        "data",
-        value = "template"
-      )
-    }
-
-    # DATA INPUT
-    data_input <- eventReactive(input$data, {
-      tryCatch(
-        eval(parse(text = input$data)),
-        error = function(e) {
-          return(NULL)
-        }
-      )
-    })
-
-    # FILE INPUT
-    observeEvent(input$file, {
-      # FILE
-      if (!is.null(input$file)) {
-        # READ ARGUMENTS
-        read_args <- c(list(input$file$datapath), read_args)
-        upload <<- do.call(read_fun, read_args)
-        # FLUSH DATA INPUT - PREVIOUS FILE UPLOAD
-        updateTextInput(
-          session,
-          "data",
-          value = ""
-        )
-        # NEW DATA INPUT
-        updateTextInput(
-          session,
-          "data",
-          value = "upload"
-        )
-      }
-    })
-    return(data_input)
-  })
-}
-
 ## DATA EDITING MODULE ---------------------------------------------------------
 
 #' Shiny module for data editing
@@ -256,7 +74,7 @@ NULL
 #' @rdname dataEdit
 #' @export
 dataEditUI <- function(id) {
-
+  
   # USER INTERFACE
   rHandsontableOutput(NS(id, "x"))
 }
@@ -278,14 +96,14 @@ dataEditServer <- function(id,
                            read_fun = "read.csv",
                            read_args = NULL,
                            ...) {
-
+  
   # COLUMN STRETCH
   if (col_stretch) {
     col_stretch <- "all"
   } else {
     col_stretch <- "name"
   }
-
+  
   # COLUMN EDIT - CUSTOM COLUMN WARNING
   if (!is.null(col_options)) {
     if (!quiet) {
@@ -295,24 +113,24 @@ dataEditServer <- function(id,
       col_edit <- FALSE
     }
   }
-
+  
   # SERVER
   moduleServer(id, function(input,
                             output,
                             session) {
-
+    
     # PREPARE DATA -------------------------------------------------------------
-
+    
     # STORAGE
     values <- reactiveValues(
       x = NULL, # trigger table render
       data_class = NULL, # original class
       col_names = NULL
     ) # columns cannot be edited
-
+    
     # DATA
     data_to_edit <- reactive({
-
+      
       # INITIALISE REACTIVE VALUES
       if (!is.reactive(data)) {
         data_to_edit <- data
@@ -321,15 +139,15 @@ dataEditServer <- function(id,
       }
       # INPUT & FORMAT DATA
       if (!is.null(data_to_edit)) {
-
+        
         # DATA INPUT -----------------------------------------------------------
         data_to_edit <- data_template(data_to_edit,
-          read_fun = read_fun,
-          read_args = read_args
+                                      read_fun = read_fun,
+                                      read_args = read_args
         )
-
+        
         # BIND ROWS ------------------------------------------------------------
-
+        
         if (!is.null(row_bind)) {
           # NEW ROWS
           if (is.null(dim(row_bind))) {
@@ -348,20 +166,20 @@ dataEditServer <- function(id,
               # ROW NAMES
             } else {
               row_bind <- matrix(rep("", ncol(data_to_edit) * length(row_bind)),
-                nrow = length(row_bind),
-                dimnames = list(
-                  row_bind,
-                  colnames(data_to_edit)
-                )
+                                 nrow = length(row_bind),
+                                 dimnames = list(
+                                   row_bind,
+                                   colnames(data_to_edit)
+                                 )
               )
             }
           }
           # BIND NEW ROWS
           data_to_edit <- rbind(data_to_edit, row_bind[, 1:ncol(data_to_edit)])
         }
-
+        
         # BIND COLUMNS -----------------------------------------------------------
-
+        
         if (!is.null(col_bind)) {
           # NEW COLUMNS
           if (is.null(dim(col_bind))) {
@@ -383,11 +201,11 @@ dataEditServer <- function(id,
               # COLUMN NAMES
             } else {
               col_bind <- matrix(rep("", nrow(data_to_edit) * length(col_bind)),
-                ncol = length(col_bind),
-                dimnames = list(
-                  rownames(data_to_edit),
-                  col_bind
-                )
+                                 ncol = length(col_bind),
+                                 dimnames = list(
+                                   rownames(data_to_edit),
+                                   col_bind
+                                 )
               )
             }
           }
@@ -397,14 +215,14 @@ dataEditServer <- function(id,
             col_bind[1:nrow(data_to_edit), , drop = FALSE]
           )
         }
-
+        
         # COLUMN NAMES -----------------------------------------------------------
-
+        
         # CHECK
         if (any(duplicated(colnames(data_to_edit)))) {
           stop("Column names must be unique!")
         }
-
+        
         # COLUMN NAMES
         if (all(is.logical(col_names))) {
           if (!col_names) {
@@ -413,7 +231,7 @@ dataEditServer <- function(id,
         } else {
           values$col_names <- col_names
         }
-
+        
         # READONLY COLUMNS
         if (!is.null(col_readonly)) {
           if (!all(col_readonly %in% colnames(data_to_edit))) {
@@ -421,9 +239,9 @@ dataEditServer <- function(id,
           }
           values$col_names <- unique(c(col_names, col_readonly))
         }
-
+        
         # COLUMN OPTIONS ---------------------------------------------------------
-
+        
         if (!is.null(col_options)) {
           for (z in names(col_options)) {
             col_type <- type.convert(col_options[[z]], as.is = TRUE)
@@ -445,14 +263,14 @@ dataEditServer <- function(id,
             }
           }
         }
-
+        
         # DATA CLASS -------------------------------------------------------------
-
+        
         # MOVE ABOVE ROW NAMES CHUNK
         data_to_edit_class <- class(data_to_edit)
-
+        
         # ABSORB ROW NAMES -------------------------------------------------------
-
+        
         # ROW NAMES
         if (!is.null(rownames(data_to_edit))) {
           # EMPTY ROW NAMES - CHARACTER(0)
@@ -476,12 +294,12 @@ dataEditServer <- function(id,
         return(NULL)
       }
     })
-
+    
     # UPDATE VALUES
     observe({
       values$x <- data_to_edit()
     })
-
+    
     # DATA EDITS - INCLUDES ROW NAME EDITS
     observeEvent(input$x, {
       # OLD VALUES
@@ -509,7 +327,7 @@ dataEditServer <- function(id,
         values$x[, col_readonly] <- x_old[, col_readonly]
       }
     })
-
+    
     # ROW/COLUMN NAME EDITS
     observeEvent(input$x_changeHeaders, {
       # COLUMN NAMES
@@ -545,7 +363,7 @@ dataEditServer <- function(id,
             values$x <- x_new
             # PREVENT COLUMN NAME EDITS
           } else if (length(values$col_names) > 0 &
-            old_col_names[col_ind] %in% values$col_names) {
+                     old_col_names[col_ind] %in% values$col_names) {
             if (quiet == FALSE) {
               message(
                 paste0(
@@ -587,23 +405,23 @@ dataEditServer <- function(id,
       #   values[["x"]] <- mat
       # }
     })
-
+    
     # TABLE
     output$x <- renderRHandsontable({
-
+      
       # RHANDSONTABLE
       if (!is.null(values$x)) {
         rhot <-
           rhandsontable(values$x,
-            useTypes = FALSE,
-            contextMenu = TRUE,
-            stretchH = col_stretch,
-            colHeaders = colnames(values$x),
-            rowHeaders = rownames(values$x),
-            manualColumnResize = TRUE,
-            ...,
-            afterOnCellMouseDown = java_script(
-              "function(event, coords, th) {
+                        useTypes = FALSE,
+                        contextMenu = TRUE,
+                        stretchH = col_stretch,
+                        colHeaders = colnames(values$x),
+                        rowHeaders = rownames(values$x),
+                        manualColumnResize = TRUE,
+                        ...,
+                        afterOnCellMouseDown = java_script(
+                          "function(event, coords, th) {
                         if (coords.row === -1 || coords.col === -1) {
                           let instance = this,
                           isColHeader = coords.row === -1,
@@ -665,13 +483,13 @@ dataEditServer <- function(id,
                           });
                         }
                       }"
-            )
+                        )
           ) %>%
           hot_context_menu(
             allowRowEdit = row_edit,
             allowColEdit = col_edit
           )
-
+        
         # CUSTOM COLUMNS
         for (z in colnames(values$x)) {
           # CHECKBOX / DROPDOWN
@@ -680,18 +498,18 @@ dataEditServer <- function(id,
             if (is.logical(col_options[[z]])) {
               rhot <- suppressWarnings(
                 hot_col(rhot,
-                  col = z,
-                  type = "checkbox",
-                  source = col_options[[z]]
+                        col = z,
+                        type = "checkbox",
+                        source = col_options[[z]]
                 )
               )
               # DROPDOWN
             } else {
               rhot <- suppressWarnings(
                 hot_col(rhot,
-                  col = z,
-                  type = "dropdown",
-                  source = col_options[[z]]
+                        col = z,
+                        type = "dropdown",
+                        source = col_options[[z]]
                 )
               )
             }
@@ -700,459 +518,15 @@ dataEditServer <- function(id,
         return(rhot)
       }
     })
-
+    
     # RETURN DATA
     return(
       reactive({
         data_format(values$x,
-          values$data_class,
-          col_factor = col_factor
+                    values$data_class,
+                    col_factor = col_factor
         )
       })
     )
-  })
-}
-
-## DATA OUTPUT MODULE ----------------------------------------------------------
-
-#' Shiny module for data output
-#'
-#' @param id unique identifier for the module to prevent namespace clashes when
-#'   making multiple calls to this shiny module.
-#' @param data an object of class data.frame wrapped in \code{reactive} to be
-#'   saved to file.
-#' @param save_as name of the file to which the data should be saved, overrides
-#'   input file path if supplied.
-#' @param write_fun name of the function to use when writing the data to file,
-#'   set to \code{"write.csv"} by default.
-#' @param write_args a named list of additional arguments to pass to
-#'   \code{write_fun} when reading in files.
-#' @param hide logical indicating whether the data input user interface should
-#'   be hidden from the user, set to FALSE by default.
-#'
-#' @importFrom shiny downloadButton downloadHandler reactive moduleServer
-#'   is.reactive
-#' @importFrom shinyjs disable enable hidden show
-#'
-#' @author Dillon Hammill, \email{Dillon.Hammill@anu.edu.au}
-#'
-#' @examples
-#' if (interactive()) {
-#'   library(shiny)
-#'   library(rhandsontable)
-#'   library(shinyjs)
-#'
-#'   ui <- fluidPage(
-#'     useShinyjs(),
-#'     dataInputUI("input1"),
-#'     dataOutputUI("output1"),
-#'     rHandsontableOutput("data1")
-#'   )
-#'
-#'   server <- function(input,
-#'                      output,
-#'                      session) {
-#'     data_input1 <- dataInputServer("input1")
-#'
-#'     output$data1 <- renderRHandsontable({
-#'       if (!is.null(data_input1())) {
-#'         rhandsontable(data_input1())
-#'       }
-#'     })
-#'
-#'     dataOutputServer("output1",
-#'       data = data_input1
-#'     )
-#'   }
-#'
-#'   shinyApp(ui, server)
-#' }
-#' @name dataOutput
-NULL
-
-#' @rdname dataOutput
-#' @export
-dataOutputUI <- function(id) {
-  hidden(
-    downloadButton(
-      NS(id, "save"),
-      label = "Save",
-      style = "margin-top: 35px; margin-left: 0px;"
-    )
-  )
-}
-
-#' @rdname dataOutput
-#' @export
-dataOutputServer <- function(id,
-                             data = reactive(NULL),
-                             save_as = NULL,
-                             write_fun = "write.csv",
-                             write_args = NULL,
-                             hide = FALSE) {
-
-  # SERVER
-  moduleServer(id, function(input,
-                            output,
-                            session) {
-
-    # HIDE USER INTERFACE
-    if (!hide) {
-      show("save")
-    }
-
-    # VALUES
-    values <- reactiveValues(data = NULL)
-
-    # DISABLE/ENABLE SAVE
-    observe({
-      # UPDATE REACTIVE VALUES
-      if (!is.reactive(data)) {
-        values$data <- data
-      } else {
-        values$data <- data()
-      }
-      # DISABLE/ENABLE BUTTON
-      if (is.null(values$data)) {
-        disable("save")
-      } else {
-        enable("save")
-        # FORMAT
-        if (!nzchar(trimws(colnames(values$data)[1]))) {
-          rownames(values$data) <- values$data[, 1]
-          values$data <- values$data[, -1]
-        }
-      }
-    })
-
-    # SAVE DATA
-    output$save <- downloadHandler(
-      filename = function() {
-        if (!is.null(save_as)) {
-          save_as
-        } else {
-          paste0(
-            paste(format(Sys.time(), "%Y%m%d"),
-              "data",
-              sep = "-"
-            ),
-            ".csv"
-          )
-        }
-      },
-      content = function(file) {
-        write_args <- c(list(values$data, file), write_args)
-        do.call(write_fun, write_args)
-      }
-    )
-  })
-}
-
-## DATA SELECT -----------------------------------------------------------------
-
-#' Shiny module for selecting data
-#'
-#' @param id unique identifier for the module to prevent namespace clashes when
-#'   making multiple calls to this shiny module.
-#' @param data an array wrapped in \code{reactive()} containing the data to be
-#'   filtered.
-#'
-#' @importFrom shiny icon is.reactive actionButton NS reactive moduleServer
-#'   reactiveValues observe observeEvent showModal modalDialog tagList insertUI
-#'   removeUI removeModal
-#' @importFrom shinyBS bsButton updateButton
-#' @importFrom htmltools tags
-#'
-#' @author Dillon Hammill, \email{Dillon.Hammill@anu.edu.au}
-#'
-#' @examples
-#' if (interactive()) {
-#'   library(shiny)
-#'   library(rhandsontable)
-#'   library(shinyjs)
-#'
-#'   ui <- fluidPage(
-#'     useShinyjs(),
-#'     dataInputUI("input1"),
-#'     dataSelectUI("select1"),
-#'     dataOutputUI("output1"),
-#'     rHandsontableOutput("data1")
-#'   )
-#'
-#'   server <- function(input,
-#'                      output,
-#'                      session) {
-#'     data_input <- dataInputServer("input1")
-#'
-#'     data_select <- dataSelectServer("select1",
-#'       data = data_input
-#'     )
-#'
-#'     output$data1 <- renderRHandsontable({
-#'       if (!is.null(data_select())) {
-#'         rhandsontable(data_select())
-#'       }
-#'     })
-#'
-#'     dataOutputServer("output1",
-#'       data = data_select
-#'     )
-#'   }
-#'
-#'   shinyApp(ui, server)
-#' }
-#' @name dataSelect
-NULL
-
-#' @rdname dataSelect
-#' @export
-dataSelectUI <- function(id) {
-  
-  # USER INTERFACE
-  actionButton(
-    NS(id, "select"),
-    "Select",
-    icon = icon("crosshairs"),
-    style = "margin-top: 35px; margin-left: 0px;"
-  )
-  
-}
-
-#' @rdname dataSelect
-#' @export
-dataSelectServer <- function(id,
-                             data = reactive(NULL)) {
-  
-  # SERVER
-  moduleServer(id, function(input, output, session) {
-
-    # NAMESPACE
-    ns <- session$ns
-
-    # OBJECTS
-    buttons <- list()
-    button_observers <- list()
-
-    # REACTIVE DATA
-    values <- reactiveValues(
-      data = NULL,
-      subset = NULL
-    )
-
-    # DATA VALUES
-    observe({
-      # DATA
-      if (!is.reactive(data)) {
-        values$data <- data
-      } else {
-        values$data <- data()
-      }
-      # RESET BUTTONS
-      if (!is.null(values$data)) {
-        buttons <<- structure(
-          rep(list(FALSE), ncol(values$data)),
-          names = paste0("button-", 1:ncol(values$data))
-        )
-      } else {
-        buttons <<- list()
-      }
-      # RESET BUTTON OBSERVERS
-      button_observers <<- list()
-    })
-
-    # DATA SUBSET
-    observe({
-      values$subset <- values$data
-    })
-
-    # SELECT UI
-    observeEvent(input$select, {
-
-      # COLUMN SELECTOR
-      if (!is.null(values$data)) {
-
-        # CREATE BUTTONS
-        lapply(1:ncol(values$data), function(z) {
-          # BUTTON
-          button_name <- paste0("button-", z)
-          # CREATE OBSERVER
-          if (is.null(button_observers[[button_name]])) {
-            button_observers[[button_name]] <<- observeEvent(input[[button_name]], {
-              buttons[[button_name]] <<- input[[button_name]]
-              if (buttons[[button_name]] == TRUE) {
-                updateButton(
-                  session,
-                  ns(button_name),
-                  colnames(values$data)[z],
-                  block = FALSE,
-                  style = "success"
-                )
-              } else if (buttons[[button_name]] == FALSE) {
-                updateButton(
-                  session,
-                  ns(button_name),
-                  colnames(values$data)[z],
-                  block = FALSE,
-                  style = "danger"
-                )
-              }
-            })
-          }
-          # CREATE RED BUTTON
-          insertUI(
-            selector = paste0("#", ns("placeholder")),
-            ui = bsButton(
-              ns(button_name),
-              colnames(values$data)[z],
-              type = "toggle",
-              block = FALSE,
-              style = "danger"
-            )
-          )
-        })
-
-        # POPUP DIALOG BOX
-        showModal(
-          modalDialog(
-            title = "Select Columns:",
-            footer = tagList(
-              actionButton(
-                ns("select_all"),
-                "Select All"
-              ),
-              actionButton(
-                ns("select_none"),
-                "Select None"
-              ),
-              actionButton(
-                ns("close"),
-                "Close",
-                icon = icon("eject", lib = "glyphicon")
-              )
-            ),
-            # BUTTON ARRAY
-            tags$div(id = ns("placeholder")),
-            easyClose = TRUE
-          )
-        )
-      }
-    })
-
-    # SELECT ALL
-    observeEvent(input$select_all, {
-
-      # UPDATE BUTTONS
-      lapply(1:ncol(values$data), function(z) {
-        updateButton(
-          session,
-          ns(paste0("button-", z)),
-          label = colnames(values$data)[z],
-          value = TRUE,
-          block = FALSE
-        )
-      })
-    })
-
-    # SELECT NONE
-    observeEvent(input$select_none, {
-
-      # UPDATE BUTTONS
-      lapply(1:ncol(values$data), function(z) {
-        updateButton(
-          session,
-          ns(paste0("button-", z)),
-          label = colnames(values$data)[z],
-          value = FALSE,
-          block = FALSE
-        )
-      })
-    })
-
-    # UPDATE & SELECT
-    observeEvent(input$close, {
-
-      # BUTTONS - SELECTED COLUMNS
-      cols <- colnames(values$data)[
-        as.numeric(gsub("^button-", "", names(buttons[buttons == TRUE])))
-      ]
-
-      # RESTRICT COLUMNS
-      if (length(cols) != 0) {
-        values$subset <- values$data[, cols, drop = FALSE]
-      }
-
-      # REMOVE BUTTONS
-      lapply(names(buttons), function(z) {
-        removeUI(
-          selector = z
-        )
-      })
-
-      # CLOSE POPUP
-      removeModal()
-    })
-
-    # RETURN FSELECTED DATA
-    return(
-      reactive({
-        values$subset
-      })
-    )
-  })
-}
-
-## DATA FILTER -----------------------------------------------------------------
-
-#' Shiny module for filtering data
-#'
-#' @importFrom shiny actionButton NS moduleServer
-#'
-#' @name dataFilter
-NULL
-
-#' @rdname dataFilter
-#' @noRd
-dataFilterUI <- function(id) {
-  actionButton(
-    NS(id, "filter"),
-    "Filter",
-    icon = icon("filter"),
-    style = "margin-top: 35px; margin-left: 0px;"
-  )
-}
-
-#' @rdname dataFilter
-#' @noRd
-dataFilterServer <- function(id) {
-  moduleServer(id, function(input, output, session) {
-
-    # FILTER UI
-    observeEvent(input$filter, {
-
-      # POPUP DIALOG BOX
-      showModal(
-        modalDialog(
-          title = "Column Selector",
-          footer = tagList(
-            actionButton(
-              ns("select_all"),
-              "Select All"
-            ),
-            actionButton(
-              ns("select_none"),
-              "Select None"
-            ),
-            actionButton(
-              ns("close"),
-              "Close",
-              icon = icon("eject", lib = "glyphicon")
-            )
-          ),
-          # BUTTON ARRAY
-          uiOutput(ns("buttons")),
-          easyClose = TRUE
-        )
-      )
-    })
   })
 }
