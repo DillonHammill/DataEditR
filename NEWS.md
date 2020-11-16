@@ -1,3 +1,9 @@
+# DataEditR 0.0.8
+
+* Add `dataSelect` and `dataFilter` modules to filter data,
+* Add a `Sync` button to update the entire dataset with changes made to a subset. Data is still exported as a whole but a new button could be added in the future to export the subsetted data.
+* Add `cut` button to allow return of subsetted data upon closing the application with the `Done` button.
+
 # DataEditR 0.0.7
 
 * Create `dataInput`, `dataEdit` and `dataOutput` modules.

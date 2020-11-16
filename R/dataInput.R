@@ -75,7 +75,7 @@ dataInputUI <- function(id,
       ),
       cellWidths = cellWidths,
       cellArgs = list(style = paste0(
-        "padding-left: 10px;",
+        "padding-left: 5px;",
         "padding-top: 10px;",
         "padding-right: 0px;"
       ))

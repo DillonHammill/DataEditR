@@ -14,6 +14,8 @@
 #'   \code{write_fun} when reading in files.
 #' @param hide logical indicating whether the data input user interface should
 #'   be hidden from the user, set to FALSE by default.
+#' @param icon supplied to \code{dataOutputUI} to control the appearance of the
+#'   icon displayed on the download button, set to \code{"download"} by default.
 #'
 #' @importFrom shiny downloadButton downloadHandler reactive moduleServer
 #'   is.reactive
@@ -57,12 +59,14 @@ NULL
 
 #' @rdname dataOutput
 #' @export
-dataOutputUI <- function(id) {
+dataOutputUI <- function(id,
+                         icon = "download") {
   hidden(
-    downloadButton(
+    customDownloadButton(
       NS(id, "save"),
-      label = "Save",
-      style = "margin-top: 35px; margin-left: 0px;"
+      label = NULL,
+      icon = icon,
+      style = "margin-left: 0px;"
     )
   )
 }

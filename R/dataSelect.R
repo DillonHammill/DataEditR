@@ -68,9 +68,9 @@ dataSelectUI <- function(id) {
   hidden(
     actionButton(
       NS(id, "select"),
-      "Select",
+      label = NULL,
       icon = icon("crosshairs"),
-      style = "margin-top: 35px; margin-left: 0px;"
+      style = "margin-left: 0px;"
     )
   )
 
@@ -100,7 +100,8 @@ dataSelectServer <- function(id,
     values <- reactiveValues(
       data = NULL,
       subset = NULL,
-      select = list()
+      select = list(),
+      columns = NULL
     )
     
     # DATA
@@ -200,6 +201,7 @@ dataSelectServer <- function(id,
         })
         
       }
+      
     })
     
     # SELECT ALL
@@ -253,6 +255,11 @@ dataSelectServer <- function(id,
         
       }
       
+      # COLUMN INDICES
+      if(!is.null(values$select)) {
+        values$columns <- which(unlist(values$select))
+      }
+      
       # CLOSE POPUP
       removeModal()
       
@@ -262,7 +269,7 @@ dataSelectServer <- function(id,
     return(
       list(
         data = reactive({values$subset}),
-        columns = reactive({which(unlist(values$select))})
+        columns = reactive({values$columns})
       )
     )
   })

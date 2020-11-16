@@ -64,9 +64,9 @@ dataFilterUI <- function(id) {
   hidden(
     actionButton(
       NS(id, "filter"),
-      "Filter",
+      label = NULL,
       icon = icon("filter"),
-      style = "margin-top: 35px; margin-left: 0px;"
+      style = "margin-left: 0px;"
     )
   )
 
@@ -550,6 +550,10 @@ dataFilterServer <- function(id,
       
       # FLUSH FILTERS
       values$filters <- NULL
+      
+      # FLUSH ROWS
+      values$rows <- NULL
+      
     })
     
     # UPDATE & FILTER
@@ -632,7 +636,11 @@ dataFilterServer <- function(id,
             
           })
         )
-        values$rows <- ind[duplicated(ind)] # intersection
+        if(length(values$filters) > 1) {
+          values$rows <- ind[duplicated(ind)] # intersection
+        } else {
+          values$rows <- ind
+        }
         values$subset <- values$data[values$rows, ]
       }
       

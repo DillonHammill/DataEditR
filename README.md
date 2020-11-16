@@ -20,11 +20,9 @@ stable](https://img.shields.io/badge/lifecycle-stable-brightgreen.svg)](https://
 
 Manual data entry and editing in R can be tedious, especially if you
 have limited coding experience and are accustomed to using software with
-a Graphical User Interface (GUI). **DataEditR** is an R package that
-makes it easy to view, enter and edit data within R, due to its
-convenient interactive GUI that supports many of the data manipulation
-operations supported by other commonly used GUI-oriented software. If
-you are new to **DataEditR** visit
+a Graphical User Interface (GUI). **DataEditR** is an R package built on
+shiny and rhandsontable that makes it easy to interactively view, enter,
+filter and edit data. If you are new to **DataEditR** visit
 <https://dillonhammill.github.io/DataEditR/> to get started.
 
 ## Installation
@@ -45,13 +43,13 @@ install_github("DillonHammill/DataEditR")
 
 ## Usage
 
-**DataEditR** ships with three distinct shiny modules, namely
-`dataInput`, `dataEdit` and `dataOutput` which have been wrapped up into
-a single function called `data_edit()` to make it possible to
-interactively view, enter or edit data in R. You can use `data_edit()`
-as a standalone application, or include the relevant modules within your
-own shiny applications. Alternatively, you can use the RStudio add-in
-that ships with `DataEditR`.
+**DataEditR** ships with a series of shiny modules, namely `dataInput`,
+`dataSelect`, `dataFilter`, `dataEdit` and `dataOutput` which have been
+wrapped up into a single function called `data_edit()` to create an
+interactive data editor. You can use `data_edit()` as a standalone
+application, or include the relevant modules within your own shiny
+applications. Alternatively, `DataEditR` also ships with an RStudio
+add-in should you prefer to interact with it in this way.
 
 #### General features:
 
@@ -76,6 +74,8 @@ that ships with `DataEditR`.
 
 #### Data editing features:
 
+  - column selection using the `dataSelect` module
+  - row selection using the `dataFilter` module
   - edit row or column names
   - addition or removal of rows or columns
   - manual column resizing
@@ -134,7 +134,7 @@ citation("DataEditR")
 #> To cite package 'DataEditR' in publications use:
 #> 
 #>   Dillon Hammill (2020). DataEditR: An Interactive Editor for Viewing,
-#>   Entering & Editing Data. R package version 0.0.7.
+#>   Entering & Editing Data. R package version 0.0.8.
 #>   https://github.com/DillonHammill/DataEditR
 #> 
 #> A BibTeX entry for LaTeX users is
@@ -143,7 +143,7 @@ citation("DataEditR")
 #>     title = {DataEditR: An Interactive Editor for Viewing, Entering & Editing Data},
 #>     author = {Dillon Hammill},
 #>     year = {2020},
-#>     note = {R package version 0.0.7},
+#>     note = {R package version 0.0.8},
 #>     url = {https://github.com/DillonHammill/DataEditR},
 #>   }
 ```

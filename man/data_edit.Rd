@@ -2,8 +2,7 @@
 % Please edit documentation in R/data_edit.R
 \name{data_edit}
 \alias{data_edit}
-\title{DATA_EDIT -------------------------------------------------------------------
-An interactive editor for viewing, entering and editing data}
+\title{An interactive editor for viewing, entering and editing data}
 \usage{
 data_edit(
   x = NULL,

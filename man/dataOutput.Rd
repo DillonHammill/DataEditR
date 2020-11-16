@@ -6,7 +6,7 @@
 \alias{dataOutputServer}
 \title{Shiny module for data output}
 \usage{
-dataOutputUI(id)
+dataOutputUI(id, icon = "download")
 
 dataOutputServer(
   id,
@@ -20,6 +20,9 @@ dataOutputServer(
 \arguments{
 \item{id}{unique identifier for the module to prevent namespace clashes when
 making multiple calls to this shiny module.}
+
+\item{icon}{supplied to \code{dataOutputUI} to control the appearance of the
+icon displayed on the download button, set to \code{"download"} by default.}
 
 \item{data}{an object of class data.frame wrapped in \code{reactive} to be
 saved to file.}
