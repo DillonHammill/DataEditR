@@ -273,7 +273,14 @@ data_edit <- function(x = NULL,
                                   read_args = read_args,
                                   hide = hide)
     observe({
-      values$data_update <- data_input()
+      # BIND ROWS
+      data_to_edit <- data_bind_rows(data_input(),
+                                     row_bind = row_bind)
+      
+      # BIND COLUMNS
+      data_to_edit <- data_bind_cols(data_to_edit,
+                                     col_bind = col_bind)
+      values$data_update <- data_to_edit
       values$rows <- NULL
       values$columns <- NULL
     })
@@ -282,109 +289,79 @@ data_edit <- function(x = NULL,
     data_select <- dataSelectServer("select1",
                                     data = reactive(values$data_update))
     
-    # COLUMNS SELECTED
-    observe({
-      values$columns <- data_select$columns()
-    })
-    
     # DATA FILTER
     data_filter <- dataFilterServer("filter1",
                                     data = reactive(values$data_update))
     
-    # ROWS SELECTED
     observe({
       values$rows <- data_filter$rows()
-    })
-    
-    # DATA ACTIVE
-    observe({
-      # VALUES
+      values$columns <- data_select$columns()
       if(length(values$rows) != 0 & length(values$columns) == 0) {
-        values$data_active <- values$data_update[values$rows, 
-                                                  , 
-                                                 drop = FALSE]
+        values$data_active <- values$data_update[values$rows, , drop = FALSE]
       } else if(length(values$rows) == 0 & length(values$columns) != 0) {
-        values$data_active <- values$data_update[ , 
-                                                  values$columns, 
-                                                  drop = FALSE]
+        values$data_active <- values$data_update[ , values$columns, drop = FALSE]
       } else if(length(values$rows) != 0 & length(values$columns) != 0) {
-        values$data_active <- values$data_update[values$rows, 
-                                                 values$columns, 
-                                                 drop = FALSE]
+        values$data_active <- values$data_update[values$rows, values$columns, drop = FALSE]
       } else {
         values$data_active <- NULL
       }
     })
     
-    # ACTIVE/UPDATE
     observe({
       if(is.null(values$data_active)) {
-        values$data_edit <- values$data_update
         values$edit <- "update"
+        values$data_edit <- values$data_update
       } else {
-        values$data_edit <- values$data_active
         values$edit <- "active"
+        values$data_edit <- values$data_active
       }
     })
     
     # DATAEDIT - ENTIRE DATASET
     data_update <- dataEditServer("edit1",
                                   data = reactive(values$data_edit),
-                                  col_bind = col_bind,
-                                  col_edit = switch(values$edit,
-                                                    "active" = FALSE,
-                                                    "update" = col_edit),
+                                  col_bind = NULL, # endless loop!
+                                  col_edit = col_edit,
                                   col_options = col_options,
                                   col_stretch = col_stretch,
                                   col_names = col_names,
                                   col_readonly = col_readonly,
                                   col_factor = col_factor,
-                                  row_bind = row_bind,
-                                  row_edit = switch(values$edit,
-                                                    "active" = FALSE,
-                                                    "update" = row_edit),
+                                  row_bind = NULL, # endless loop!
+                                  row_edit = row_edit,
                                   quiet = quiet)
-    
-    # DATA UPDATE
-    observe({
-      if(values$edit == "active") {
-        values$data_active <- data_update()
-      } else if(values$edit == "update"){
-        values$data_update <- data_update()
-      }
-    })
     
     # SYNC
     observeEvent(input$sync, {
       # VALUES
       if(length(values$rows) != 0 & length(values$columns) == 0) {
-        values$data_update[values$rows, ] <- values$data_active
+        values$data_update[values$rows, ] <- data_update()
       } else if(length(values$rows) == 0 & length(values$columns) != 0) {
-        values$data_update[ , values$columns] <- values$data_active
+        values$data_update[ , values$columns] <- data_update()
       } else if(length(values$rows) != 0 & length(values$columns) != 0) {
         values$data_update[values$rows, values$columns] <- 
-          values$data_active
+          data_update()
       }
       # ROW/COLUMN NAMES
-      if(!is.null(values$data_active)) {
+      if(!is.null(data_update())) {
         # ROW NAMES
-        if(!all(rownames(values$data_active) == 
+        if(!all(rownames(data_update()) == 
                 rownames(values$data_update)[values$rows])) {
           rownames(values$data_update)[values$rows] <- 
-            rownames(values$data_active)
+            rownames(data_update())
         }
         # COLUMN NAMES
-        if(!all(colnames(values$data_active) == 
+        if(!all(colnames(data_update()) == 
                 colnames(values$data_update)[values$columns])) {
           colnames(values$data_update)[values$columns] <- 
-            colnames(values$data_active)
+            colnames(data_update())
         }
       }
     })
     
     # DATA OUTPUT - DATA ACTIVE
     dataOutputServer("output-active",
-                     data = reactive({values$data_active}),
+                     data = data_update,
                      save_as = save_as,
                      write_fun = write_fun,
                      write_args = write_args,

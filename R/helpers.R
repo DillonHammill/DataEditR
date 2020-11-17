@@ -126,3 +126,97 @@ data_format <- function(data,
   return(data)
   
 }
+
+## BIND COLUMNS ----------------------------------------------------------------
+
+#' Add new columns to data
+#' @noRd
+data_bind_cols <- function(data = NULL,
+                           col_bind = NULL) {
+  
+  # COLUMNS
+  if (!is.null(col_bind)) {
+    # NEW COLUMNS
+    if (is.null(dim(col_bind))) {
+      # COLUMNS AS LIST
+      if (class(col_bind) == "list") {
+        # NAMES
+        if (is.null(names(col_bind))) {
+          names(col_bind) <- paste0("V", length(col_bind))
+        }
+        # LENGTHS
+        ind <- which(!unlist(lapply(col_bind, length)) == nrow(data))
+        if (length(ind) > 0) {
+          for (z in ind) {
+            col_bind[[z]] <- rep(col_bind[[z]], nrow(data))
+          }
+        }
+        # MATRIX
+        col_bind <- do.call("cbind", col_bind)
+        # COLUMN NAMES
+      } else {
+        col_bind <- matrix(rep("", nrow(data) * length(col_bind)),
+                           ncol = length(col_bind),
+                           dimnames = list(
+                             rownames(data),
+                             col_bind
+                           )
+        )
+      }
+    }
+    # BIND NEW COLUMNS
+    if(!is.null(data)) {
+      data <- cbind(
+        data,
+        col_bind[1:nrow(data), , drop = FALSE]
+      )
+    }
+  }
+  
+  return(data)
+  
+}
+
+## BIND ROWS -------------------------------------------------------------------
+
+#' Add new rows to data
+#' @noRd
+data_bind_rows <- function(data = NULL,
+                           row_bind = NULL) {
+  
+  # ROWS
+  if (!is.null(row_bind)) {
+    # NEW ROWS
+    if (is.null(dim(row_bind))) {
+      # ROWS AS LIST
+      if (class(row_bind) == "list") {
+        # NAMES NOT NECESSARY
+        # LENGTHS
+        ind <- which(!unlist(lapply(row_bind, length)) == ncol(data))
+        if (length(ind) > 0) {
+          for (z in ind) {
+            row_bind[[z]] <- rep(row_bind[[z]], ncol(data))
+          }
+        }
+        # MATRIX
+        row_bind <- do.call("rbind", row_bind)
+        # ROW NAMES
+      } else {
+        row_bind <- matrix(rep("", ncol(data) * length(row_bind)),
+                           nrow = length(row_bind),
+                           dimnames = list(
+                             row_bind,
+                             colnames(data)
+                           )
+        )
+      }
+    }
+    # BIND NEW ROWS
+    if(!is.null(data)) {
+      data <- rbind(data, row_bind[, 1:ncol(data)])
+    }
+  }
+  
+  return(data)
+  
+}

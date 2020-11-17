@@ -115,7 +115,7 @@ dataEditServer <- function(id,
   }
 
   # SERVER
-  dt <- moduleServer(id, function(input,
+  moduleServer(id, function(input,
                             output,
                             session) {
     
@@ -149,73 +149,13 @@ dataEditServer <- function(id,
         
         # BIND ROWS ------------------------------------------------------------
         
-        if (!is.null(row_bind)) {
-          # NEW ROWS
-          if (is.null(dim(row_bind))) {
-            # ROWS AS LIST
-            if (class(row_bind) == "list") {
-              # NAMES NOT NECESSARY
-              # LENGTHS
-              ind <- which(!unlist(lapply(row_bind, length)) == ncol(data_to_edit))
-              if (length(ind) > 0) {
-                for (z in ind) {
-                  row_bind[[z]] <- rep(row_bind[[z]], ncol(data_to_edit))
-                }
-              }
-              # MATRIX
-              row_bind <- do.call("rbind", row_bind)
-              # ROW NAMES
-            } else {
-              row_bind <- matrix(rep("", ncol(data_to_edit) * length(row_bind)),
-                                 nrow = length(row_bind),
-                                 dimnames = list(
-                                   row_bind,
-                                   colnames(data_to_edit)
-                                 )
-              )
-            }
-          }
-          # BIND NEW ROWS
-          data_to_edit <- rbind(data_to_edit, row_bind[, 1:ncol(data_to_edit)])
-        }
+        data_to_edit <- data_bind_rows(data_to_edit,
+                                       row_bind = row_bind)
         
         # BIND COLUMNS -----------------------------------------------------------
         
-        if (!is.null(col_bind)) {
-          # NEW COLUMNS
-          if (is.null(dim(col_bind))) {
-            # COLUMNS AS LIST
-            if (class(col_bind) == "list") {
-              # NAMES
-              if (is.null(names(col_bind))) {
-                names(col_bind) <- paste0("V", length(col_bind))
-              }
-              # LENGTHS
-              ind <- which(!unlist(lapply(col_bind, length)) == nrow(data_to_edit))
-              if (length(ind) > 0) {
-                for (z in ind) {
-                  col_bind[[z]] <- rep(col_bind[[z]], nrow(data_to_edit))
-                }
-              }
-              # MATRIX
-              col_bind <- do.call("cbind", col_bind)
-              # COLUMN NAMES
-            } else {
-              col_bind <- matrix(rep("", nrow(data_to_edit) * length(col_bind)),
-                                 ncol = length(col_bind),
-                                 dimnames = list(
-                                   rownames(data_to_edit),
-                                   col_bind
-                                 )
-              )
-            }
-          }
-          # BIND NEW COLUMNS
-          data_to_edit <- cbind(
-            data_to_edit,
-            col_bind[1:nrow(data_to_edit), , drop = FALSE]
-          )
-        }
+        data_to_edit <- data_bind_cols(data_to_edit,
+                                       col_bind = col_bind)
         
         # COLUMN NAMES -----------------------------------------------------------
         
@@ -531,6 +471,4 @@ dataEditServer <- function(id,
     )
     
   })
-  
-  return(dt)
 }
