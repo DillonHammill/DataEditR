@@ -44,7 +44,7 @@
 #'
 #' @author Dillon Hammill, \email{Dillon.Hammill@anu.edu.au}
 #'
-#' @importFrom shiny reactive reactiveValues observe observeEvent moduleServer
+#' @importFrom shiny reactive reactiveValues observe observeEvent moduleServer 
 #' @importFrom rhandsontable rhandsontable hot_to_r hot_context_menu hot_col
 #'   renderRHandsontable rHandsontableOutput %>%
 #'
@@ -113,9 +113,9 @@ dataEditServer <- function(id,
       col_edit <- FALSE
     }
   }
-  
+
   # SERVER
-  moduleServer(id, function(input,
+  dt <- moduleServer(id, function(input,
                             output,
                             session) {
     
@@ -137,6 +137,7 @@ dataEditServer <- function(id,
       } else {
         data_to_edit <- data()
       }
+      
       # INPUT & FORMAT DATA
       if (!is.null(data_to_edit)) {
         
@@ -220,7 +221,7 @@ dataEditServer <- function(id,
         
         # CHECK
         if (any(duplicated(colnames(data_to_edit)))) {
-          stop("Column names must be unique!")
+          warning("Column names must be unique!")
         }
         
         # COLUMN NAMES
@@ -327,7 +328,7 @@ dataEditServer <- function(id,
         values$x[, col_readonly] <- x_old[, col_readonly]
       }
     })
-    
+
     # ROW/COLUMN NAME EDITS
     observeEvent(input$x_changeHeaders, {
       # COLUMN NAMES
@@ -405,10 +406,10 @@ dataEditServer <- function(id,
       #   values[["x"]] <- mat
       # }
     })
-    
+
     # TABLE
     output$x <- renderRHandsontable({
-      
+
       # RHANDSONTABLE
       if (!is.null(values$x)) {
         rhot <-
@@ -436,7 +437,7 @@ dataEditServer <- function(id,
                                 } : {
                                   rowHeaders: headers
                                 });
-                                    
+
                                 // send the event to Shiny
                                 let id = instance.container.parentElement.id
                                 if(HTMLWidgets.shinyMode) {
@@ -450,7 +451,7 @@ dataEditServer <- function(id,
                                     }
                                   )
                                 }
-                                    
+
                                 setTimeout(() => {
                                   if (input.parentNode) {
                                     input.parentNode.removeChild(input)
@@ -467,7 +468,7 @@ dataEditServer <- function(id,
                               'top:' + rect.top + 'px;' +
                               'width:' + (rect.width - 4) + 'px;' +
                               'height:' + (rect.height - 4) + 'px;' +
-                              'z-index:1000;' + 
+                              'z-index:1000;' +
                               'text-align:center';
                             document.body.appendChild(input);
                           };
@@ -476,7 +477,7 @@ dataEditServer <- function(id,
                           ).innerText;
                           appendInput();
                           setTimeout(() => {
-                            input.select(); 
+                            input.select();
                             addListeners('change blur', instance[
                               isColHeader ? 'getColHeader' : 'getRowHeader'
                               ](), coords[isColHeader ? 'col' : 'row']);
@@ -489,7 +490,7 @@ dataEditServer <- function(id,
             allowRowEdit = row_edit,
             allowColEdit = col_edit
           )
-        
+
         # CUSTOM COLUMNS
         for (z in colnames(values$x)) {
           # CHECKBOX / DROPDOWN
@@ -528,5 +529,8 @@ dataEditServer <- function(id,
         )
       })
     )
+    
   })
+  
+  return(dt)
 }

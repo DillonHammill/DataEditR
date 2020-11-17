@@ -246,11 +246,8 @@ data_edit <- function(x = NULL,
     fluidRow(
       column(
         12,
-        div(
-          # style = "padding-top: 0px;",
-          dataEditUI("edit1"),
-          br()
-        )
+        dataEditUI("edit1"),
+        br()
       )
     )
   )

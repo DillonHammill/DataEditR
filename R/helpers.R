@@ -81,7 +81,7 @@ data_template <- function(x = NULL,
 #' @noRd
 data_format <- function(data,
                         data_class = NULL,
-                        col_factor = FALSE) {
+                        col_factor = FALSE) { 
   
   # FORMAT
   if(!is.null(data)) {
