@@ -314,7 +314,6 @@ data_edit <- function(x = NULL,
       } else {
         values$data_active <- NULL
       }
-
     })
     
     # ACTIVE/UPDATE

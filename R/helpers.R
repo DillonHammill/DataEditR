@@ -105,7 +105,7 @@ data_format <- function(data,
         colnames(data)[1] <- "rownames"
       } else {
         rownames(data) <- new_row_names
-        data <- data[, -1]
+        data <- data[, -1, drop = FALSE]
       }
     } else {
       rownames(data) <- NULL
