@@ -114,6 +114,7 @@
 #' @importFrom shinythemes shinytheme
 #' @importFrom miniUI gadgetTitleBar
 #' @importFrom shinyBS bsButton updateButton
+#' @importFrom rhandsontable %>%
 #'
 #' @author Dillon Hammill, \email{Dillon.Hammill@anu.edu.au}
 #'
@@ -258,9 +259,9 @@ data_edit <- function(x = NULL,
                      session) {
     
     # DATA STORAGE
-    values <- reactiveValues(data_edit = NULL,
-                             data_update = NULL, # all updates
+    values <- reactiveValues(data_update = NULL, # all updates
                              data_active = NULL, # subset
+                             data_edit = NULL,   # edits
                              rows = NULL,        # row indices
                              columns = NULL,     # column indices
                              edit = NULL,
@@ -272,15 +273,11 @@ data_edit <- function(x = NULL,
                                   read_fun = read_fun,
                                   read_args = read_args,
                                   hide = hide)
+    
     observe({
-      # BIND ROWS
-      data_to_edit <- data_bind_rows(data_input(),
-                                     row_bind = row_bind)
-      
-      # BIND COLUMNS
-      data_to_edit <- data_bind_cols(data_to_edit,
-                                     col_bind = col_bind)
-      values$data_update <- data_to_edit
+      values$data_update <- data_input() %>%
+        data_bind_rows(row_bind = row_bind) %>%
+        data_bind_cols(col_bind = col_bind)
       values$rows <- NULL
       values$columns <- NULL
     })

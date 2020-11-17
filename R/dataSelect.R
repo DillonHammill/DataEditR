@@ -113,6 +113,7 @@ dataSelectServer <- function(id,
       }
       # RESET FILTERS - NEW DATA
       values$select <- list()
+      values$columns <- NULL
     })
     
     # SELECT UI

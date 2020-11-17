@@ -109,6 +109,7 @@ dataFilterServer <- function(id,
       }
       # RESET FILTERS - NEW DATA
       values$filters <- list()
+      values$rows <- NULL
     })
     
     # FILTER UI
