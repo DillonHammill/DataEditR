@@ -177,7 +177,7 @@ If no data is supplied to `data_edit()` an empty data.frame will be constructed 
 data_edit()
 ```
 
-```{r, echo=FALSE, fig.align="center", out.width = '60%'}
+```{r, echo=FALSE, fig.align="center", out.width = '100%'}
 knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-7.png')
 ```
 
@@ -187,7 +187,7 @@ The dimensions of the template can be controlled by supplying a vector of the fo
 data_edit(c(20, 15))
 ```
 
-```{r, echo=FALSE, fig.align="center", out.width = '40%'}
+```{r, echo=FALSE, fig.align="center", out.width = '100%'}
 knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-8.png')
 ```
 
@@ -199,7 +199,7 @@ Alternatively, you can pass a vector of column names to create a data.frame temp
 data_edit(c("Date", "Country", "Temperature", "Rainfall", "Visibility", "Humidity"))
 ```
 
-```{r, echo=FALSE, fig.align="center", out.width = '40%'}
+```{r, echo=FALSE, fig.align="center", out.width = '100%'}
 knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-9.png')
 ```
 
@@ -215,7 +215,7 @@ Column selection is supported through the `dataSelect` module which can be invok
 data_edit(mtcars)
 ```
 
-```{r, echo=FALSE, fig.align="center", out.width = '40%'}
+```{r, echo=FALSE, fig.align="center", out.width = '100%'}
 knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-10.gif')
 ```
 
@@ -227,7 +227,7 @@ Row filtering is supported through the `dataFilter` module which can be invoked 
 data_edit(mtcars)
 ```
 
-```{r, echo=FALSE, fig.align="center", out.width = '40%'}
+```{r, echo=FALSE, fig.align="center", out.width = '100%'}
 knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-11.gif')
 ```
 
@@ -239,7 +239,7 @@ Changes made to data subsets are not automatically synchronised in the complete 
 data_edit(mtcars)
 ```
 
-```{r, echo=FALSE, fig.align="center", out.width = '40%'}
+```{r, echo=FALSE, fig.align="center", out.width = '100%'}
 knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-12.gif')
 ```
 
@@ -252,7 +252,7 @@ mtcars_subset <- data_edit(mtcars)
 str(mtcars_subset)
 ```
 
-```{r, echo=FALSE, fig.align="center", out.width = '40%'}
+```{r, echo=FALSE, fig.align="center", out.width = '100%'}
 knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-13.gif')
 ```
 
@@ -290,8 +290,8 @@ mtcars_new <- data_edit(mtcars,
 
 Alternatively, data can be saved to file by selecting either of the file download buttons as highlighted in the image below. The button of the left is used to save the data subset to file whilst the button on the right is used to save the entire dataset to file.
 
-```{r, echo=FALSE, fig.align="center", out.width = '40%'}
-knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-14.gif')
+```{r, echo=FALSE, fig.align="center", out.width = '100%'}
+knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-14.png')
 ```
 
 ## 7. Complex user inputs
@@ -378,7 +378,7 @@ knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEdi
 `DataEditR` also ships with an RStudio add-in should you prefer to interact with your data in this way. Simply highlight the name of a dataset in an active script and select the `Interactive Data Editor` from the list of `Addins` in your RStudio session.
 
 ```{r, echo=FALSE, fig.align="center", out.width = '100%'}
-knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-19.png')
+knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-19.gif')
 ```
 
 ## Summary
