@@ -20,6 +20,7 @@ install:
   - R -e 'install.packages("knitr")'
   - R -e 'install.packages("shiny")'
   - R -e 'install.packages("shinythemes")'
+  - R -e 'install.packages("shinyBS")'
   - R -e 'install.packages("shinyjs")'
   - R -e 'install.packages("miniUI")'
   - R -e 'install.packages("rstudioapi")'
