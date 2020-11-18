@@ -40,7 +40,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="index.html">DataEditR</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.0.6</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.0.8</span>
       </span>
     </div>
 
@@ -87,39 +87,57 @@
 </h1></div>
 <!-- badges: start -->
 
-<p>Manual data entry and editing in R can be tedious, especially if you have limited coding experience and are accustomed to using software with a Graphical User Interface (GUI). <strong>DataEditR</strong> is an R package that makes it easy to view, enter and edit data within R, due to its convenient interactive GUI that supports many of the data manipulation operations supported by other commonly used GUI-oriented software. If you are new to <strong>DataEditR</strong> visit <a href="https://dillonhammill.github.io/DataEditR/" class="uri">https://dillonhammill.github.io/DataEditR/</a> to get started.</p>
+<p>Manual data entry and editing in R can be tedious, especially if you have limited coding experience and are accustomed to using software with a Graphical User Interface (GUI). <strong>DataEditR</strong> is an R package built on shiny and rhandsontable that makes it easy to interactively view, enter, filter and edit data. If you are new to <strong>DataEditR</strong> visit <a href="https://dillonhammill.github.io/DataEditR/" class="uri">https://dillonhammill.github.io/DataEditR/</a> to get started.</p>
 <div id="installation" class="section level2">
 <h2 class="hasAnchor">
 <a href="#installation" class="anchor"></a>Installation</h2>
-<p><strong>DataEditR</strong> can be installed directly from GitHub:</p>
-<div class="sourceCode" id="cb1"><pre class="r"><span class="fu"><a href="https://rdrr.io/r/base/library.html">library</a></span>(<span class="no">devtools</span>)
+<p><strong>DataEditR</strong> can be installed from CRAN:</p>
+<div class="sourceCode" id="cb1"><pre class="r"><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html">install.packages</a></span>(<span class="st">"DataEditR"</span>)</pre></div>
+<p>The development version of <strong>DataEditR</strong> can be installed directly from GitHub:</p>
+<div class="sourceCode" id="cb2"><pre class="r"><span class="fu"><a href="https://rdrr.io/r/base/library.html">library</a></span>(<span class="no">devtools</span>)
 <span class="fu"><a href="https://devtools.r-lib.org//reference/remote-reexports.html">install_github</a></span>(<span class="st">"DillonHammill/DataEditR"</span>)</pre></div>
 </div>
 <div id="usage" class="section level2">
 <h2 class="hasAnchor">
 <a href="#usage" class="anchor"></a>Usage</h2>
-<p><strong>DataEditR</strong> ships with a single function called <code><a href="reference/data_edit.html">data_edit()</a></code> that allows you to interactively view, enter or edit data in R. The key features of the data editor are summarised below and will be explored in detail in the package vignette:</p>
+<p><strong>DataEditR</strong> ships with a series of shiny modules, namely <code>dataInput</code>, <code>dataSelect</code>, <code>dataFilter</code>, <code>dataEdit</code> and <code>dataOutput</code> which have been wrapped up into a single function called <code><a href="reference/data_edit.html">data_edit()</a></code> to create an interactive data editor. You can use <code><a href="reference/data_edit.html">data_edit()</a></code> as a standalone application, or include the relevant modules within your own shiny applications. Alternatively, <code>DataEditR</code> also ships with an RStudio add-in should you prefer to interact with it in this way.</p>
+<div id="general-features" class="section level4">
+<h4 class="hasAnchor">
+<a href="#general-features" class="anchor"></a>General features:</h4>
 <ul>
-<li>a quick way to view your data</li>
-<li>create data.frames from scratch</li>
+<li>RStudio add-in</li>
+<li>flexible display options (either <code>dialog</code> box, <code>browser</code> or RStudio <code>viewer</code> pane)</li>
+<li>fast rendering to quickly view datasets</li>
+<li>ability to interactively create data.frames from scratch</li>
 <li>load tabular data saved to file using any reading function (e.g. <code><a href="https://rdrr.io/r/utils/read.table.html">read.csv()</a></code>)</li>
-<li>row indices are always included even if row names have been specified</li>
-<li>addition/removal of rows or columns</li>
-<li>editing of either row or column names</li>
+<li>save edited data to file using any writing function (e.g. <code><a href="https://rdrr.io/r/utils/write.table.html">write.csv()</a></code>)</li>
+<li>return appropriately formatted data as an R object for downstream use</li>
+<li>code required to create edited data can be optionally printed to the console</li>
+<li>support for custom themes through <code>shinythemes</code> package</li>
+<li>customisable user interface (title, logo and modules)</li>
+<li>row indices are always displayed for easy navigation</li>
+<li>switch between datasets or files without having to leave the application</li>
+</ul>
+</div>
+<div id="data-editing-features" class="section level4">
+<h4 class="hasAnchor">
+<a href="#data-editing-features" class="anchor"></a>Data editing features:</h4>
+<ul>
+<li>column selection using the <code>dataSelect</code> module</li>
+<li>row selection using the <code>dataFilter</code> module</li>
+<li>edit row or column names</li>
+<li>addition or removal of rows or columns</li>
 <li>manual column resizing</li>
-<li>drag a cell to fill others</li>
-<li>paste data from other software directly into the editor</li>
-<li>programmatically add columns/rows prior to loading the data editor</li>
-<li>copy and paste edited data into other software</li>
-<li>edited data can be optionally saved to file using any writing function (e.g. <code><a href="https://rdrr.io/r/utils/write.table.html">write.csv()</a></code>)</li>
-<li>edited data is exported as a matrix or data.frame for use within R</li>
-<li>data editor is opened in the RStudio Viewer pane by default but can be changed to open in a pop-up window or web browser</li>
-<li>customize appearance using a <code>shinythemes</code> theme</li>
-<li>developers can add checkbox or dropdown columns for user input</li>
-<li>developers can customize the data editor with their own package logo and title</li>
+<li>drag to fill cells</li>
+<li>copy or paste data to and from external software</li>
+<li>custom column types to simplify user input (e.g. checkboxes and dropdown menus)</li>
+<li>support for readonly columns to prevent users from editing certain columns</li>
+<li>control over which column names can be edited</li>
+<li>stretch columns horizontally to fill available space</li>
+<li>programmatically add columns or rows to data prior to loading into the data editor</li>
 </ul>
 <p>A quick demonstration of some of these features can be seen below, where we use <code><a href="reference/data_edit.html">data_edit()</a></code> to make changes to the <code>mtcars</code> dataset and save the result to a new csv file:</p>
-<div class="sourceCode" id="cb2"><pre class="r"><span class="co"># Load required packages</span>
+<div class="sourceCode" id="cb3"><pre class="r"><span class="co"># Load required packages</span>
 <span class="fu"><a href="https://rdrr.io/r/base/library.html">library</a></span>(<span class="no">DataEditR</span>)
 
 <span class="co"># Save output to R object &amp; csv file</span>
@@ -127,10 +145,11 @@
                         <span class="kw">save_as</span> <span class="kw">=</span> <span class="st">"mtcars_new.csv"</span>)</pre></div>
 <p><img src="https://raw.githubusercontent.com/DillonHammill/DataEditR/master/man/figures/DataEditR/DataEditR-README.gif" width="100%" style="display: block; margin: auto;"></p>
 </div>
+</div>
 <div id="credits" class="section level2">
 <h2 class="hasAnchor">
 <a href="#credits" class="anchor"></a>Credits</h2>
-<p><strong>DataEditR</strong> is built using the fantastic <a href="https://github.com/jrowen/rhandsontable">rhandsontable</a> package. <strong>DataEditR</strong> makes use of many features for entering and editing data, but <strong>rhandsontable</strong> has support for much more sophisticated interactive representations of data should you need them.</p>
+<p><strong>DataEditR</strong> is built using the fantastic <a href="https://github.com/jrowen/rhandsontable">rhandsontable</a> package. <strong>DataEditR</strong> makes use of many features for entering and editing data, but <strong>rhandsontable</strong> has support for much more sophisticated interactive representations of data should you need them. The user interface of <strong>DataEditR</strong> has been inspired by the <a href="https://github.com/cardiomoon/editData">editData</a> package which is a great alternative to <strong>DataEditR</strong>.</p>
 </div>
 <div id="code-of-conduct" class="section level2">
 <h2 class="hasAnchor">
@@ -141,12 +160,12 @@
 <h2 class="hasAnchor">
 <a href="#citation" class="anchor"></a>Citation</h2>
 <p>If you use <strong>DataEditR</strong> in your work, please cite the package as follows:</p>
-<div class="sourceCode" id="cb3"><pre class="r"><span class="fu"><a href="https://rdrr.io/r/utils/citation.html">citation</a></span>(<span class="st">"DataEditR"</span>)
+<div class="sourceCode" id="cb4"><pre class="r"><span class="fu"><a href="https://rdrr.io/r/utils/citation.html">citation</a></span>(<span class="st">"DataEditR"</span>)
 <span class="co">#&gt; </span>
 <span class="co">#&gt; To cite package 'DataEditR' in publications use:</span>
 <span class="co">#&gt; </span>
 <span class="co">#&gt;   Dillon Hammill (2020). DataEditR: An Interactive Editor for Viewing,</span>
-<span class="co">#&gt;   Entering &amp; Editing Data. R package version 0.0.6.</span>
+<span class="co">#&gt;   Entering &amp; Editing Data. R package version 0.0.8.</span>
 <span class="co">#&gt;   https://github.com/DillonHammill/DataEditR</span>
 <span class="co">#&gt; </span>
 <span class="co">#&gt; A BibTeX entry for LaTeX users is</span>
@@ -155,7 +174,7 @@
 <span class="co">#&gt;     title = {DataEditR: An Interactive Editor for Viewing, Entering &amp; Editing Data},</span>
 <span class="co">#&gt;     author = {Dillon Hammill},</span>
 <span class="co">#&gt;     year = {2020},</span>
-<span class="co">#&gt;     note = {R package version 0.0.6},</span>
+<span class="co">#&gt;     note = {R package version 0.0.8},</span>
 <span class="co">#&gt;     url = {https://github.com/DillonHammill/DataEditR},</span>
 <span class="co">#&gt;   }</span></pre></div>
 </div>

@@ -6,7 +6,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>An interactive editor for viewing, entering and editing data — data_edit • DataEditR</title>
+<title>Shiny module for data editing — dataEdit • DataEditR</title>
 
 <!-- favicons -->
 <link rel="icon" type="image/png" sizes="16x16" href="../favicon-16x16.png">
@@ -46,11 +46,8 @@
 
 
 
-<meta property="og:title" content="An interactive editor for viewing, entering and editing data — data_edit" />
-<meta property="og:description" content="codedata_edit is a shiny application built on rhandsontable that is
-designed to make it easy to interactively view, enter or edit data without
-any coding. data_edit is also a wrapper for any reading or writing
-function to make it easy to interactively update data saved to file." />
+<meta property="og:title" content="Shiny module for data editing — dataEdit" />
+<meta property="og:description" content="Shiny module for data editing" />
 <meta property="og:image" content="/logo.png" />
 
 
@@ -125,45 +122,32 @@ function to make it easy to interactively update data saved to file." />
 <div class="row">
   <div class="col-md-9 contents">
     <div class="page-header">
-    <h1>An interactive editor for viewing, entering and editing data</h1>
-    <small class="dont-index">Source: <a href='https://github.com/DillonHammill/DataEditR/blob/master/R/data_edit.R'><code>R/data_edit.R</code></a></small>
-    <div class="hidden name"><code>data_edit.Rd</code></div>
+    <h1>Shiny module for data editing</h1>
+    <small class="dont-index">Source: <a href='https://github.com/DillonHammill/DataEditR/blob/master/R/dataEdit.R'><code>R/dataEdit.R</code></a></small>
+    <div class="hidden name"><code>dataEdit.Rd</code></div>
     </div>
 
     <div class="ref-description">
-    <p>codedata_edit is a shiny application built on <code>rhandsontable</code> that is
-designed to make it easy to interactively view, enter or edit data without
-any coding. <code>data_edit</code> is also a wrapper for any reading or writing
-function to make it easy to interactively update data saved to file.</p>
+    <p>Shiny module for data editing</p>
     </div>
 
-    <pre class="usage"><span class='fu'>data_edit</span>(
-  <span class='kw'>x</span> <span class='kw'>=</span> <span class='kw'>NULL</span>,
+    <pre class="usage"><span class='fu'>dataEditUI</span>(<span class='no'>id</span>)
+
+<span class='fu'>dataEditServer</span>(
+  <span class='no'>id</span>,
+  <span class='kw'>data</span> <span class='kw'>=</span> <span class='fu'>reactive</span>(<span class='kw'>NULL</span>),
   <span class='kw'>col_bind</span> <span class='kw'>=</span> <span class='kw'>NULL</span>,
   <span class='kw'>col_edit</span> <span class='kw'>=</span> <span class='fl'>TRUE</span>,
   <span class='kw'>col_options</span> <span class='kw'>=</span> <span class='kw'>NULL</span>,
   <span class='kw'>col_stretch</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>,
-  <span class='kw'>col_factor</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>,
   <span class='kw'>col_names</span> <span class='kw'>=</span> <span class='fl'>TRUE</span>,
   <span class='kw'>col_readonly</span> <span class='kw'>=</span> <span class='kw'>NULL</span>,
+  <span class='kw'>col_factor</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>,
   <span class='kw'>row_bind</span> <span class='kw'>=</span> <span class='kw'>NULL</span>,
   <span class='kw'>row_edit</span> <span class='kw'>=</span> <span class='fl'>TRUE</span>,
-  <span class='kw'>save_as</span> <span class='kw'>=</span> <span class='kw'>NULL</span>,
-  <span class='kw'>title</span> <span class='kw'>=</span> <span class='kw'>NULL</span>,
-  <span class='kw'>logo</span> <span class='kw'>=</span> <span class='kw'>NULL</span>,
-  <span class='kw'>logo_size</span> <span class='kw'>=</span> <span class='fl'>30</span>,
-  <span class='kw'>logo_side</span> <span class='kw'>=</span> <span class='st'>"left"</span>,
-  <span class='kw'>viewer</span> <span class='kw'>=</span> <span class='st'>"dialog"</span>,
-  <span class='kw'>viewer_height</span> <span class='kw'>=</span> <span class='fl'>800</span>,
-  <span class='kw'>viewer_width</span> <span class='kw'>=</span> <span class='fl'>1200</span>,
-  <span class='kw'>theme</span> <span class='kw'>=</span> <span class='st'>"yeti"</span>,
+  <span class='kw'>quiet</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>,
   <span class='kw'>read_fun</span> <span class='kw'>=</span> <span class='st'>"read.csv"</span>,
   <span class='kw'>read_args</span> <span class='kw'>=</span> <span class='kw'>NULL</span>,
-  <span class='kw'>write_fun</span> <span class='kw'>=</span> <span class='st'>"write.csv"</span>,
-  <span class='kw'>write_args</span> <span class='kw'>=</span> <span class='kw'>NULL</span>,
-  <span class='kw'>quiet</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>,
-  <span class='kw'>hide</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>,
-  <span class='kw'>code</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>,
   <span class='no'>...</span>
 )</pre>
 
@@ -171,12 +155,17 @@ function to make it easy to interactively update data saved to file.</p>
     <table class="ref-arguments">
     <colgroup><col class="name" /><col class="desc" /></colgroup>
     <tr>
-      <th>x</th>
-      <td><p>a matrix, data.frame, data.table or the name of a csv file to edit.
-Tibbles are also supported but will be coerced to data.frames. An empty
-table can be created by specifying the dimensions in a vector of the form
-<code><a href='https://rdrr.io/r/base/c.html'>c(nrow, ncol)</a></code> or the names of the columns to include in the
-template.</p></td>
+      <th>id</th>
+      <td><p>unique identifier for the module to prevent namespace clashes when
+making multiple calls to this shiny module.</p></td>
+    </tr>
+    <tr>
+      <th>data</th>
+      <td><p>a reactive expression containing an array (e.g. data.frame,
+matrix or data.table) or a vector indicating the dimensions of the array
+(e.g. c(10,10)) or column names to construct a new template for editing. If
+no data is supplied a template with 10 rows and columns will be generated
+for editing.</p></td>
     </tr>
     <tr>
       <th>col_bind</th>
@@ -201,12 +190,6 @@ dropdown menus or checkboxes.</p></td>
 fill the full width of the display, set to FALSE by default.</p></td>
     </tr>
     <tr>
-      <th>col_factor</th>
-      <td><p>logical indicating whether character columns should be
-converted to factors prior to returning the edited data, set to FALSE by
-default.</p></td>
-    </tr>
-    <tr>
       <th>col_names</th>
       <td><p>logical indicating whether column names can be edited or a
 vector of column names that cannot be edited, set to TRUE by default to
@@ -217,6 +200,12 @@ allow editing of column names.</p></td>
       <td><p>names of columns that cannot be edited. Users will be
 able to edit values but these will be reverted to the original values.
 Column names for these column cannot be edited either.</p></td>
+    </tr>
+    <tr>
+      <th>col_factor</th>
+      <td><p>logical indicating whether character columns should be
+converted to factors prior to returning the edited data, set to FALSE by
+default.</p></td>
     </tr>
     <tr>
       <th>row_bind</th>
@@ -231,104 +220,46 @@ each new column.</p></td>
 to TRUE by default.</p></td>
     </tr>
     <tr>
-      <th>save_as</th>
-      <td><p>name of a csv file to which the edited data should be saved.</p></td>
-    </tr>
-    <tr>
-      <th>title</th>
-      <td><p>optional title to include above the data editor.</p></td>
-    </tr>
-    <tr>
-      <th>logo</th>
-      <td><p>optional package logo to include in title above the data editor,
-must be supplied as path to logo png.</p></td>
-    </tr>
-    <tr>
-      <th>logo_size</th>
-      <td><p>width of the logo in pixels, set to 30 pixels by default.</p></td>
-    </tr>
-    <tr>
-      <th>logo_side</th>
-      <td><p>can be either <code>"left"</code> or <code>"right"</code> to determine
-the position of the logo relative to the title, set to <code>"left"</code> by
-default.</p></td>
-    </tr>
-    <tr>
-      <th>viewer</th>
-      <td><p>can be either <code>"dialog"</code>, <code>"browser"</code> or
-<code>"pane"</code> to open the application in a dialog box, browser or RStudio
-viewer pane. First letter abbreviations are allowed, set to <code>"dialog"</code>
-by default.</p></td>
-    </tr>
-    <tr>
-      <th>viewer_height</th>
-      <td><p>numeric to control the height of the viewer in pixels
-when <code>viewer</code> is set to <code>"dialog"</code>, set 800 by default.</p></td>
-    </tr>
-    <tr>
-      <th>viewer_width</th>
-      <td><p>numeric to control the width of the viewer in pixels when
-<code>viewer</code> is set to <code>"dialog"</code>, set to 1200 by default.</p></td>
-    </tr>
-    <tr>
-      <th>theme</th>
-      <td><p>valid shinytheme name, set to "yeti" by default.</p></td>
+      <th>quiet</th>
+      <td><p>logical to suppress warnings when using <code>col_options</code>.</p></td>
     </tr>
     <tr>
       <th>read_fun</th>
-      <td><p>name of the function to use to read in the data when <code>x</code>
-is the name of a file, set to <code>read.csv</code> by default.</p></td>
+      <td><p>name of the function to use to read in the data when a file
+is selected, set to <code>read.csv</code> by default.</p></td>
     </tr>
     <tr>
       <th>read_args</th>
       <td><p>a named list of additional arguments to pass to
-<code>read_fun</code>.</p></td>
-    </tr>
-    <tr>
-      <th>write_fun</th>
-      <td><p>name of the function to use to write the edited version of
-<code>x</code> to a file, set to <code>write.csv</code> by default. Only requirement is
-that the first argument accepts the edited data and the second argument
-accepts the file name supplied to <code>save_as</code>.</p></td>
-    </tr>
-    <tr>
-      <th>write_args</th>
-      <td><p>a named list of additional arguments to pass to
-<code>write_fun</code>.</p></td>
-    </tr>
-    <tr>
-      <th>quiet</th>
-      <td><p>logical indicating whether messages should be suppressed, set to
-FALSE by default.</p></td>
-    </tr>
-    <tr>
-      <th>hide</th>
-      <td><p>logical indicating whether the <code>dataInput</code> and
-<code>dataOutput</code> modules should be visible to the user within the
-application. If <code>hide = FALSE</code> and <code>save_as</code> is specified, the
-edited data will be written to file after the application is closed.</p></td>
-    </tr>
-    <tr>
-      <th>code</th>
-      <td><p>logical indicating whether the code required to generate the
-edited data should be printed to the console, set to <code>FALSE</code> by
-default.</p></td>
+<code>read_fun</code> when reading in files.</p></td>
     </tr>
     <tr>
       <th>...</th>
-      <td><p>not in use.</p></td>
+      <td><p>additional arguments passed to
+<code><a href='https://rdrr.io/pkg/rhandsontable/man/rhandsontable.html'>rhandsontable</a></code>.</p></td>
     </tr>
     </table>
 
-    <h2 class="hasAnchor" id="value"><a class="anchor" href="#value"></a>Value</h2>
-
-    <p>the edited data as a matrix or data.frame.</p>
 
     <h2 class="hasAnchor" id="examples"><a class="anchor" href="#examples"></a>Examples</h2>
-    <pre class="examples"><div class='input'><span class='kw'>if</span>(<span class='fu'><a href='https://rdrr.io/r/base/interactive.html'>interactive</a></span>()) {
+    <pre class="examples"><div class='input'><span class='kw'>if</span> (<span class='fu'><a href='https://rdrr.io/r/base/interactive.html'>interactive</a></span>()) {
+  <span class='no'>ui</span> <span class='kw'>&lt;-</span> <span class='fu'>fluidPage</span>(
+    <span class='fu'><a href='dataInput.html'>dataInputUI</a></span>(<span class='st'>"input-1"</span>),
+    <span class='fu'><a href='dataOutput.html'>dataOutputUI</a></span>(<span class='st'>"output-1"</span>),
+    <span class='fu'>dataEditUI</span>(<span class='st'>"edit-1"</span>)
+  )
 
-  <span class='fu'>data_edit</span>(<span class='no'>mtcars</span>)
+  <span class='no'>server</span> <span class='kw'>&lt;-</span> <span class='kw'>function</span>(<span class='no'>input</span>, <span class='no'>output</span>, <span class='no'>session</span>) {
+    <span class='no'>data_to_edit</span> <span class='kw'>&lt;-</span> <span class='fu'><a href='dataInput.html'>dataInputServer</a></span>(<span class='st'>"input-1"</span>)
+    <span class='no'>data_to_edit</span> <span class='kw'>&lt;-</span> <span class='fu'>dataEditServer</span>(<span class='st'>"edit-1"</span>,
+      <span class='kw'>data</span> <span class='kw'>=</span> <span class='no'>data_to_edit</span>
+    )
+    <span class='fu'><a href='dataOutput.html'>dataOutputServer</a></span>(<span class='st'>"output-1"</span>,
+      <span class='kw'>data</span> <span class='kw'>=</span> <span class='no'>data_to_edit</span>
+    )
+  }
 
+  <span class='fu'>shinyApp</span>(<span class='no'>ui</span>, <span class='no'>server</span>)
 }</div></pre>
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">

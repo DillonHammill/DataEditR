@@ -6,7 +6,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Changelog • DataEditR</title>
+<title>Shiny module for data output — dataOutput • DataEditR</title>
 
 <!-- favicons -->
 <link rel="icon" type="image/png" sizes="16x16" href="../favicon-16x16.png">
@@ -46,7 +46,8 @@
 
 
 
-<meta property="og:title" content="Changelog" />
+<meta property="og:title" content="Shiny module for data output — dataOutput" />
+<meta property="og:description" content="Shiny module for data output" />
 <meta property="og:image" content="/logo.png" />
 
 
@@ -66,7 +67,7 @@
   </head>
 
   <body data-spy="scroll" data-target="#toc">
-    <div class="container template-news">
+    <div class="container template-reference-topic">
       <header>
       <div class="navbar navbar-default navbar-fixed-top" role="navigation">
   <div class="container">
@@ -121,95 +122,104 @@
 <div class="row">
   <div class="col-md-9 contents">
     <div class="page-header">
-      <h1 data-toc-skip>Changelog <small></small></h1>
-      <small>Source: <a href='https://github.com/DillonHammill/DataEditR/blob/master/NEWS.md'><code>NEWS.md</code></a></small>
+    <h1>Shiny module for data output</h1>
+    <small class="dont-index">Source: <a href='https://github.com/DillonHammill/DataEditR/blob/master/R/dataOutput.R'><code>R/dataOutput.R</code></a></small>
+    <div class="hidden name"><code>dataOutput.Rd</code></div>
     </div>
 
-    <div id="dataeditr-008" class="section level1">
-<h1 class="page-header" data-toc-text="0.0.8">
-<a href="#dataeditr-008" class="anchor"></a>DataEditR 0.0.8<small> Unreleased </small>
-</h1>
-<ul>
-<li>Add <code>dataSelect</code> and <code>dataFilter</code> modules to filter data,</li>
-<li>Add a <code>Sync</code> button to update the entire dataset with changes made to a subset. Data is still exported as a whole but a new button could be added in the future to export the subsetted data.</li>
-<li>Add <code>cut</code> button to allow return of subsetted data upon closing the application with the <code>Done</code> button.</li>
-</ul>
-</div>
-    <div id="dataeditr-007" class="section level1">
-<h1 class="page-header" data-toc-text="0.0.7">
-<a href="#dataeditr-007" class="anchor"></a>DataEditR 0.0.7<small> Unreleased </small>
-</h1>
-<ul>
-<li>Create <code>dataInput</code>, <code>dataEdit</code> and <code>dataOutput</code> modules.</li>
-<li>Create RStudio addin to interactively edit data.</li>
-<li>Update user interface to allow interactive file selection or input of R data objects.</li>
-<li>Add new viewer options to open the data editor in a <code>dialog</code> box, <code>browser</code> or RStudio <code>viewer</code> pane. This can be controlled through the <code>viewer</code> argument and has been set to use a <code>dialog</code> box by default. Additional arguments <code>viewer_height</code> and <code>viewer_width</code> have been added to allow control over the dimensions of <code>dialog</code> boxes.</li>
-<li>Add a cancel button in top left to return data unchanged.</li>
-<li>Add new <code>hide</code> argument to optionally display the <code>dataInput</code> and <code>dataOutput</code> modules. This functionality requires the <code>shinyjs</code> package. The <code>hide</code> argument allows users to maximize the space available to display the data and also prevent users from interacting with these modules. It is still possible to save data to file when <code>dataOutput</code> module is not visible, by simply supplying the file name to the <code>save_as</code> argument of <code><a href="../reference/data_edit.html">data_edit()</a></code>.</li>
-<li>Improve handling of row names with the <code>dataEdit</code> module.</li>
-<li>Add helper function to handle generation of templates based on inputs to <code><a href="../reference/data_edit.html">data_edit()</a></code> to make it easier to create data.frames from scratch. The default template size has been increased to be a 10 x 10 grid.</li>
-<li>Add <code>logo_side</code> argument to control whether the logo should be placed on the <code>left</code> or <code>right</code> of the title.</li>
-<li>Add new <code>code</code> argument to <code><a href="../reference/data_edit.html">data_edit()</a></code> to print the code required to create the edited data to the console.</li>
-</ul>
-</div>
-    <div id="dataeditr-006" class="section level1">
-<h1 class="page-header" data-toc-text="0.0.6">
-<a href="#dataeditr-006" class="anchor"></a>DataEditR 0.0.6<small> Unreleased </small>
-</h1>
-<ul>
-<li>Add ability to pass column names to <code><a href="../reference/data_edit.html">data_edit()</a></code> to construct a template data.frame with pre-defined column names.</li>
-</ul>
-</div>
-    <div id="dataeditr-005" class="section level1">
-<h1 class="page-header" data-toc-text="0.0.5">
-<a href="#dataeditr-005" class="anchor"></a>DataEditR 0.0.5<small> 2020-08-12 </small>
-</h1>
-<ul>
-<li>Fix row indices when rows are added or removed.</li>
-<li>Improve handling of duplicate row indices in case of accidental editing.</li>
-</ul>
-</div>
-    <div id="dataeditr-004" class="section level1">
-<h1 class="page-header" data-toc-text="0.0.4">
-<a href="#dataeditr-004" class="anchor"></a>DataEditR 0.0.4<small> Unreleased </small>
-</h1>
-<ul>
-<li>Add <code>col_readonly</code> argument to prevent users from editing values or column names of certain columns.</li>
-<li>Prevent error when column is clicked but not edited.</li>
-</ul>
-</div>
-    <div id="dataeditr-003" class="section level1">
-<h1 class="page-header" data-toc-text="0.0.3">
-<a href="#dataeditr-003" class="anchor"></a>DataEditR 0.0.3<small> Unreleased </small>
-</h1>
-<ul>
-<li>Add <code>col_names</code> argument to allow control over which column names can be edited by the user.</li>
-</ul>
-</div>
-    <div id="dataeditr-002" class="section level1">
-<h1 class="page-header" data-toc-text="0.0.2">
-<a href="#dataeditr-002" class="anchor"></a>DataEditR 0.0.2<small> Unreleased </small>
-</h1>
-<ul>
-<li>Fixes for CRAN submission.</li>
-</ul>
-</div>
-    <div id="dataeditr-001" class="section level1">
-<h1 class="page-header" data-toc-text="0.0.1">
-<a href="#dataeditr-001" class="anchor"></a>DataEditR 0.0.1<small> Unreleased </small>
-</h1>
-<ul>
-<li>Add <code><a href="../reference/data_edit.html">data_edit()</a></code> to allow interactive data viewing, entry and editing.</li>
-</ul>
-</div>
-  </div>
+    <div class="ref-description">
+    <p>Shiny module for data output</p>
+    </div>
 
+    <pre class="usage"><span class='fu'>dataOutputUI</span>(<span class='no'>id</span>, <span class='kw'>icon</span> <span class='kw'>=</span> <span class='st'>"download"</span>)
+
+<span class='fu'>dataOutputServer</span>(
+  <span class='no'>id</span>,
+  <span class='kw'>data</span> <span class='kw'>=</span> <span class='fu'>reactive</span>(<span class='kw'>NULL</span>),
+  <span class='kw'>save_as</span> <span class='kw'>=</span> <span class='kw'>NULL</span>,
+  <span class='kw'>write_fun</span> <span class='kw'>=</span> <span class='st'>"write.csv"</span>,
+  <span class='kw'>write_args</span> <span class='kw'>=</span> <span class='kw'>NULL</span>,
+  <span class='kw'>hide</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>
+)</pre>
+
+    <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
+    <table class="ref-arguments">
+    <colgroup><col class="name" /><col class="desc" /></colgroup>
+    <tr>
+      <th>id</th>
+      <td><p>unique identifier for the module to prevent namespace clashes when
+making multiple calls to this shiny module.</p></td>
+    </tr>
+    <tr>
+      <th>icon</th>
+      <td><p>supplied to <code>dataOutputUI</code> to control the appearance of the
+icon displayed on the download button, set to <code>"download"</code> by default.</p></td>
+    </tr>
+    <tr>
+      <th>data</th>
+      <td><p>an object of class data.frame wrapped in <code>reactive</code> to be
+saved to file.</p></td>
+    </tr>
+    <tr>
+      <th>save_as</th>
+      <td><p>name of the file to which the data should be saved, overrides
+input file path if supplied.</p></td>
+    </tr>
+    <tr>
+      <th>write_fun</th>
+      <td><p>name of the function to use when writing the data to file,
+set to <code>"write.csv"</code> by default.</p></td>
+    </tr>
+    <tr>
+      <th>write_args</th>
+      <td><p>a named list of additional arguments to pass to
+<code>write_fun</code> when reading in files.</p></td>
+    </tr>
+    <tr>
+      <th>hide</th>
+      <td><p>logical indicating whether the data input user interface should
+be hidden from the user, set to FALSE by default.</p></td>
+    </tr>
+    </table>
+
+
+    <h2 class="hasAnchor" id="examples"><a class="anchor" href="#examples"></a>Examples</h2>
+    <pre class="examples"><div class='input'><span class='kw'>if</span> (<span class='fu'><a href='https://rdrr.io/r/base/interactive.html'>interactive</a></span>()) {
+  <span class='fu'><a href='https://rdrr.io/r/base/library.html'>library</a></span>(<span class='no'>shiny</span>)
+  <span class='fu'><a href='https://rdrr.io/r/base/library.html'>library</a></span>(<span class='no'>rhandsontable</span>)
+  <span class='fu'><a href='https://rdrr.io/r/base/library.html'>library</a></span>(<span class='no'>shinyjs</span>)
+
+  <span class='no'>ui</span> <span class='kw'>&lt;-</span> <span class='fu'><a href='https://shiny.rstudio.com/reference/shiny/latest/fluidPage.html'>fluidPage</a></span>(
+    <span class='fu'><a href='https://rdrr.io/pkg/shinyjs/man/useShinyjs.html'>useShinyjs</a></span>(),
+    <span class='fu'><a href='dataInput.html'>dataInputUI</a></span>(<span class='st'>"input1"</span>),
+    <span class='fu'>dataOutputUI</span>(<span class='st'>"output1"</span>),
+    <span class='fu'><a href='https://rdrr.io/pkg/rhandsontable/man/rHandsontableOutput.html'>rHandsontableOutput</a></span>(<span class='st'>"data1"</span>)
+  )
+
+  <span class='no'>server</span> <span class='kw'>&lt;-</span> <span class='kw'>function</span>(<span class='no'>input</span>,
+                     <span class='no'>output</span>,
+                     <span class='no'>session</span>) {
+    <span class='no'>data_input1</span> <span class='kw'>&lt;-</span> <span class='fu'><a href='dataInput.html'>dataInputServer</a></span>(<span class='st'>"input1"</span>)
+
+    <span class='no'>output</span>$<span class='no'>data1</span> <span class='kw'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/pkg/rhandsontable/man/renderRHandsontable.html'>renderRHandsontable</a></span>({
+      <span class='kw'>if</span> (!<span class='fu'><a href='https://rdrr.io/r/base/NULL.html'>is.null</a></span>(<span class='fu'>data_input1</span>())) {
+        <span class='fu'><a href='https://rdrr.io/pkg/rhandsontable/man/rhandsontable.html'>rhandsontable</a></span>(<span class='fu'>data_input1</span>())
+      }
+    })
+
+    <span class='fu'>dataOutputServer</span>(<span class='st'>"output1"</span>,
+      <span class='kw'>data</span> <span class='kw'>=</span> <span class='no'>data_input1</span>
+    )
+  }
+
+  <span class='fu'><a href='https://shiny.rstudio.com/reference/shiny/latest/shinyApp.html'>shinyApp</a></span>(<span class='no'>ui</span>, <span class='no'>server</span>)
+}</div></pre>
+  </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
     <nav id="toc" data-toggle="toc" class="sticky-top">
       <h2 data-toc-skip>Contents</h2>
     </nav>
   </div>
-
 </div>
 
 

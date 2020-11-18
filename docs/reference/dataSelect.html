@@ -6,7 +6,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Articles • DataEditR</title>
+<title>Shiny module for selecting data — dataSelect • DataEditR</title>
 
 <!-- favicons -->
 <link rel="icon" type="image/png" sizes="16x16" href="../favicon-16x16.png">
@@ -46,7 +46,8 @@
 
 
 
-<meta property="og:title" content="Articles" />
+<meta property="og:title" content="Shiny module for selecting data — dataSelect" />
+<meta property="og:description" content="Shiny module for selecting data" />
 <meta property="og:image" content="/logo.png" />
 
 
@@ -66,7 +67,7 @@
   </head>
 
   <body data-spy="scroll" data-target="#toc">
-    <div class="container template-article-index">
+    <div class="container template-reference-topic">
       <header>
       <div class="navbar navbar-default navbar-fixed-top" role="navigation">
   <div class="container">
@@ -121,18 +122,85 @@
 <div class="row">
   <div class="col-md-9 contents">
     <div class="page-header">
-      <h1>Articles</h1>
+    <h1>Shiny module for selecting data</h1>
+    <small class="dont-index">Source: <a href='https://github.com/DillonHammill/DataEditR/blob/master/R/dataSelect.R'><code>R/dataSelect.R</code></a></small>
+    <div class="hidden name"><code>dataSelect.Rd</code></div>
     </div>
 
-    <div class="section ">
-      <h3>All vignettes</h3>
-      <p class="section-desc"></p>
-
-      <dl>
-        <dt><a href="DataEditR.html">DataEditR</a></dt>
-        <dd></dt>
-      </dl>
+    <div class="ref-description">
+    <p>Shiny module for selecting data</p>
     </div>
+
+    <pre class="usage"><span class='fu'>dataSelectUI</span>(<span class='no'>id</span>)
+
+<span class='fu'>dataSelectServer</span>(<span class='no'>id</span>, <span class='kw'>data</span> <span class='kw'>=</span> <span class='fu'>reactive</span>(<span class='kw'>NULL</span>), <span class='kw'>hide</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>)</pre>
+
+    <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
+    <table class="ref-arguments">
+    <colgroup><col class="name" /><col class="desc" /></colgroup>
+    <tr>
+      <th>id</th>
+      <td><p>unique identifier for the module to prevent namespace clashes when
+making multiple calls to this shiny module.</p></td>
+    </tr>
+    <tr>
+      <th>data</th>
+      <td><p>an array wrapped in <code>reactive()</code> containing the data to be
+filtered.</p></td>
+    </tr>
+    <tr>
+      <th>hide</th>
+      <td><p>logical indicating whether the data selection user interface
+should be hidden from the user, set to FALSE by default.</p></td>
+    </tr>
+    </table>
+
+    <h2 class="hasAnchor" id="value"><a class="anchor" href="#value"></a>Value</h2>
+
+    <p>a list of reactive objects containing the filtered <code>data</code> and
+indices for selected <code>columns</code>.</p>
+
+    <h2 class="hasAnchor" id="examples"><a class="anchor" href="#examples"></a>Examples</h2>
+    <pre class="examples"><div class='input'><span class='kw'>if</span> (<span class='fu'><a href='https://rdrr.io/r/base/interactive.html'>interactive</a></span>()) {
+  <span class='fu'><a href='https://rdrr.io/r/base/library.html'>library</a></span>(<span class='no'>shiny</span>)
+  <span class='fu'><a href='https://rdrr.io/r/base/library.html'>library</a></span>(<span class='no'>rhandsontable</span>)
+  <span class='fu'><a href='https://rdrr.io/r/base/library.html'>library</a></span>(<span class='no'>shinyjs</span>)
+
+  <span class='no'>ui</span> <span class='kw'>&lt;-</span> <span class='fu'><a href='https://shiny.rstudio.com/reference/shiny/latest/fluidPage.html'>fluidPage</a></span>(
+    <span class='fu'><a href='https://rdrr.io/pkg/shinyjs/man/useShinyjs.html'>useShinyjs</a></span>(),
+    <span class='fu'><a href='dataInput.html'>dataInputUI</a></span>(<span class='st'>"input1"</span>),
+    <span class='fu'>dataSelectUI</span>(<span class='st'>"select1"</span>),
+    <span class='fu'><a href='dataOutput.html'>dataOutputUI</a></span>(<span class='st'>"output1"</span>),
+    <span class='fu'><a href='https://rdrr.io/pkg/rhandsontable/man/rHandsontableOutput.html'>rHandsontableOutput</a></span>(<span class='st'>"data1"</span>)
+  )
+
+  <span class='no'>server</span> <span class='kw'>&lt;-</span> <span class='kw'>function</span>(<span class='no'>input</span>,
+                     <span class='no'>output</span>,
+                     <span class='no'>session</span>) {
+    <span class='no'>data_input</span> <span class='kw'>&lt;-</span> <span class='fu'><a href='dataInput.html'>dataInputServer</a></span>(<span class='st'>"input1"</span>)
+
+    <span class='no'>data_select</span> <span class='kw'>&lt;-</span> <span class='fu'>dataSelectServer</span>(<span class='st'>"select1"</span>,
+      <span class='kw'>data</span> <span class='kw'>=</span> <span class='no'>data_input</span>
+    )
+
+    <span class='no'>output</span>$<span class='no'>data1</span> <span class='kw'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/pkg/rhandsontable/man/renderRHandsontable.html'>renderRHandsontable</a></span>({
+      <span class='kw'>if</span> (!<span class='fu'><a href='https://rdrr.io/r/base/NULL.html'>is.null</a></span>(<span class='fu'>data_select</span>())) {
+        <span class='fu'><a href='https://rdrr.io/pkg/rhandsontable/man/rhandsontable.html'>rhandsontable</a></span>(<span class='fu'>data_select</span>())
+      }
+    })
+
+    <span class='fu'><a href='dataOutput.html'>dataOutputServer</a></span>(<span class='st'>"output1"</span>,
+      <span class='kw'>data</span> <span class='kw'>=</span> <span class='no'>data_select</span>
+    )
+  }
+
+  <span class='fu'><a href='https://shiny.rstudio.com/reference/shiny/latest/shinyApp.html'>shinyApp</a></span>(<span class='no'>ui</span>, <span class='no'>server</span>)
+}</div></pre>
+  </div>
+  <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
+    <nav id="toc" data-toggle="toc" class="sticky-top">
+      <h2 data-toc-skip>Contents</h2>
+    </nav>
   </div>
 </div>
 
