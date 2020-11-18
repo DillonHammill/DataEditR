@@ -26,7 +26,7 @@ html <- htmltools::doRenderTags(img)
 readr::write_lines(html, path = "logo.html")
 ```
 
-**DataEditR** is a lightweight package to interactively view, enter or edit data in R. In this vignette we will explore some of the key features that are available through the `data_edit()` function. 
+**DataEditR** is an R package built on shiny and rhandsontable that makes it easy to interactively view, enter, filter and edit data. In this vignette we will explore some of the key features that are available through the `data_edit()` function. 
 
 ## Preparation
 
@@ -54,18 +54,18 @@ data_edit(mtcars)
 knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-1.png')
 ```
 
-The data editor will open in the RStudio viewer pane by default but this can be changed to a pop-up window by setting `viewer = FALSE` as below. Both of these options have optional support for displaying the data in a web browser as well.
+The data editor will open in an RStudio `"dialog"` box by default, but can be optionally displayed in the RStudio viewer pane or a web browser by setting `viewer` to `"viewer"` or `"browser"` respectively.
 
 ```{r, eval = FALSE}
 data_edit(mtcars,
-          viewer = FALSE)
+          viewer = "browser")
 ```
 
-The data editor will automatically move row names inside the table so that the row indices can be displayed on the left hand side. Once you are finished exploring the data, you can close the data editor by hitting the `Save & Close` button in the top left corner.
+The data editor will automatically move row names inside the table so that the row indices can be displayed on the left hand side to aid navigation. Once you are finished exploring the data, you can close the data editor by hitting the `Done` button in the top right corner. If you wish to cancel all changes made to the data, you can select the `Cancel` button in the top left corner and the unedited data will be returned.
 
 ## 2. Data Import
 
-`data_edit()` can all read in any form tabular data from file for viewing and editing. By default `data_edit()` will use `read.csv` from the `utils` package to read in files, but this can be changed to any reading function by supplying the name of the function to the `read_fun` argument. If you need to pass any additional arguments to your reading function, these can be supplied as a named list to the `read_args` argument. The data will be returned by `data_edit()` once the `Save & Close` button has been clicked.
+`data_edit()` uses the `dataInput` module to read in any form of tabular data from file for viewing and editing. By default `data_edit()` will use `read.csv` from the `utils` package to read in files, but this can be changed to any reading function by supplying the name of the function to the `read_fun` argument. If you need to pass any additional arguments to your reading function, these can be supplied as a named list to the `read_args` argument.
 
 ```{r, eval = FALSE}
 mtcars <- data_edit("mtcars.csv",
@@ -80,7 +80,7 @@ head(mtcars)
 
 ## 3. Data Manipulation
 
-`data_edit()` has a variety of interactive data manipulation tools to edit your data. We will explore the use of each of these tools below:
+`data_edit()` uses the `dataEdit` module to provide a variety of interactive data manipulation tools to edit your data. We will explore the use of each of these tools below:
 
 ### 3.1 Addition or removal of rows or columns
 
@@ -169,37 +169,94 @@ data_edit(mtcars,
 
 You can also use `data_edit()` to interactively create data.frames from scratch without any coding.
 
-### 4.1 Start with empty data.frame
+### 4.1 Start with empty template
 
-If no data is supplied to `data_edit()` an empty data.frame will be constructed with a single row and column. You can then build your data.frame from scratch by adding new rows and columns and annotating the cells.
+If no data is supplied to `data_edit()` an empty data.frame will be constructed with 10 rows and columns. You can then build your data.frame from scratch by adding new rows and columns and annotating the cells.
 
 ```{r, eval = FALSE}
 data_edit()
 ```
 
 ```{r, echo=FALSE, fig.align="center", out.width = '60%'}
-knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-7.gif')
+knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-7.png')
 ```
 
-### 4.2 Start with a template data.frame
-
-Creating a data.frame from scratch as described above can be tedious, so instead we could start with a data.frame template that contains more rows or columns. To create a template data.frame, simply supply the required dimensions of the data.frame in the form `c(nrow, ncol)`.
+The dimensions of the template can be controlled by supplying a vector of the form `c(nrow, ncol)` to indicate the number of rows and columns to use. 
 
 ```{r, eval = FALSE}
-data_edit(c(3, 3))
+data_edit(c(20, 15))
 ```
 
 ```{r, echo=FALSE, fig.align="center", out.width = '40%'}
-knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-8.gif')
+knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-8.png')
 ```
 
-Alternatively, you can pass a vector of column names to create a data.frame template with pre-defined column names. You will need to install the development version **DataEditR** from GitHub to use this feature.
+### 4.2 Start with a labelled template
+
+Alternatively, you can pass a vector of column names to create a data.frame template with pre-defined column names. 
 
 ```{r, eval = FALSE}
-data_edit(c("Player", "Age", "Titles"))
+data_edit(c("Date", "Country", "Temperature", "Rainfall", "Visibility", "Humidity"))
 ```
 
-## 5. Data saving
+```{r, echo=FALSE, fig.align="center", out.width = '40%'}
+knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-9.png')
+```
+
+## 5. Data Filtering
+
+`data_edit()` provides useful interfaces for selecting columns and filtering rows in your dataset. This makes it easy to export and edit subsets of a dataset or display a portion of the data for editing.
+
+### 5.1 Column Selection
+
+Column selection is supported through the `dataSelect` module which can be invoked by selecting the crosshairs icon. A pop-up window will open with a series of red buttons labelled with the names of the columns in the dataset. Simply click the buttons for the columns that you want to keep and close the window when you are done. The subsetted data will be displayed in the data editor for editing. The column selection can be changed at any time by selecting the crosshairs icon, there are also additional buttons to optionally add or remove all columns.
+
+```{r, eval = FALSE}
+data_edit(mtcars)
+```
+
+```{r, echo=FALSE, fig.align="center", out.width = '40%'}
+knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-10.gif')
+```
+
+### 5.2 Row Selection
+
+Row filtering is supported through the `dataFilter` module which can be invoked by selecting the filter icon. A pop-up window will open with a series of dropdown boxes. To add a filter, simply select the `Add Filter` button and indicate the column, logic and levels to filter the data. Individual filters can be deleted by selecting the trash icon next to the relevant filter. All filters can be removed by selecting the `Remove Filters` buttons. Once you have created all your filters, close the window and the filtered data will be displayed in the data editor for editing.
+
+```{r, eval = FALSE}
+data_edit(mtcars)
+```
+
+```{r, echo=FALSE, fig.align="center", out.width = '40%'}
+knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-11.gif')
+```
+
+### 5.3 Data Synchronisation
+
+Changes made to data subsets are not automatically synchronised in the complete dataset to allow for increased flexibility. However, it is possible to synchronise these changes by selecting the sync button. Currently, synchronising data subsets with altered row/column numbers is not supported.
+
+```{r, eval = FALSE}
+data_edit(mtcars)
+```
+
+```{r, echo=FALSE, fig.align="center", out.width = '40%'}
+knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-12.gif')
+```
+
+### 5.4 Export Data Subsets
+
+`data_edit()` will return the complete dataset as a R object for downstream use by default. However, you can select the scissors icon if you would like to return just the subset of the data that you are working on.
+
+```{r, eval = FALSE}
+mtcars_subset <- data_edit(mtcars)
+str(mtcars_subset)
+```
+
+```{r, echo=FALSE, fig.align="center", out.width = '40%'}
+knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-13.gif')
+```
+
+## 6. Data saving
 
 `data_edit()` will automatically return the edited data with appropriate column classes as an R object for use within R. Character columns are not converted to factors by default, but this can be changed by setting `col_factor = TRUE`.
 
@@ -221,7 +278,7 @@ mtcars_new$car <- factor(mtcars_new$car)
 str(mtcars_new)
 ```
 
-The edited data can also be written to a file of any format by specifying the name of the file to the `save_as` argument and specifying the name of the writing function to use through `write_fun`. The default is to use `write.csv` from the `utils` package. You can also pass any additional arguments to your write function in a named list to `write_args`.
+The edited data can also be written to a file of any format by specifying the name of the file to the `save_as` argument and specifying the name of the writing function to use through `write_fun`. The default is to use `write.csv` from the `utils` package. You can also pass any additional arguments to your write function in a named list to `write_args`. The data will be written to file when the `Done` button is selected.
 
 ```{r, eval = FALSE}
 mtcars_new <- data_edit(mtcars,
@@ -231,11 +288,17 @@ mtcars_new <- data_edit(mtcars,
                                           row.names = TRUE))
 ```
 
-## 6. Complex user inputs
+Alternatively, data can be saved to file by selecting either of the file download buttons as highlighted in the image below. The button of the left is used to save the data subset to file whilst the button on the right is used to save the entire dataset to file.
+
+```{r, echo=FALSE, fig.align="center", out.width = '40%'}
+knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-14.gif')
+```
+
+## 7. Complex user inputs
 
 `data_edit()` can also be used to accept complex inputs from users and these inputs can be restricted by adding columns with checkboxes or dropdown menus. To use this feature, the options for the columns must be supplied in a named list through the `col_options` argument. It is important to note that should you choose to use this feature, users will be unable to add or remove columns as described previously.
 
-### 6.1 Checkboxes
+### 7.1 Checkboxes
 
 Checkboxes can be used to obtain TRUE or FALSE value inputs from users. The resulting data will have a value of TRUE or NA based on user input.
 
@@ -246,33 +309,33 @@ data_edit(mtcars,
 ```
 
 ```{r, echo=FALSE, fig.align="center", out.width = '100%'}
-knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-9.gif')
+knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-15.gif')
 ```
 
-### 6.2 Dropdown menus
+### 7.2 Dropdown menus
 
 Dropdown menus can be used to help prevent typing errors when set number of options are available for a column. For example, if we have a factor with levels `Treatment-A`, `Treatment-B` or `Treatment-C` it would be easier to select these options from a dropdown menu instead of having to manually type them. Dropdown menus can be added in the same way as checkboxes.
 
 ```{r, eval = FALSE}
 # Add column for car colour
 data_edit(mtcars,
-          col_bind = "col",
-          col_options = list(col = c("red",
-                                      "blue",
-                                      "orange",
-                                      "green",
-                                      "black")))
+          col_bind = "colour",
+          col_options = list(colour = c("red",
+                                        "blue",
+                                        "orange",
+                                        "green",
+                                        "black")))
 ```
 
 ```{r, echo=FALSE, fig.align="center", out.width = '100%'}
-knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-10.gif')
+knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-16.gif')
 ```
 
-## 7. Customisation
+## 8. Customisation
 
 `data_edit()` has been designed to be simple, but does come with some customisation options including column stretching, addition of logos and/or titles or custom themes.
 
-### 7.1 Stretch columns to fill page
+### 8.1 Stretch columns to fill page
 
 If you would like to make full use of the space available to you, you can set `col_stretch = TRUE` to stretch the columns to fill the full width of the display.
 
@@ -281,7 +344,7 @@ data_edit(mtcars,
           col_stretch = TRUE)
 ```
 
-### 7.2 Logo and title
+### 8.2 Logo and title
 
 `data_edit()` does also have support for adding a logo and/or title to the data editor. For example, if you wanted to use `data_edit()` within your own package you can customise it with your package `logo` and instructions to the user through `title`.
 
@@ -294,10 +357,10 @@ data_edit(mtcars,
 ```
 
 ```{r, echo=FALSE, fig.align="center", out.width = '100%'}
-knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-11.png')
+knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-17.png')
 ```
 
-### 7.3 Custom themes
+### 8.3 Custom themes
 
 `data_edit()` makes use of the `shinythemes` package to customise the appearance of the data editor. You can explore the different themes by supplying the name of a valid `shinythemes` theme to the `theme` argument.
 
@@ -307,9 +370,17 @@ data_edit(mtcars,
 ```
 
 ```{r, echo=FALSE, fig.align="center", out.width = '100%'}
-knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-12.png')
+knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-18.png')
+```
+
+## 9. RStudio Add-in
+
+`DataEditR` also ships with an RStudio add-in should you prefer to interact with your data in this way. Simply highlight the name of a dataset in an active script and select the `Interactive Data Editor` from the list of `Addins` in your RStudio session.
+
+```{r, echo=FALSE, fig.align="center", out.width = '100%'}
+knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-19.png')
 ```
 
 ## Summary
 
-**DataEditR** is a lightweight, powerful and intuitive package to allow interactive viewing, entry and editing of data in R. **DataEditR** is also appealing to developers seeking complex input from users using an interface that is robust and customisable.
+**DataEditR** is a lightweight, powerful and intuitive package to allow interactive viewing, entry, filtering and editing of data in R. **DataEditR** also ships with separate shiny modules (namely `dataInput`, `dataSelect`, `dataFilter`, `dataEdit` and `dataOutput`) that can be used by developers in their own shiny applications.

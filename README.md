@@ -20,16 +20,21 @@ stable](https://img.shields.io/badge/lifecycle-stable-brightgreen.svg)](https://
 
 Manual data entry and editing in R can be tedious, especially if you
 have limited coding experience and are accustomed to using software with
-a Graphical User Interface (GUI). **DataEditR** is an R package that
-makes it easy to view, enter and edit data within R, due to its
-convenient interactive GUI that supports many of the data manipulation
-operations supported by other commonly used GUI-oriented software. If
-you are new to **DataEditR** visit
+a Graphical User Interface (GUI). **DataEditR** is an R package built on
+shiny and rhandsontable that makes it easy to interactively view, enter,
+filter and edit data. If you are new to **DataEditR** visit
 <https://dillonhammill.github.io/DataEditR/> to get started.
 
 ## Installation
 
-**DataEditR** can be installed directly from GitHub:
+**DataEditR** can be installed from CRAN:
+
+``` r
+install.packages("DataEditR")
+```
+
+The development version of **DataEditR** can be installed directly from
+GitHub:
 
 ``` r
 library(devtools)
@@ -38,33 +43,52 @@ install_github("DillonHammill/DataEditR")
 
 ## Usage
 
-**DataEditR** ships with a single function called `data_edit()` that
-allows you to interactively view, enter or edit data in R. The key
-features of the data editor are summarised below and will be explored in
-detail in the package vignette:
+**DataEditR** ships with a series of shiny modules, namely `dataInput`,
+`dataSelect`, `dataFilter`, `dataEdit` and `dataOutput` which have been
+wrapped up into a single function called `data_edit()` to create an
+interactive data editor. You can use `data_edit()` as a standalone
+application, or include the relevant modules within your own shiny
+applications. Alternatively, `DataEditR` also ships with an RStudio
+add-in should you prefer to interact with it in this way.
 
-  - a quick way to view your data
-  - create data.frames from scratch
+#### General features:
+
+  - RStudio add-in
+  - flexible display options (either `dialog` box, `browser` or RStudio
+    `viewer` pane)
+  - fast rendering to quickly view datasets
+  - ability to interactively create data.frames from scratch
   - load tabular data saved to file using any reading function
     (e.g. `read.csv()`)
-  - row indices are always included even if row names have been
-    specified
-  - addition/removal of rows or columns
-  - editing of either row or column names
+  - save edited data to file using any writing function
+    (e.g. `write.csv()`)
+  - return appropriately formatted data as an R object for downstream
+    use
+  - code required to create edited data can be optionally printed to the
+    console
+  - support for custom themes through `shinythemes` package
+  - customisable user interface (title, logo and modules)
+  - row indices are always displayed for easy navigation
+  - switch between datasets or files without having to leave the
+    application
+
+#### Data editing features:
+
+  - column selection using the `dataSelect` module
+  - row selection using the `dataFilter` module
+  - edit row or column names
+  - addition or removal of rows or columns
   - manual column resizing
-  - drag a cell to fill others
-  - paste data from other software directly into the editor
-  - programmatically add columns/rows prior to loading the data editor
-  - copy and paste edited data into other software
-  - edited data can be optionally saved to file using any writing
-    function (e.g. `write.csv()`)
-  - edited data is exported as a matrix or data.frame for use within R
-  - data editor is opened in the RStudio Viewer pane by default but can
-    be changed to open in a pop-up window or web browser
-  - customize appearance using a `shinythemes` theme
-  - developers can add checkbox or dropdown columns for user input
-  - developers can customize the data editor with their own package logo
-    and title
+  - drag to fill cells
+  - copy or paste data to and from external software
+  - custom column types to simplify user input (e.g. checkboxes and
+    dropdown menus)
+  - support for readonly columns to prevent users from editing certain
+    columns
+  - control over which column names can be edited
+  - stretch columns horizontally to fill available space
+  - programmatically add columns or rows to data prior to loading into
+    the data editor
 
 A quick demonstration of some of these features can be seen below, where
 we use `data_edit()` to make changes to the `mtcars` dataset and save
@@ -87,7 +111,10 @@ mtcars_new <- data_edit(mtcars,
 [rhandsontable](https://github.com/jrowen/rhandsontable) package.
 **DataEditR** makes use of many features for entering and editing data,
 but **rhandsontable** has support for much more sophisticated
-interactive representations of data should you need them.
+interactive representations of data should you need them. The user
+interface of **DataEditR** has been inspired by the
+[editData](https://github.com/cardiomoon/editData) package which is a
+great alternative to **DataEditR**.
 
 ## Code of Conduct
 
@@ -107,7 +134,7 @@ citation("DataEditR")
 #> To cite package 'DataEditR' in publications use:
 #> 
 #>   Dillon Hammill (2020). DataEditR: An Interactive Editor for Viewing,
-#>   Entering & Editing Data. R package version 0.0.6.
+#>   Entering & Editing Data. R package version 0.0.8.
 #>   https://github.com/DillonHammill/DataEditR
 #> 
 #> A BibTeX entry for LaTeX users is
@@ -116,7 +143,7 @@ citation("DataEditR")
 #>     title = {DataEditR: An Interactive Editor for Viewing, Entering & Editing Data},
 #>     author = {Dillon Hammill},
 #>     year = {2020},
-#>     note = {R package version 0.0.6},
+#>     note = {R package version 0.0.8},
 #>     url = {https://github.com/DillonHammill/DataEditR},
 #>   }
 ```

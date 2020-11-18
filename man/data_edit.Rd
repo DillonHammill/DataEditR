@@ -2,10 +2,10 @@
 % Please edit documentation in R/data_edit.R
 \name{data_edit}
 \alias{data_edit}
-\title{An interactive editor for viewing, entering & editing data}
+\title{An interactive editor for viewing, entering and editing data}
 \usage{
 data_edit(
-  x,
+  x = NULL,
   col_bind = NULL,
   col_edit = TRUE,
   col_options = NULL,
@@ -18,22 +18,28 @@ data_edit(
   save_as = NULL,
   title = NULL,
   logo = NULL,
-  logo_size = 100,
-  viewer = TRUE,
+  logo_size = 30,
+  logo_side = "left",
+  viewer = "dialog",
+  viewer_height = 800,
+  viewer_width = 1200,
   theme = "yeti",
-  quiet = FALSE,
   read_fun = "read.csv",
   read_args = NULL,
   write_fun = "write.csv",
   write_args = NULL,
+  quiet = FALSE,
+  hide = FALSE,
+  code = FALSE,
   ...
 )
 }
 \arguments{
-\item{x}{a matrix, data.frame, data.table or the name of a csv file to
-edit.Tibble are also supported but will be coerced to data.frames. An empty
+\item{x}{a matrix, data.frame, data.table or the name of a csv file to edit.
+Tibbles are also supported but will be coerced to data.frames. An empty
 table can be created by specifying the dimensions in a vector of the form
-\code{c(nrow, ncol)}.}
+\code{c(nrow, ncol)} or the names of the columns to include in the
+template.}
 
 \item{col_bind}{additional columns to add to the data prior to loading into
 editor, can be either an array containing the new data, a vector containing
@@ -76,15 +82,24 @@ to TRUE by default.}
 \item{logo}{optional package logo to include in title above the data editor,
 must be supplied as path to logo png.}
 
-\item{logo_size}{width of the logo in pixels, set to 100 pixels by default.}
+\item{logo_size}{width of the logo in pixels, set to 30 pixels by default.}
 
-\item{viewer}{logical indicating whether the data editor should be invoked in
-the RStudio viewer pane, set to TRUE by default.}
+\item{logo_side}{can be either \code{"left"} or \code{"right"} to determine
+the position of the logo relative to the title, set to \code{"left"} by
+default.}
+
+\item{viewer}{can be either \code{"dialog"}, \code{"browser"} or
+\code{"pane"} to open the application in a dialog box, browser or RStudio
+viewer pane. First letter abbreviations are allowed, set to \code{"dialog"}
+by default.}
+
+\item{viewer_height}{numeric to control the height of the viewer in pixels
+when \code{viewer} is set to \code{"dialog"}, set 800 by default.}
+
+\item{viewer_width}{numeric to control the width of the viewer in pixels when
+\code{viewer} is set to \code{"dialog"}, set to 1200 by default.}
 
 \item{theme}{valid shinytheme name, set to "yeti" by default.}
-
-\item{quiet}{logical indicating whether messages should be suppressed, set to
-FALSE by default.}
 
 \item{read_fun}{name of the function to use to read in the data when \code{x}
 is the name of a file, set to \code{read.csv} by default.}
@@ -100,33 +115,36 @@ accepts the file name supplied to \code{save_as}.}
 \item{write_args}{a named list of additional arguments to pass to
 \code{write_fun}.}
 
-\item{...}{additional arguments passed to both \code{read_fun} and
-\code{write_fun}, such as \code{sep}. Arguments that are shared by
-\code{read_fun} and \code{write_fun} can be supplied separately to these
-functions using the \code{read_args} and \code{write_args} arguments. For
-example, this becomes particularly important when specifying
-\code{row.names} arguments.}
+\item{quiet}{logical indicating whether messages should be suppressed, set to
+FALSE by default.}
+
+\item{hide}{logical indicating whether the \code{dataInput} and
+\code{dataOutput} modules should be visible to the user within the
+application. If \code{hide = FALSE} and \code{save_as} is specified, the
+edited data will be written to file after the application is closed.}
+
+\item{code}{logical indicating whether the code required to generate the
+edited data should be printed to the console, set to \code{FALSE} by
+default.}
+
+\item{...}{not in use.}
 }
 \value{
-edited matrix-like object.
+the edited data as a matrix or data.frame.
 }
 \description{
-\code{data_edit} is a shiny application built on \code{rhandsontable} that is
+code{data_edit} is a shiny application built on \code{rhandsontable} that is
 designed to make it easy to interactively view, enter or edit data without
 any coding. \code{data_edit} is also a wrapper for any reading or writing
 function to make it easy to interactively update data saved to file.
 }
 \examples{
-if (interactive()) {
-  # Edit matrix & save to csv
-  file <- tempfile("mtcars-new", fileext = ".csv")
-  data_edit(mtcars,
-    save_as = file
-  )
+if(interactive()) {
 
-  # Edit csv file
-  data_edit(file)
+  data_edit(mtcars)
+
 }
+
 }
 \author{
 Dillon Hammill, \email{Dillon.Hammill@anu.edu.au}

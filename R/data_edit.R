@@ -21,17 +21,26 @@
 # may be possible to handle this externally but this gets complicated when
 # columns are added or removed.
 
-#' An interactive editor for viewing, entering & editing data
+# DEBUGGING:
+# - options(shiny.reactlog=TRUE) 
+# - launch app
+# - CTRL + F3
+
+# SHINY NOTES
+# - DO NOT USE DOTS IN IDs! (e.g. Sepal.Width)
+
+#' An interactive editor for viewing, entering and editing data
 #'
-#' \code{data_edit} is a shiny application built on \code{rhandsontable} that is
+#' code{data_edit} is a shiny application built on \code{rhandsontable} that is
 #' designed to make it easy to interactively view, enter or edit data without
 #' any coding. \code{data_edit} is also a wrapper for any reading or writing
 #' function to make it easy to interactively update data saved to file.
 #'
-#' @param x a matrix, data.frame, data.table or the name of a csv file to
-#'   edit.Tibble are also supported but will be coerced to data.frames. An empty
+#' @param x a matrix, data.frame, data.table or the name of a csv file to edit.
+#'   Tibbles are also supported but will be coerced to data.frames. An empty
 #'   table can be created by specifying the dimensions in a vector of the form
-#'   \code{c(nrow, ncol)}.
+#'   \code{c(nrow, ncol)} or the names of the columns to include in the
+#'   template.
 #' @param col_bind additional columns to add to the data prior to loading into
 #'   editor, can be either an array containing the new data, a vector containing
 #'   the new column names for empty columns or a named list containing a vector
@@ -61,12 +70,19 @@
 #' @param title optional title to include above the data editor.
 #' @param logo optional package logo to include in title above the data editor,
 #'   must be supplied as path to logo png.
-#' @param logo_size width of the logo in pixels, set to 100 pixels by default.
-#' @param viewer logical indicating whether the data editor should be invoked in
-#'   the RStudio viewer pane, set to TRUE by default.
+#' @param logo_size width of the logo in pixels, set to 30 pixels by default.
+#' @param logo_side can be either \code{"left"} or \code{"right"} to determine
+#'   the position of the logo relative to the title, set to \code{"left"} by
+#'   default.
+#' @param viewer can be either \code{"dialog"}, \code{"browser"} or
+#'   \code{"pane"} to open the application in a dialog box, browser or RStudio
+#'   viewer pane. First letter abbreviations are allowed, set to \code{"dialog"}
+#'   by default.
+#' @param viewer_height numeric to control the height of the viewer in pixels
+#'   when \code{viewer} is set to \code{"dialog"}, set 800 by default.
+#' @param viewer_width numeric to control the width of the viewer in pixels when
+#'   \code{viewer} is set to \code{"dialog"}, set to 1200 by default.
 #' @param theme valid shinytheme name, set to "yeti" by default.
-#' @param quiet logical indicating whether messages should be suppressed, set to
-#'   FALSE by default.
 #' @param read_fun name of the function to use to read in the data when \code{x}
 #'   is the name of a file, set to \code{read.csv} by default.
 #' @param read_args a named list of additional arguments to pass to
@@ -77,38 +93,40 @@
 #'   accepts the file name supplied to \code{save_as}.
 #' @param write_args a named list of additional arguments to pass to
 #'   \code{write_fun}.
-#' @param ... additional arguments passed to both \code{read_fun} and
-#'   \code{write_fun}, such as \code{sep}. Arguments that are shared by
-#'   \code{read_fun} and \code{write_fun} can be supplied separately to these
-#'   functions using the \code{read_args} and \code{write_args} arguments. For
-#'   example, this becomes particularly important when specifying
-#'   \code{row.names} arguments.
+#' @param quiet logical indicating whether messages should be suppressed, set to
+#'   FALSE by default.
+#' @param hide logical indicating whether the \code{dataInput} and
+#'   \code{dataOutput} modules should be visible to the user within the
+#'   application. If \code{hide = FALSE} and \code{save_as} is specified, the
+#'   edited data will be written to file after the application is closed.
+#' @param code logical indicating whether the code required to generate the
+#'   edited data should be printed to the console, set to \code{FALSE} by
+#'   default.
+#' @param ... not in use.
 #'
-#' @return edited matrix-like object.
+#' @return the edited data as a matrix or data.frame.
 #'
-#' @importFrom shiny shinyApp fluidPage titlePanel mainPanel actionButton
-#'   reactiveValues observeEvent paneViewer runApp stopApp
-#' @importFrom rhandsontable rhandsontable hot_col hot_to_r rHandsontableOutput
-#'   renderRHandsontable %>% hot_context_menu
-#' @importFrom htmltools img div span
+#' @importFrom rstudioapi getActiveDocumentContext
+#' @importFrom htmltools img span br div HTML
+#' @importFrom shiny runGadget dialogViewer browserViewer paneViewer splitLayout
+#'   fluidPage column stopApp reactiveValues actionButton insertUI
+#' @importFrom shinyjs useShinyjs
 #' @importFrom shinythemes shinytheme
-#' @importFrom utils type.convert
+#' @importFrom miniUI gadgetTitleBar
+#' @importFrom shinyBS bsButton updateButton
+#' @importFrom rhandsontable %>%
 #'
 #' @author Dillon Hammill, \email{Dillon.Hammill@anu.edu.au}
 #'
 #' @examples
-#' if (interactive()) {
-#'   # Edit matrix & save to csv
-#'   file <- tempfile("mtcars-new", fileext = ".csv")
-#'   data_edit(mtcars,
-#'     save_as = file
-#'   )
+#' if(interactive()) {
 #'
-#'   # Edit csv file
-#'   data_edit(file)
+#'   data_edit(mtcars)
+#'
 #' }
+#'
 #' @export
-data_edit <- function(x,
+data_edit <- function(x = NULL,
                       col_bind = NULL,
                       col_edit = TRUE,
                       col_options = NULL,
@@ -121,531 +139,322 @@ data_edit <- function(x,
                       save_as = NULL,
                       title = NULL,
                       logo = NULL,
-                      logo_size = 100,
-                      viewer = TRUE,
+                      logo_size = 30,
+                      logo_side = "left",
+                      viewer = "dialog",
+                      viewer_height = 800,
+                      viewer_width = 1200,
                       theme = "yeti",
-                      quiet = FALSE,
                       read_fun = "read.csv",
                       read_args = NULL,
                       write_fun = "write.csv",
                       write_args = NULL,
+                      quiet = FALSE,
+                      hide = FALSE,
+                      code = FALSE,
                       ...) {
-
+  
   # PREPARE DATA ---------------------------------------------------------------
-
-  # EMPTY DATA
-  if (missing(x)) {
-    x <- data.frame("V1" = "")
-  }
-
-  # READ IN DATA
-  if (is.null(dim(x))) {
-    # FILE/COLUMN NAMES
-    if(is.character(x)) {
-      # FILE NAME - SINGLE + EXTENSION
-      if(length(x) == 1 & all(nchar(file_ext(x)) != 0)) {
-        # FUNCTION
-        read_fun <- match.fun(read_fun)
-        # CHECK READ ARGUMENTS
-        if (!is.null(read_args)) {
-          if (!class(read_args) == "list") {
-            stop("read_args must be a named list of arguments for read_fun.")
-          }
-        }
-        # READ ARGUMENTS
-        read_args <- c(list(x), read_args)
-        # EXTRA ARGUMENTS
-        extra_args <- list(...)
-        read_args <- c(
-          read_args,
-          extra_args[!names(extra_args) %in% names(read_args)]
-        )
-        # CALL FUNCTION
-        x <- do.call(read_fun, read_args)
-      # COLUMN NAMES  
-      } else {
-        x <- data.frame(
-          structure(rep(list(""), length(x)),
-                    names = x),
-          check.names = FALSE,
-          stringsAsFactors =  FALSE
-        )
-      }
-    # DIMENSIONS
-    } else if(is.numeric(x)) {
-      x <- data.frame(
-        structure(rep(list(rep("", x[1])), x[2]),
-                  names = paste0("V", seq_len(x[2]))),
-        check.names = FALSE,
-        stringsAsFactors =  FALSE
-        )
+  
+  # RSTUDIO ADDIN/DATA
+  context <- getActiveDocumentContext()
+  if(nzchar(context$selection[[1]]$text)) {
+    data <- context$selection[[1]]$text
+  } else {
+    if(!is.null(dim(x))) {
+      data <- as.character(substitute(x))
+    } else {
+      data <- x
     }
   }
   
-  # BIND ROWS
-  if (!is.null(row_bind)) {
-    # NEW ROWS
-    if (is.null(dim(row_bind))) {
-      # ROWS AS LIST
-      if (class(row_bind) == "list") {
-        # NAMES NOT NECESSARY
-        # LENGTHS
-        ind <- which(!unlist(lapply(row_bind, length)) == ncol(x))
-        if (length(ind) > 0) {
-          for (z in ind) {
-            row_bind[[z]] <- rep(row_bind[[z]], ncol(x))
-          }
-        }
-        # MATRIX
-        row_bind <- do.call("rbind", row_bind)
-        # ROW NAMES
-      } else {
-        row_bind <- matrix(rep("", ncol(x) * length(row_bind)),
-          nrow = length(row_bind),
-          dimnames = list(
-            row_bind,
-            colnames(x)
-          )
-        )
-      }
-    }
-    # BIND NEW ROWS
-    x <- rbind(x, row_bind[, 1:ncol(x)])
-  }
-
-  # BIND COLUMNS
-  if (!is.null(col_bind)) {
-    # NEW COLUMNS
-    if (is.null(dim(col_bind))) {
-      # COLUMNS AS LIST
-      if (class(col_bind) == "list") {
-        # NAMES
-        if (is.null(names(col_bind))) {
-          names(col_bind) <- paste0("V", length(col_bind))
-        }
-        # LENGTHS
-        ind <- which(!unlist(lapply(col_bind, length)) == nrow(x))
-        if (length(ind) > 0) {
-          for (z in ind) {
-            col_bind[[z]] <- rep(col_bind[[z]], nrow(x))
-          }
-        }
-        # MATRIX
-        col_bind <- do.call("cbind", col_bind)
-        # COLUMN NAMES
-      } else {
-        col_bind <- matrix(rep("", nrow(x) * length(col_bind)),
-          ncol = length(col_bind),
-          dimnames = list(
-            rownames(x),
-            col_bind
-          )
-        )
-      }
-    }
-    # BIND NEW COLUMNS
-    x <- cbind(x, col_bind[1:nrow(x), , drop = FALSE])
-  }
-
-  # COLUMN NAMES
-  if (length(unique(colnames(x))) != length(colnames(x))) {
-    stop("Column names must be unique!")
-  }
-
-  # COLUMN OPTIONS - LOGICAL
-  if (!is.null(col_options)) {
-    for (z in names(col_options)) {
-      col_type <- type.convert(col_options[[z]], as.is = TRUE)
-      # CHECKBOXES
-      if (is.logical(col_type)) {
-        if (!is.logical(x[, z])) {
-          res <- type.convert(x[, z], as.is = TRUE)
-          if (!is.logical(res)) {
-            res <- rep(NA, nrow(x))
-          }
-          x[, z] <- res
-        }
-        # DROPDOWN MENUS
-      } else {
-        # NA TO EMPTY CHARACTERS
-        if (all(is.na(x[, z]))) {
-          x[, z] <- rep("", nrow(x))
-        }
-      }
-    }
-  }
-
-  # CLASS
-  data_class <- class(x)
-
-  # ABSORB ROW NAMES
-  if (!is.null(rownames(x))) {
-    # EMPTY ROW NAMES - CHARACTER(0)
-    if (length(rownames(x)) == 0) {
-      rn <- "empty"
-      rownames(x) <- 1:nrow(x)
-      # ROW INDICES
-    } else if (all(rownames(x) == seq(1, nrow(x)))) {
-      rn <- "index"
-      # ROW NAMES SET
-    } else {
-      rn <- "set"
-      x <- cbind(rownames(x), x)
-      colnames(x)[1] <- " "
-      rownames(x) <- 1:nrow(x) # display row indices in table
-    }
-  } else {
-    rn <- "empty"
-    rownames(x) <- 1:nrow(x)
-  }
-
-  # COERCE TO DATA.FRAME
-  if (!"data.frame" %in% data_class) {
-    x <- as.data.frame(x)
-  }
-
   # PREPARE SHINY COMPONENTS ---------------------------------------------------
-
-  # LOGO
-  if (!is.null(logo)) {
+  
+  # DATAEDITR LOGO
+  if(is.null(logo)) {
+    logo <- paste0(
+      "https://raw.githubusercontent.com/DillonHammill/DataEditR/master",
+      "/vignettes/logo.png"
+    )
+  }
+  
+  # LOGO IMAGE
+  if(!is.null(logo)) {
     logo <- img(
       src = logo,
       width = logo_size
     )
   }
-
-  # TITLE PANEL
-  if (!is.null(title) | !is.null(logo)) {
-    title_panel <- titlePanel(
-      span(
-        logo,
-        title,
-        span(actionButton("save_and_close", "Save & Close"))
-      )
-    )
-  } else {
-    title_panel <- titlePanel(
-      span(actionButton("save_and_close", "Save & Close"))
-    )
-  }
-
-  # COLUMN STRETCH
-  if (col_stretch == TRUE) {
-    col_stretch <- "all"
-  } else {
-    col_stretch <- "none"
-  }
-
-  # ROW/COLUMN EDIT
-  if (!is.null(col_options)) {
-    if (quiet == FALSE) {
-      message("Column editing is turned off to add dropdowns or checkboxes...")
-    }
-    col_edit <- FALSE
-  }
-
-  # COLUMN NAMES - INDICES THAT CANNOT BE EDITED
-  if(col_names == FALSE) {
-    col_names <- colnames(x)
-  }else if(col_names == TRUE) {
-    col_names <- NULL
-  }  
   
-  # READONLY COLUMNS
-  if(!is.null(col_readonly)) {
-    if(!all(col_readonly %in% colnames(x))) {
-      stop("'col_readonly' must contain valid column names.")
-    }
-    col_names <- unique(c(col_names, col_readonly))
+  # TITLE
+  if(is.null(title)) {
+    title <- "Data Editor"
   }
-
+  
+  # TITLE PANEL
+  if(is.null(logo)) {
+    title <- gadgetTitleBar(
+      title
+    )
+  # TITLE + LOGO PANEL
+  } else {
+    # LOGO ON LEFT
+    if(grepl("^l", logo_side, ignore.case = TRUE)) {
+      title <- gadgetTitleBar(
+        span(logo,
+             title)
+      )
+    # LOGO ON RIGHT
+    } else if(grepl("^r", logo_side, ignore.case = TRUE)) {
+      title <- gadgetTitleBar(
+        span(title,
+             logo)
+      )
+    }
+  }
+  
   # SHINY APPLICATION ----------------------------------------------------------
-
-  # DATA EDITOR
-  app <- shinyApp(
-
-    # USER INTERFACE
-    ui <- fluidPage(
-      theme = shinytheme(theme),
-      title_panel,
-      mainPanel(rHandsontableOutput("x"),
-        width = 12
+  
+  # USER INTERFACE
+  ui <- fluidPage(
+    title,
+    theme = shinytheme(theme),
+    useShinyjs(),
+    fluidRow(
+      column(
+        7,
+        style = "padding-right: 5px;",
+        dataInputUI("input1",
+                    cellWidths = c("50%", "50%"))
+      ),
+      column(
+        5,
+        style = "padding-left: 5px; margin-top: 35px;",
+        dataSelectUI("select1"),
+        dataFilterUI("filter1"),
+        actionButton("sync", 
+                     label = NULL, 
+                     icon = icon("sync")),
+        dataOutputUI("output-active"),
+        dataOutputUI("output-update", icon = "file-download"),
+        bsButton("cut",
+                 label = NULL,
+                 icon = icon("cut"),
+                 style = "danger",
+                 type = "action")
       )
     ),
-
-    # SERVER
-    server <- function(input, output, session) {
-
-      # VALUES
-      values <- reactiveValues(x = x)
-
-      # DATA EDITS - INCLUDES ROW NAME EDITS
-      observeEvent(input$x, {
-        # OLD VALUES
-        x_old <- values[["x"]]
-        values[["x"]] <- hot_to_r(input$x)
-        # FIX ROW INDICES
-        if(nrow(x_old) != nrow(values[["x"]])) {
-          rownames(values[["x"]]) <- 1:nrow(values[["x"]])
-        }
-        # REVERT READONLY COLUMNS
-        if(!is.null(col_readonly)){
-          values[["x"]][, col_readonly] <- x_old[, col_readonly]
-        }
-      })
-
-      # ROW/COLUMN NAME EDITS
-      observeEvent(input$x_changeHeaders, {
-        # COLUMN NAMES
-        if ("colHeaders" %in% names(input$x_changeHeaders)) {
-          # OLD COLUMN NAMES
-          old_col_names <- colnames(values[["x"]])
-          # UPDATED COLUMN NAMES
-          new_col_names <- unlist(input$x_changeHeaders[["colHeaders"]])
-          # COLUMN INDEX - COLUMNS CANNOT BE MOVED
-          col_ind <- which(old_col_names != new_col_names)
-          # ONLY UPDATE IF COLUMN NAMES CHANGE
-          if(length(col_ind) != 0) {
-            # CUSTOM COLUMNS - KEEP COLUMN TYPE
-            if (!is.null(names(col_options))) {
-              if (any(old_col_names[col_ind] %in% names(col_options))) {
-                for (z in col_ind) {
-                  if (old_col_names[z] %in% names(col_options)) {
-                    ind <- match(old_col_names[z], names(col_options))
-                    names(col_options)[ind] <- new_col_names[z]
-                  }
-                }
-              }
-            }
-            # EMPTY COLUMN NAMES
-            empty_col_names <- which(unlist(lapply(new_col_names, nchar) == 0))
-            # APPLY COLUMN NAMES - RENDER
-            x_new <- hot_to_r(input$x)
-            colnames(x_new) <- new_col_names
-            values[["x"]] <- x_new
-            # REVERT EMPTY COLUMN NAMES TO ORIGINAL - RE-RENDER
-            if (length(empty_col_names) > 0) {
-              colnames(x_new)[empty_col_names] <- old_col_names[empty_col_names]
-              values[["x"]] <- x_new
-              # PREVENT COLUMN NAME EDITS
-            } else if (length(col_names) > 0 & 
-                       old_col_names[col_ind] %in% col_names) {
-              if (quiet == FALSE) {
-                message(
-                  paste0(paste(old_col_names[col_ind], collapse = " & "), 
-                         " column name(s) cannot be edited.")
-                )
-              }
-              colnames(x_new) <- old_col_names
-              values[["x"]] <- x_new
-            }
-          }
-          # ROW NAMES CANNOT BE EDITED
-        } else if ("rowHeaders" %in% names(input$x_changeHeaders)) {
-          x_old <- values[["x"]]
-          # OLD ROW NAMES
-          old_row_names <- rownames(values[["x"]])
-          # NEW ROW NAMES
-          new_row_names <- unlist(input$x_changeHeaders[["rowHeaders"]])
-          # DUPLICATE ROW NAMES
-          row_ind <- which(duplicated(new_row_names))
-          if(length(row_ind) > 0) {
-            new_row_names[row_ind] <- paste0(new_row_names[row_ind], "    ")
-          }
-          rownames(x_old) <- new_row_names
-          values[["x"]] <- x_old
-          # REVERT TO ORIGINAL ROW NAMES - RE-RENDER
-          rownames(x_old) <- 1:nrow(x_old)
-          values[["x"]] <- x_old
-        }
-        # ROW NAMES - NOT IN USE
-        # } else if("rowHeaders" %in% names(input$x_changeHeaders)){
-        #   mat <- hot_to_r(input$x)
-        #   new_row_names <- unlist(input$x_changeHeaders[["rowHeaders"]])
-        #   # ROW NAMES MUST BE UNIQUE
-        #   if(length(unique(new_row_names)) == nrow(mat)){
-        #     rownames(mat) <- new_row_names
-        #   }
-        #   values[["x"]] <- mat
-        # }
-      })
-
-      # TABLE
-      output$x <- renderRHandsontable({
-
-        # RHANDSONTABLE
-        rhot <-
-          rhandsontable(values[["x"]],
-            useTypes = FALSE,
-            contextMenu = TRUE,
-            stretchH = col_stretch,
-            colHeaders = colnames(values[["x"]]),
-            rowHeaders = rownames(values[["x"]]),
-            manualColumnResize = TRUE,
-            afterOnCellMouseDown = java_script(
-              "function(event, coords, th) {
-                        if (coords.row === -1 || coords.col === -1) {
-                          let instance = this,
-                          isColHeader = coords.row === -1,
-                          input = document.createElement('input'),
-                          rect = th.getBoundingClientRect(),
-                          addListeners = (events, headers, index) => {
-                            events.split(' ').forEach(e => {
-                              input.addEventListener(e, () => {
-                                headers[index] = input.value;
-                                instance.updateSettings(isColHeader ? {
-                                  colHeaders: headers
-                                } : {
-                                  rowHeaders: headers
-                                });
-                                    
-                                // send the event to Shiny
-                                let id = instance.container.parentElement.id
-                                if(HTMLWidgets.shinyMode) {
-                                  // name the event what you would like
-                                  Shiny.setInputValue(
-                                    id + '_changeHeaders',
-                                    isColHeader ? {
-                                      colHeaders: headers
-                                    } : {
-                                      rowHeaders: headers
-                                    }
-                                  )
-                                }
-                                    
-                                setTimeout(() => {
-                                  if (input.parentNode) {
-                                    input.parentNode.removeChild(input)
-                                  }
-                                });
-                              })
-                            })
-                          },
-                          appendInput = () => {
-                            input.setAttribute('type', 'text');
-                            input.style.cssText = '' +
-                              'position:absolute;' +
-                              'left:' + rect.left + 'px;' +
-                              'top:' + rect.top + 'px;' +
-                              'width:' + (rect.width - 4) + 'px;' +
-                              'height:' + (rect.height - 4) + 'px;' +
-                              'z-index:1000;' + 
-                              'text-align:center';
-                            document.body.appendChild(input);
-                          };
-                          input.value = th.querySelector(
-                            isColHeader ? '.colHeader' : '.rowHeader'
-                          ).innerText;
-                          appendInput();
-                          setTimeout(() => {
-                            input.select(); 
-                            addListeners('change blur', instance[
-                              isColHeader ? 'getColHeader' : 'getRowHeader'
-                              ](), coords[isColHeader ? 'col' : 'row']);
-                          });
-                        }
-                      }"
-            )
-          ) %>%
-          hot_context_menu(
-            allowRowEdit = row_edit,
-            allowColEdit = col_edit
-          )
-
-        for (z in colnames(values[["x"]])) {
-          # CHECKBOX / DROPDOWN
-          if (z %in% names(col_options)) {
-            # CHECKBOX
-            if (is.logical(col_options[[z]])) {
-              rhot <- suppressWarnings(
-                hot_col(rhot,
-                  col = z,
-                  type = "checkbox",
-                  source = col_options[[z]]
-                )
-              )
-              # DROPDOWN
-            } else {
-              rhot <- suppressWarnings(
-                hot_col(rhot,
-                  col = z,
-                  type = "dropdown",
-                  source = col_options[[z]]
-                )
-              )
-            }
-          }
-        }
-        return(rhot)
-      })
-
-      # MANUAL CLOSE
-      observeEvent(input$save_and_close, {
-        stopApp(values[["x"]])
-      })
-    }
+    fluidRow(
+      column(
+        12,
+        dataEditUI("edit1"),
+        br()
+      )
+    )
   )
-
-  # RUN DATA EDITOR - INTERACTIVE MODE ONLY
-  if (viewer == TRUE) {
-    x <- runApp(app,
-      launch.browser = paneViewer(),
-      quiet = TRUE
-    )
-  } else {
-    x <- runApp(app,
-      quiet = TRUE
-    )
-  }
   
-  # RETURN ORIGINAL CLASS
-  if ("matrix" %in% data_class) {
-    x <- as.matrix(x)
-  }
-  
-  # ROW NAMES - FIRST COLUMN
-  if (rn == "set") {
-    new_row_names <- x[, 1]
-    # UNIQUE ROW NAMES
-    if (length(unique(new_row_names)) != length(new_row_names)) {
-      message("Storing non-unique row names in the first column of 'x'.")
-      colnames(x)[1] <- "rownames(x)"
-    } else {
-      rownames(x) <- new_row_names
-      x <- x[, -1]
-    }
-    # EMPTY ROWNAMES - INDICES KEPT
-  } else if (rn == "empty") {
-    rownames(x) <- NULL
-  }
-
-  # ATTEMPT TO FIX CLASSES - EMPTY DATA
-  for (z in colnames(x)) {
-    x[, z] <- type.convert(x[, z], as.is = !col_factor)
-  }
-
-  # SAVE EDITIED DATA
-  if (!is.null(save_as)) {
-    # FUNCTION
-    write_fun <- match.fun(write_fun)
-    # CHECK WRITE ARGUMENTS
-    if (!is.null(write_args)) {
-      if (!class(write_args) == "list") {
-        stop("write_args must be a named list of arguments for write_fun.")
+  # SERVER
+  server <- function(input,
+                     output,
+                     session) {
+    
+    # DATA STORAGE
+    values <- reactiveValues(data_update = NULL, # all updates
+                             data_active = NULL, # subset
+                             data_edit = NULL,   # edits
+                             rows = NULL,        # row indices
+                             columns = NULL,     # column indices
+                             edit = NULL,
+                             cut = FALSE)
+    
+    # DATA INPUT
+    data_input <- dataInputServer("input1",
+                                  data = data,
+                                  read_fun = read_fun,
+                                  read_args = read_args,
+                                  hide = hide)
+    
+    observe({
+      values$data_update <- data_input() %>%
+        data_bind_rows(row_bind = row_bind) %>%
+        data_bind_cols(col_bind = col_bind)
+      values$rows <- NULL
+      values$columns <- NULL
+    })
+    
+    # DATA SELECT
+    data_select <- dataSelectServer("select1",
+                                    data = reactive(values$data_update))
+    
+    # DATA FILTER
+    data_filter <- dataFilterServer("filter1",
+                                    data = reactive(values$data_update))
+    
+    observe({
+      values$rows <- data_filter$rows()
+      values$columns <- data_select$columns()
+      if(length(values$rows) != 0 & length(values$columns) == 0) {
+        values$data_active <- values$data_update[values$rows, , drop = FALSE]
+      } else if(length(values$rows) == 0 & length(values$columns) != 0) {
+        values$data_active <- values$data_update[ , values$columns, drop = FALSE]
+      } else if(length(values$rows) != 0 & length(values$columns) != 0) {
+        values$data_active <- values$data_update[values$rows, values$columns, drop = FALSE]
+      } else {
+        values$data_active <- NULL
       }
-    }
-    # WRITE ARGUMENTS
-    write_args <- c(list(x, save_as), write_args)
-    # EXTRA ARGUMENTS
-    extra_args <- list(...)
-    write_args <- c(
-      write_args,
-      extra_args[!names(extra_args) %in% names(write_args)]
-    )
-    # CALL FUNCTION
-    do.call(write_fun, write_args)
+    })
+    
+    observe({
+      if(is.null(values$data_active)) {
+        values$edit <- "update"
+        values$data_edit <- values$data_update
+      } else {
+        values$edit <- "active"
+        values$data_edit <- values$data_active
+      }
+    })
+    
+    # DATAEDIT - ENTIRE DATASET
+    data_update <- dataEditServer("edit1",
+                                  data = reactive(values$data_edit),
+                                  col_bind = NULL, # endless loop!
+                                  col_edit = col_edit,
+                                  col_options = col_options,
+                                  col_stretch = col_stretch,
+                                  col_names = col_names,
+                                  col_readonly = col_readonly,
+                                  col_factor = col_factor,
+                                  row_bind = NULL, # endless loop!
+                                  row_edit = row_edit,
+                                  quiet = quiet)
+    
+    # SYNC
+    observeEvent(input$sync, {
+      # VALUES
+      if(length(values$rows) != 0 & length(values$columns) == 0) {
+        values$data_update[values$rows, ] <- data_update()
+      } else if(length(values$rows) == 0 & length(values$columns) != 0) {
+        values$data_update[ , values$columns] <- data_update()
+      } else if(length(values$rows) != 0 & length(values$columns) != 0) {
+        values$data_update[values$rows, values$columns] <- 
+          data_update()
+      }
+      # ROW/COLUMN NAMES
+      if(!is.null(data_update())) {
+        # ROW NAMES
+        if(!all(rownames(data_update()) == 
+                rownames(values$data_update)[values$rows])) {
+          rownames(values$data_update)[values$rows] <- 
+            rownames(data_update())
+        }
+        # COLUMN NAMES
+        if(!all(colnames(data_update()) == 
+                colnames(values$data_update)[values$columns])) {
+          colnames(values$data_update)[values$columns] <- 
+            colnames(data_update())
+        }
+      }
+    })
+    
+    # DATA OUTPUT - DATA ACTIVE
+    dataOutputServer("output-active",
+                     data = data_update,
+                     save_as = save_as,
+                     write_fun = write_fun,
+                     write_args = write_args,
+                     hide = hide)
+    
+    # DATA OUTPUT - DATA ACTIVE
+    dataOutputServer("output-update",
+                     data = reactive({values$data_update}),
+                     save_as = save_as,
+                     write_fun = write_fun,
+                     write_args = write_args,
+                     hide = hide)
+    
+    # CUT
+    observeEvent(input$cut, {
+      if(values$cut) {
+        values$cut <- FALSE
+        updateButton(
+          session,
+          "cut",
+          NULL,
+          block = FALSE,
+          style = "danger"
+        )
+      } else {
+        values$cut <- TRUE
+        updateButton(
+          session,
+          "cut",
+          NULL,
+          block = FALSE,
+          style = "success"
+        )
+      }
+    })
+    
+    # CANCEL
+    observeEvent(input$cancel, {
+      stopApp(NULL)
+    })
+    
+    # DONE
+    observeEvent(input$done, {
+      # DATA ACTIVE
+      if(values$cut) {
+        stopApp(values$data_active)
+      # DATA UPDATE
+      } else {
+        stopApp(values$data_update)
+      }
+    })
+    
   }
-
-  # RETURN EDITIED DATA
-  return(x)
+  
+  # DIALOG
+  if(grepl("^d", viewer, ignore.case = TRUE)){
+    viewer <- dialogViewer("DataEditR",
+                           width = viewer_width,
+                           height = viewer_height)
+  # BROWSER  
+  } else if (grepl("^b", viewer, ignore.case = TRUE)) {
+    viewer <- browserViewer()
+  # VIEWER PANE  
+  } else if (grepl("^v", viewer, ignore.case = TRUE) |
+             grepl("^p", viewer, ignore.case = TRUE)) {
+    viewer <- paneViewer()
+  # UNSUPPORTED VIEWER  
+  } else {
+    viewer <- paneViewer()
+  }
+  
+  # RUN APPLICATION
+  x_edit <- runGadget(ui,
+                      server,
+                      viewer = viewer,
+                      stopOnCancel = FALSE)
+  
+  # SAVE AS
+  if(!is.null(x_edit)) {
+    if(!hide & !is.null(save_as)) {
+      do.call(
+        write_fun,
+        c(list(x_edit, save_as), write_args)
+      )
+    }
+  }
+  
+  # RETURN DATA
+  if(is.null(x_edit)) {
+    return(x)
+  } else {
+    # CODE
+    if(code) {
+      dput(x_edit)
+    }
+    return(x_edit)
+  }
+  
 }
