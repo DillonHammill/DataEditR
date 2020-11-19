@@ -131,15 +131,15 @@
     <p>Shiny module for data input</p>
     </div>
 
-    <pre class="usage"><span class='fu'>dataInputUI</span>(<span class='no'>id</span>, <span class='kw'>cellWidths</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='st'>"50%"</span>, <span class='st'>"48%"</span>))
+    <pre class="usage"><span class='fu'>dataInputUI</span><span class='op'>(</span><span class='va'>id</span>, cellWidths <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='st'>"50%"</span>, <span class='st'>"48%"</span><span class='op'>)</span><span class='op'>)</span>
 
-<span class='fu'>dataInputServer</span>(
-  <span class='no'>id</span>,
-  <span class='kw'>data</span> <span class='kw'>=</span> <span class='kw'>NULL</span>,
-  <span class='kw'>read_fun</span> <span class='kw'>=</span> <span class='st'>"read.csv"</span>,
-  <span class='kw'>read_args</span> <span class='kw'>=</span> <span class='kw'>NULL</span>,
-  <span class='kw'>hide</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>
-)</pre>
+<span class='fu'>dataInputServer</span><span class='op'>(</span>
+  <span class='va'>id</span>,
+  data <span class='op'>=</span> <span class='cn'>NULL</span>,
+  read_fun <span class='op'>=</span> <span class='st'>"read.csv"</span>,
+  read_args <span class='op'>=</span> <span class='cn'>NULL</span>,
+  hide <span class='op'>=</span> <span class='cn'>FALSE</span>
+<span class='op'>)</span></pre>
 
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
     <table class="ref-arguments">
@@ -178,31 +178,35 @@ be hidden from the user, set to FALSE by default.</p></td>
     </tr>
     </table>
 
+    <h2 class="hasAnchor" id="author"><a class="anchor" href="#author"></a>Author</h2>
+
+    <p>Dillon Hammill, <a href='mailto:Dillon.Hammill@anu.edu.au'>Dillon.Hammill@anu.edu.au</a></p>
 
     <h2 class="hasAnchor" id="examples"><a class="anchor" href="#examples"></a>Examples</h2>
-    <pre class="examples"><div class='input'><span class='kw'>if</span> (<span class='fu'><a href='https://rdrr.io/r/base/interactive.html'>interactive</a></span>()) {
-  <span class='fu'><a href='https://rdrr.io/r/base/library.html'>library</a></span>(<span class='no'>shiny</span>)
-  <span class='fu'><a href='https://rdrr.io/r/base/library.html'>library</a></span>(<span class='no'>rhandsontable</span>)
+    <pre class="examples"><div class='input'><span class='kw'>if</span> <span class='op'>(</span><span class='fu'><a href='https://rdrr.io/r/base/interactive.html'>interactive</a></span><span class='op'>(</span><span class='op'>)</span><span class='op'>)</span> <span class='op'>{</span>
+  <span class='kw'><a href='https://rdrr.io/r/base/library.html'>library</a></span><span class='op'>(</span><span class='va'><a href='http://shiny.rstudio.com'>shiny</a></span><span class='op'>)</span>
+  <span class='kw'><a href='https://rdrr.io/r/base/library.html'>library</a></span><span class='op'>(</span><span class='va'><a href='http://jrowen.github.io/rhandsontable/'>rhandsontable</a></span><span class='op'>)</span>
 
-  <span class='no'>ui</span> <span class='kw'>&lt;-</span> <span class='fu'><a href='https://shiny.rstudio.com/reference/shiny/latest/fluidPage.html'>fluidPage</a></span>(
-    <span class='fu'>dataInputUI</span>(<span class='st'>"input1"</span>),
-    <span class='fu'><a href='https://rdrr.io/pkg/rhandsontable/man/rHandsontableOutput.html'>rHandsontableOutput</a></span>(<span class='st'>"data1"</span>)
-  )
+  <span class='va'>ui</span> <span class='op'>&lt;-</span> <span class='fu'><a href='https://shiny.rstudio.com/reference/shiny/latest/fluidPage.html'>fluidPage</a></span><span class='op'>(</span>
+    <span class='fu'>dataInputUI</span><span class='op'>(</span><span class='st'>"input1"</span><span class='op'>)</span>,
+    <span class='fu'><a href='https://rdrr.io/pkg/rhandsontable/man/rHandsontableOutput.html'>rHandsontableOutput</a></span><span class='op'>(</span><span class='st'>"data1"</span><span class='op'>)</span>
+  <span class='op'>)</span>
 
-  <span class='no'>server</span> <span class='kw'>&lt;-</span> <span class='kw'>function</span>(<span class='no'>input</span>,
-                     <span class='no'>output</span>,
-                     <span class='no'>session</span>) {
-    <span class='no'>data_input1</span> <span class='kw'>&lt;-</span> <span class='fu'>dataInputServer</span>(<span class='st'>"input1"</span>)
+  <span class='va'>server</span> <span class='op'>&lt;-</span> <span class='kw'>function</span><span class='op'>(</span><span class='va'>input</span>,
+                     <span class='va'>output</span>,
+                     <span class='va'>session</span><span class='op'>)</span> <span class='op'>{</span>
+    <span class='va'>data_input1</span> <span class='op'>&lt;-</span> <span class='fu'>dataInputServer</span><span class='op'>(</span><span class='st'>"input1"</span><span class='op'>)</span>
 
-    <span class='no'>output</span>$<span class='no'>data1</span> <span class='kw'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/pkg/rhandsontable/man/renderRHandsontable.html'>renderRHandsontable</a></span>({
-      <span class='kw'>if</span> (!<span class='fu'><a href='https://rdrr.io/r/base/NULL.html'>is.null</a></span>(<span class='fu'>data_input1</span>())) {
-        <span class='fu'><a href='https://rdrr.io/pkg/rhandsontable/man/rhandsontable.html'>rhandsontable</a></span>(<span class='fu'>data_input1</span>())
-      }
-    })
-  }
+    <span class='va'>output</span><span class='op'>$</span><span class='va'>data1</span> <span class='op'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/pkg/rhandsontable/man/renderRHandsontable.html'>renderRHandsontable</a></span><span class='op'>(</span><span class='op'>{</span>
+      <span class='kw'>if</span> <span class='op'>(</span><span class='op'>!</span><span class='fu'><a href='https://rdrr.io/r/base/NULL.html'>is.null</a></span><span class='op'>(</span><span class='fu'>data_input1</span><span class='op'>(</span><span class='op'>)</span><span class='op'>)</span><span class='op'>)</span> <span class='op'>{</span>
+        <span class='fu'><a href='https://rdrr.io/pkg/rhandsontable/man/rhandsontable.html'>rhandsontable</a></span><span class='op'>(</span><span class='fu'>data_input1</span><span class='op'>(</span><span class='op'>)</span><span class='op'>)</span>
+      <span class='op'>}</span>
+    <span class='op'>}</span><span class='op'>)</span>
+  <span class='op'>}</span>
 
-  <span class='fu'><a href='https://shiny.rstudio.com/reference/shiny/latest/shinyApp.html'>shinyApp</a></span>(<span class='no'>ui</span>, <span class='no'>server</span>)
-}</div></pre>
+  <span class='fu'><a href='https://shiny.rstudio.com/reference/shiny/latest/shinyApp.html'>shinyApp</a></span><span class='op'>(</span><span class='va'>ui</span>, <span class='va'>server</span><span class='op'>)</span>
+<span class='op'>}</span>
+</div></pre>
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
     <nav id="toc" data-toggle="toc" class="sticky-top">
@@ -218,7 +222,7 @@ be hidden from the user, set to FALSE by default.</p></td>
 </div>
 
 <div class="pkgdown">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.5.1.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.6.1.</p>
 </div>
 
       </footer>
