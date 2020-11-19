@@ -16,8 +16,8 @@
 #' @param col_edit logical indicating whether columns can be added or removed,
 #'   set to TRUE by default.
 #' @param col_options a list named with valid columns names and either
-#'   \code(c(TRUE, FALSE)) for checkboxes, a vector of options for dropdowns or
-#'   \code{"date"} for date input.
+#'   \code{c(TRUE, FALSE)} for checkboxes, a vector of options for dropdowns, 
+#'   \code{"date"} for date input or \code{"password"} for password input.
 #' @param col_stretch logical indicating whether columns should be stretched to
 #'   fill the full width of the display, set to FALSE by default.
 #' @param col_factor logical indicating whether character columns should be
