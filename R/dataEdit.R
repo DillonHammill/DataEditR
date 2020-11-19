@@ -15,8 +15,9 @@
 #'   for each new column.
 #' @param col_edit logical indicating whether columns can be added or removed,
 #'   set to TRUE by default.
-#' @param col_options named list containing the options for columns that use
-#'   dropdown menus or checkboxes.
+#' @param col_options a list named with valid columns names and either
+#'   \code(c(TRUE, FALSE)) for checkboxes, a vector of options for dropdowns or
+#'   \code{"date"} for date input.
 #' @param col_stretch logical indicating whether columns should be stretched to
 #'   fill the full width of the display, set to FALSE by default.
 #' @param col_factor logical indicating whether character columns should be
@@ -44,7 +45,7 @@
 #'
 #' @author Dillon Hammill, \email{Dillon.Hammill@anu.edu.au}
 #'
-#' @importFrom shiny reactive reactiveValues observe observeEvent moduleServer 
+#' @importFrom shiny reactive reactiveValues observe observeEvent moduleServer
 #' @importFrom rhandsontable rhandsontable hot_to_r hot_context_menu hot_col
 #'   renderRHandsontable rHandsontableOutput %>%
 #'
@@ -444,6 +445,16 @@ dataEditServer <- function(id,
                         source = col_options[[z]]
                 )
               )
+              # DATE OR PASSWORD
+            } else if(length(col_options[[z]]) == 1) {
+              if(col_options[[z]] %in% c("date", "password")) {
+                rhot <- suppressWarnings(
+                  hot_col(rhot,
+                          col = z,
+                          type = col_options[[z]]
+                  )
+                )
+              }
               # DROPDOWN
             } else {
               rhot <- suppressWarnings(

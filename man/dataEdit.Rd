@@ -44,8 +44,9 @@ for each new column.}
 \item{col_edit}{logical indicating whether columns can be added or removed,
 set to TRUE by default.}
 
-\item{col_options}{named list containing the options for columns that use
-dropdown menus or checkboxes.}
+\item{col_options}{a list named with valid columns names and either
+\code(c(TRUE, FALSE)) for checkboxes, a vector of options for dropdowns or
+\code{"date"} for date input.}
 
 \item{col_stretch}{logical indicating whether columns should be stretched to
 fill the full width of the display, set to FALSE by default.}

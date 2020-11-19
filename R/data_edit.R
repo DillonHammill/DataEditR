@@ -258,6 +258,7 @@ data_edit <- function(x = NULL,
                      output,
                      session) {
     
+    
     # DATA STORAGE
     values <- reactiveValues(data_update = NULL, # all updates
                              data_active = NULL, # subset
