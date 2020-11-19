@@ -50,7 +50,7 @@ Simply supply your data in the form of a matrix, data.frame or data.table to `da
 data_edit(mtcars)
 ```
 
-```{r, echo=FALSE, fig.align="center", out.width = '100%'}
+```{r, echo=FALSE, fig.align="center", out.width = '90%'}
 knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-1.png')
 ```
 
@@ -90,7 +90,7 @@ Rows or columns can be added to the data from within the data editor by right cl
 data_edit(mtcars)
 ```
 
-```{r, echo=FALSE, fig.align="center", out.width = '100%'}
+```{r, echo=FALSE, fig.align="center", out.width = '90%'}
 knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-2.gif')
 ```
 
@@ -102,7 +102,7 @@ knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEdi
 data_edit(mtcars)
 ```
 
-```{r, echo=FALSE, fig.align="center", out.width = '100%'}
+```{r, echo=FALSE, fig.align="center", out.width = '90%'}
 knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-3.gif')
 ```
 
@@ -121,7 +121,7 @@ To size columns, go to the right-hand border of the cell containing the name of 
 data_edit(mtcars)
 ```
 
-```{r, echo=FALSE, fig.align="center", out.width = '100%'}
+```{r, echo=FALSE, fig.align="center", out.width = '90%'}
 knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-4.gif')
 ```
 
@@ -133,7 +133,7 @@ Values in cells can be dragged to other cells by selecting the filled cells and 
 data_edit(mtcars)
 ```
 
-```{r, echo=FALSE, fig.align="center", out.width = '100%'}
+```{r, echo=FALSE, fig.align="center", out.width = '90%'}
 knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-5.gif')
 ```
 
@@ -152,7 +152,7 @@ data_edit(mtcars,
           col_bind = new_col)
 ```
 
-```{r, echo=FALSE, fig.align="center", out.width = '100%'}
+```{r, echo=FALSE, fig.align="center", out.width = '90%'}
 knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-6.png')
 ```
 
@@ -177,7 +177,7 @@ If no data is supplied to `data_edit()` an empty data.frame will be constructed 
 data_edit()
 ```
 
-```{r, echo=FALSE, fig.align="center", out.width = '100%'}
+```{r, echo=FALSE, fig.align="center", out.width = '90%'}
 knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-7.png')
 ```
 
@@ -187,7 +187,7 @@ The dimensions of the template can be controlled by supplying a vector of the fo
 data_edit(c(20, 15))
 ```
 
-```{r, echo=FALSE, fig.align="center", out.width = '100%'}
+```{r, echo=FALSE, fig.align="center", out.width = '90%'}
 knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-8.png')
 ```
 
@@ -199,7 +199,7 @@ Alternatively, you can pass a vector of column names to create a data.frame temp
 data_edit(c("Date", "Country", "Temperature", "Rainfall", "Visibility", "Humidity"))
 ```
 
-```{r, echo=FALSE, fig.align="center", out.width = '100%'}
+```{r, echo=FALSE, fig.align="center", out.width = '90%'}
 knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-9.png')
 ```
 
@@ -215,7 +215,7 @@ Column selection is supported through the `dataSelect` module which can be invok
 data_edit(mtcars)
 ```
 
-```{r, echo=FALSE, fig.align="center", out.width = '100%'}
+```{r, echo=FALSE, fig.align="center", out.width = '90%'}
 knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-10.gif')
 ```
 
@@ -227,7 +227,7 @@ Row filtering is supported through the `dataFilter` module which can be invoked 
 data_edit(mtcars)
 ```
 
-```{r, echo=FALSE, fig.align="center", out.width = '100%'}
+```{r, echo=FALSE, fig.align="center", out.width = '90%'}
 knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-11.gif')
 ```
 
@@ -239,7 +239,7 @@ Changes made to data subsets are not automatically synchronised in the complete 
 data_edit(mtcars)
 ```
 
-```{r, echo=FALSE, fig.align="center", out.width = '100%'}
+```{r, echo=FALSE, fig.align="center", out.width = '90%'}
 knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-12.gif')
 ```
 
@@ -252,7 +252,7 @@ mtcars_subset <- data_edit(mtcars)
 str(mtcars_subset)
 ```
 
-```{r, echo=FALSE, fig.align="center", out.width = '100%'}
+```{r, echo=FALSE, fig.align="center", out.width = '90%'}
 knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-13.gif')
 ```
 
@@ -290,7 +290,7 @@ mtcars_new <- data_edit(mtcars,
 
 Alternatively, data can be saved to file by selecting either of the file download buttons as highlighted in the image below. The button of the left is used to save the data subset to file whilst the button on the right is used to save the entire dataset to file.
 
-```{r, echo=FALSE, fig.align="center", out.width = '100%'}
+```{r, echo=FALSE, fig.align="center", out.width = '90%'}
 knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-14.png')
 ```
 
@@ -308,7 +308,7 @@ data_edit(mtcars,
           col_options = list(fast = c(TRUE,FALSE)))
 ```
 
-```{r, echo=FALSE, fig.align="center", out.width = '100%'}
+```{r, echo=FALSE, fig.align="center", out.width = '90%'}
 knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-15.gif')
 ```
 
@@ -327,8 +327,34 @@ data_edit(mtcars,
                                         "black")))
 ```
 
-```{r, echo=FALSE, fig.align="center", out.width = '100%'}
+```{r, echo=FALSE, fig.align="center", out.width = '90%'}
 knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-16.gif')
+```
+
+### 7.3 Dates
+
+Dates can be entered interactively by selecting the relevant day from a calender. To convert a column to accept interactive date inputs, supply a list with the name of the column and `"date"` as the option to `col_options`.
+
+```{r, eval = FALSE}
+data_edit(c("date", "time", "region", "temperature"),
+          col_options = list(date = "date"))
+```
+
+```{r, echo=FALSE, fig.align="center", out.width = '90%'}
+knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-17.gif')
+```
+
+### 7.4 Passwords
+
+If you would like to keep your data entries a secret, you convert relevant columns to accept passwords as inputs. The data is entered as per usual, but the input is displayed asterisks to conceal the entered data. To convert a column to accept password inputs, supply a list with the name of the column and `"password"` as the option to `col_options`.
+
+```{r, eval = FALSE}
+data_edit(c("date", "time", "user", "password"),
+          col_options = list(password = "password"))
+```
+
+```{r, echo=FALSE, fig.align="center", out.width = '90%'}
+knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-18.gif')
 ```
 
 ## 8. Customisation
@@ -356,8 +382,8 @@ data_edit(mtcars,
           title = "mtcars")
 ```
 
-```{r, echo=FALSE, fig.align="center", out.width = '100%'}
-knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-17.png')
+```{r, echo=FALSE, fig.align="center", out.width = '90%'}
+knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-19.png')
 ```
 
 ### 8.3 Custom themes
@@ -369,16 +395,16 @@ data_edit(mtcars,
           theme = "cosmo")
 ```
 
-```{r, echo=FALSE, fig.align="center", out.width = '100%'}
-knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-18.png')
+```{r, echo=FALSE, fig.align="center", out.width = '90%'}
+knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-20.png')
 ```
 
 ## 9. RStudio Add-in
 
 `DataEditR` also ships with an RStudio add-in should you prefer to interact with your data in this way. Simply highlight the name of a dataset in an active script and select the `Interactive Data Editor` from the list of `Addins` in your RStudio session.
 
-```{r, echo=FALSE, fig.align="center", out.width = '100%'}
-knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-19.gif')
+```{r, echo=FALSE, fig.align="center", out.width = '90%'}
+knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-21.gif')
 ```
 
 ## Summary

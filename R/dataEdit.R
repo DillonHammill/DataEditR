@@ -109,7 +109,7 @@ dataEditServer <- function(id,
   if (!is.null(col_options)) {
     if (!quiet) {
       message(
-        "Column editing is turned off to add dropdowns or checkboxes..."
+        "Column editing is turned off to add complex column types..."
       )
       col_edit <- FALSE
     }
