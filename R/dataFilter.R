@@ -642,6 +642,9 @@ dataFilterServer <- function(id,
         } else {
           values$rows <- ind
         }
+        if(length(values$rows) == nrow(values$data)) {
+          values$rows <- NULL
+        }
         values$subset <- values$data[values$rows, ]
       }
       

@@ -260,6 +260,9 @@ dataSelectServer <- function(id,
       if(!is.null(values$select)) {
         values$columns <- which(unlist(values$select))
       }
+      if(length(values$columns) == ncol(values$data)) {
+        values$columns <- NULL
+      }
       
       # CLOSE POPUP
       removeModal()

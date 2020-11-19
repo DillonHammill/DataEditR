@@ -260,12 +260,10 @@ data_edit <- function(x = NULL,
     
     
     # DATA STORAGE
-    values <- reactiveValues(data_update = NULL, # all updates
-                             data_active = NULL, # subset
-                             data_edit = NULL,   # edits
-                             rows = NULL,        # row indices
-                             columns = NULL,     # column indices
-                             edit = NULL,
+    values <- reactiveValues(data = NULL, # original data
+                             data_active = NULL, # displayed data
+                             rows = NULL,
+                             columns = NULL,
                              cut = FALSE)
     
     # DATA INPUT
@@ -275,49 +273,60 @@ data_edit <- function(x = NULL,
                                   read_args = read_args,
                                   hide = hide)
     
-    observe({
-      values$data_update <- data_input() %>%
-        data_bind_rows(row_bind = row_bind) %>%
-        data_bind_cols(col_bind = col_bind)
+    # RESET FILTERS
+    observeEvent(data_input(), {
+      # RESET FILTERS
       values$rows <- NULL
       values$columns <- NULL
+      # BIND ROWS/COLUMNS
+      values$data <- data_input() %>%
+        data_bind_rows(row_bind = row_bind) %>%
+        data_bind_cols(col_bind = col_bind)
     })
     
     # DATA SELECT
     data_select <- dataSelectServer("select1",
-                                    data = reactive(values$data_update))
+                                    data = reactive(values$data))
     
     # DATA FILTER
     data_filter <- dataFilterServer("filter1",
-                                    data = reactive(values$data_update))
+                                    data = reactive(values$data))
     
+    # UPDATE FILTERS
     observe({
       values$rows <- data_filter$rows()
       values$columns <- data_select$columns()
-      if(length(values$rows) != 0 & length(values$columns) == 0) {
-        values$data_active <- values$data_update[values$rows, , drop = FALSE]
-      } else if(length(values$rows) == 0 & length(values$columns) != 0) {
-        values$data_active <- values$data_update[ , values$columns, drop = FALSE]
-      } else if(length(values$rows) != 0 & length(values$columns) != 0) {
-        values$data_active <- values$data_update[values$rows, values$columns, drop = FALSE]
-      } else {
-        values$data_active <- NULL
-      }
     })
     
+    # DATA FILTERING
     observe({
-      if(is.null(values$data_active)) {
-        values$edit <- "update"
-        values$data_edit <- values$data_update
+      # ENTIRE DATA
+      if(length(values$rows) == 0 & length(values$columns) == 0) {
+        values$data_active <- values$data
+      # DATA SUBSET
       } else {
-        values$edit <- "active"
-        values$data_edit <- values$data_active
+        # ROWS
+        if(length(values$rows) != 0 & length(values$columns) == 0) {
+          values$data_active <- values$data[values$rows, 
+                                             , 
+                                            drop = FALSE]
+        # COLUMNS
+        } else if(length(values$rows) == 0 & length(values$columns) != 0) {
+          values$data_active <- values$data[ , 
+                                            values$columns, 
+                                            drop = FALSE]
+        # ROWS & COLUMNS
+        } else if(length(values$rows) != 0 & length(values$columns) != 0) {
+          values$data_active <- values$data[values$rows, 
+                                            values$columns, 
+                                            drop = FALSE]
+        }
       }
     })
     
     # DATAEDIT - ENTIRE DATASET
     data_update <- dataEditServer("edit1",
-                                  data = reactive(values$data_edit),
+                                  data = reactive({values$data_active}),
                                   col_bind = NULL, # endless loop!
                                   col_edit = col_edit,
                                   col_options = col_options,
@@ -329,45 +338,55 @@ data_edit <- function(x = NULL,
                                   row_edit = row_edit,
                                   quiet = quiet)
     
+    # UPDATE ACTIVE DATA
+    observe({
+      values$data_active <- data_update()
+    })
+    
     # SYNC
     observeEvent(input$sync, {
-      # VALUES
-      if(length(values$rows) != 0 & length(values$columns) == 0) {
-        values$data_update[values$rows, ] <- data_update()
-      } else if(length(values$rows) == 0 & length(values$columns) != 0) {
-        values$data_update[ , values$columns] <- data_update()
-      } else if(length(values$rows) != 0 & length(values$columns) != 0) {
-        values$data_update[values$rows, values$columns] <- 
-          data_update()
-      }
-      # ROW/COLUMN NAMES
-      if(!is.null(data_update())) {
-        # ROW NAMES
-        if(!all(rownames(data_update()) == 
-                rownames(values$data_update)[values$rows])) {
-          rownames(values$data_update)[values$rows] <- 
-            rownames(data_update())
+      # ENTIRE DATA
+      if(length(values$rows) == 0 & length(values$columns) == 0) {
+        values$data <- values$data_active
+      # DATA
+      } else {
+        # VALUES
+        if(length(values$rows) != 0 & length(values$columns) == 0) {
+          values$data[values$rows, ] <- values$data_active
+        } else if(length(values$rows) == 0 & length(values$columns) != 0) {
+          values$data[ , values$columns] <- values$data_active
+        } else if(length(values$rows) != 0 & length(values$columns) != 0) {
+          values$data[values$rows, values$columns] <- values$data_active
         }
-        # COLUMN NAMES
-        if(!all(colnames(data_update()) == 
-                colnames(values$data_update)[values$columns])) {
-          colnames(values$data_update)[values$columns] <- 
-            colnames(data_update())
+        # ROW/COLUMN NAMES
+        if(!is.null(values$data_active)) {
+          # ROW NAMES
+          if(!all(rownames(values$data_active) == 
+                  rownames(values$data)[values$rows])) {
+            rownames(values$data)[values$rows] <- 
+              rownames(values$data_active)
+          }
+          # COLUMN NAMES
+          if(!all(colnames(values$data_active) == 
+                  colnames(values$data)[values$columns])) {
+            colnames(values$data)[values$columns] <- 
+              colnames(values$data_active)
+          }
         }
       }
     })
     
     # DATA OUTPUT - DATA ACTIVE
     dataOutputServer("output-active",
-                     data = data_update,
+                     data = reactive({values$data_active}),
                      save_as = save_as,
                      write_fun = write_fun,
                      write_args = write_args,
                      hide = hide)
     
-    # DATA OUTPUT - DATA ACTIVE
+    # DATA OUTPUT - DATA ENTIRE
     dataOutputServer("output-update",
-                     data = reactive({values$data_update}),
+                     data = reactive({values$data}),
                      save_as = save_as,
                      write_fun = write_fun,
                      write_args = write_args,
@@ -408,7 +427,7 @@ data_edit <- function(x = NULL,
         stopApp(values$data_active)
       # DATA UPDATE
       } else {
-        stopApp(values$data_update)
+        stopApp(values$data)
       }
     })
     
