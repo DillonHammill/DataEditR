@@ -110,7 +110,7 @@
 #' @importFrom htmltools img span br div HTML
 #' @importFrom shiny runGadget dialogViewer browserViewer paneViewer splitLayout
 #'   fluidPage column stopApp reactiveValues actionButton insertUI
-#' @importFrom shinyjs useShinyjs
+#' @importFrom shinyjs useShinyjs hidden show
 #' @importFrom shinythemes shinytheme
 #' @importFrom miniUI gadgetTitleBar
 #' @importFrom shinyBS bsButton updateButton
@@ -232,16 +232,20 @@ data_edit <- function(x = NULL,
         style = "padding-left: 5px; margin-top: 35px;",
         dataSelectUI("select1"),
         dataFilterUI("filter1"),
-        actionButton("sync", 
-                     label = NULL, 
-                     icon = icon("sync")),
+        hidden(
+          actionButton("sync", 
+                       label = NULL, 
+                       icon = icon("sync"))
+        ),
         dataOutputUI("output-active"),
         dataOutputUI("output-update", icon = "file-download"),
-        bsButton("cut",
-                 label = NULL,
-                 icon = icon("cut"),
-                 style = "danger",
-                 type = "action")
+        hidden(
+          bsButton("cut",
+                   label = NULL,
+                   icon = icon("cut"),
+                   style = "danger",
+                   type = "action")
+        )
       )
     ),
     fluidRow(
@@ -258,6 +262,11 @@ data_edit <- function(x = NULL,
                      output,
                      session) {
     
+    # SHOW BUTTONS
+    if(!hide) {
+      show("sync")
+      show("cut")
+    }
     
     # DATA STORAGE
     values <- reactiveValues(data = NULL, # original data
@@ -284,13 +293,17 @@ data_edit <- function(x = NULL,
         data_bind_cols(col_bind = col_bind)
     })
     
+    # FILTERS ALWAYS RESET ON DATA SYNC
+    
     # DATA SELECT
     data_select <- dataSelectServer("select1",
-                                    data = reactive(values$data))
+                                    data = reactive(values$data),
+                                    hide = hide)
     
     # DATA FILTER
     data_filter <- dataFilterServer("filter1",
-                                    data = reactive(values$data))
+                                    data = reactive(values$data),
+                                    hide = hide)
     
     # UPDATE FILTERS
     observe({
@@ -345,6 +358,7 @@ data_edit <- function(x = NULL,
     
     # SYNC
     observeEvent(input$sync, {
+      print("YASSS")
       # ENTIRE DATA
       if(length(values$rows) == 0 & length(values$columns) == 0) {
         values$data <- values$data_active
@@ -422,13 +436,20 @@ data_edit <- function(x = NULL,
     
     # DONE
     observeEvent(input$done, {
-      # DATA ACTIVE
-      if(values$cut) {
+      # HIDDEN INPUTS - SYNC & RETURN
+      if(hide == TRUE) {
         stopApp(values$data_active)
-      # DATA UPDATE
+      # VISIBLE INPUTS
       } else {
-        stopApp(values$data)
+        # DATA ACTIVE
+        if(values$cut) {
+          stopApp(values$data_active)
+          # DATA UPDATE
+        } else {
+          stopApp(values$data)
+        }
       }
+
     })
     
   }
