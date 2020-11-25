@@ -358,7 +358,6 @@ data_edit <- function(x = NULL,
     
     # SYNC
     observeEvent(input$sync, {
-      print("YASSS")
       # ENTIRE DATA
       if(length(values$rows) == 0 & length(values$columns) == 0) {
         values$data <- values$data_active
