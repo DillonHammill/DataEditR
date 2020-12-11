@@ -126,8 +126,8 @@ dataEditServer <- function(id,
     values <- reactiveValues(
       x = NULL, # trigger table render
       data_class = NULL, # original class
-      col_names = NULL
-    ) # columns cannot be edited
+      col_names = NULL# columns cannot be edited
+    ) 
     
     # DATA
     data_to_edit <- reactive({
@@ -247,6 +247,10 @@ dataEditServer <- function(id,
       # OLD VALUES
       x_old <- values$x
       x_new <- hot_to_r(input$x)
+      # PATCH - COLUMNS ADDED LEFT/RIGHT - ISSUE #12
+      if(ncol(x_new) > ncol(x_old)) {
+        x_new[, colnames(x_new) %in% colnames(x_old)] <- x_old
+      }
       # NA ROW NAMES - MATCH DATA_FORMAT()
       if (!nzchar(trimws(colnames(x_new)[1]))) {
         ind <- which(is.na(x_new[, 1]))
