@@ -1,3 +1,7 @@
+# DataEditR 0.0.9
+
+* Minor improvements to ensure that the original data is retained when new columns are added or renamed. Requires installation of `rhandsontable` from `install_github("DillonHammill/rhandsontable")`.
+
 # DataEditR 0.0.8
 
 * Add `dataSelect` and `dataFilter` modules to filter data,

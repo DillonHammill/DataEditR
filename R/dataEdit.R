@@ -247,10 +247,6 @@ dataEditServer <- function(id,
       # OLD VALUES
       x_old <- values$x
       x_new <- hot_to_r(input$x)
-      # PATCH - COLUMNS ADDED LEFT/RIGHT - ISSUE #12
-      if(ncol(x_new) > ncol(x_old)) {
-        x_new[, colnames(x_new) %in% colnames(x_old)] <- x_old
-      }
       # NA ROW NAMES - MATCH DATA_FORMAT()
       if (!nzchar(trimws(colnames(x_new)[1]))) {
         ind <- which(is.na(x_new[, 1]))
@@ -301,7 +297,9 @@ dataEditServer <- function(id,
           empty_col_names <- which(unlist(lapply(new_col_names, nchar) == 0))
           # APPLY COLUMN NAMES - RENDER
           x_new <- hot_to_r(input$x)
+          # MAKE SURE DATA IS NOT LOST ON RENAME - ISSUE #12
           colnames(x_new) <- new_col_names
+          # RE-RENDER
           values$x <- x_new
           # REVERT EMPTY COLUMN NAMES TO ORIGINAL - RE-RENDER
           if (length(empty_col_names) > 0) {

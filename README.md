@@ -53,41 +53,41 @@ add-in should you prefer to interact with it in this way.
 
 #### General features:
 
-  - RStudio add-in
-  - flexible display options (either `dialog` box, `browser` or RStudio
+-   RStudio add-in
+-   flexible display options (either `dialog` box, `browser` or RStudio
     `viewer` pane)
-  - fast rendering to quickly view datasets
-  - ability to interactively create data.frames from scratch
-  - load tabular data saved to file using any reading function
+-   fast rendering to quickly view datasets
+-   ability to interactively create data.frames from scratch
+-   load tabular data saved to file using any reading function
     (e.g. `read.csv()`)
-  - save edited data to file using any writing function
+-   save edited data to file using any writing function
     (e.g. `write.csv()`)
-  - return appropriately formatted data as an R object for downstream
+-   return appropriately formatted data as an R object for downstream
     use
-  - code required to create edited data can be optionally printed to the
+-   code required to create edited data can be optionally printed to the
     console
-  - support for custom themes through `shinythemes` package
-  - customisable user interface (title, logo and modules)
-  - row indices are always displayed for easy navigation
-  - switch between datasets or files without having to leave the
+-   support for custom themes through `shinythemes` package
+-   customisable user interface (title, logo and modules)
+-   row indices are always displayed for easy navigation
+-   switch between datasets or files without having to leave the
     application
 
 #### Data editing features:
 
-  - column selection using the `dataSelect` module
-  - row selection using the `dataFilter` module
-  - edit row or column names
-  - addition or removal of rows or columns
-  - manual column resizing
-  - drag to fill cells
-  - copy or paste data to and from external software
-  - custom column types to simplify user input (e.g. checkboxes and
+-   column selection using the `dataSelect` module
+-   row selection using the `dataFilter` module
+-   edit row or column names
+-   addition or removal of rows or columns
+-   manual column resizing
+-   drag to fill cells
+-   copy or paste data to and from external software
+-   custom column types to simplify user input (e.g. checkboxes and
     dropdown menus)
-  - support for readonly columns to prevent users from editing certain
+-   support for readonly columns to prevent users from editing certain
     columns
-  - control over which column names can be edited
-  - stretch columns horizontally to fill available space
-  - programmatically add columns or rows to data prior to loading into
+-   control over which column names can be edited
+-   stretch columns horizontally to fill available space
+-   programmatically add columns or rows to data prior to loading into
     the data editor
 
 A quick demonstration of some of these features can be seen below, where
@@ -134,7 +134,7 @@ citation("DataEditR")
 #> To cite package 'DataEditR' in publications use:
 #> 
 #>   Dillon Hammill (2020). DataEditR: An Interactive Editor for Viewing,
-#>   Entering & Editing Data. R package version 0.0.8.
+#>   Entering & Editing Data. R package version 0.0.9.
 #>   https://github.com/DillonHammill/DataEditR
 #> 
 #> A BibTeX entry for LaTeX users is
@@ -143,7 +143,7 @@ citation("DataEditR")
 #>     title = {DataEditR: An Interactive Editor for Viewing, Entering & Editing Data},
 #>     author = {Dillon Hammill},
 #>     year = {2020},
-#>     note = {R package version 0.0.8},
+#>     note = {R package version 0.0.9},
 #>     url = {https://github.com/DillonHammill/DataEditR},
 #>   }
 ```
