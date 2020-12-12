@@ -1,5 +1,5 @@
 Package: DataEditR
-Title: An Interactive Editor for Viewing, Entering & Editing Data
+Title: An Interactive Editor for Viewing, Entering, Filtering & Editing Data
 Version: 0.0.9
 Date: 2020-11-12
 Authors@R: 
@@ -9,7 +9,7 @@ Authors@R:
            email = "Dillon.Hammill@anu.edu.au",
            comment = c(ORCID = "0000-0002-1407-7223"))
 Description: An interactive editor built on 'rhandsontable' to allow the 
-  interactive viewing, entering and editing of data in R 
+  interactive viewing, entering, filtering and editing of data in R 
   <https://dillonhammill.github.io/DataEditR/>.
 URL: https://github.com/DillonHammill/DataEditR
 BugReports: https://github.com/DillonHammill/DataEditR/issues
