@@ -16,7 +16,7 @@ BugReports: https://github.com/DillonHammill/DataEditR/issues
 Depends:
   R(>= 3.5.0)
 Imports:
-  shiny,
+  shiny (>= 1.5.0),
   shinyBS,
   shinyjs,
   shinythemes,
