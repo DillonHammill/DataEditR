@@ -12,3 +12,4 @@
 ^Meta$
 vignettes/DataEditR/
 man/figures/DataEditR/
+^\.github$
