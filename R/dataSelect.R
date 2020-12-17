@@ -31,7 +31,6 @@
 #'     useShinyjs(),
 #'     dataInputUI("input1"),
 #'     dataSelectUI("select1"),
-#'     dataOutputUI("output1"),
 #'     rHandsontableOutput("data1")
 #'   )
 #'
@@ -45,14 +44,11 @@
 #'     )
 #'
 #'     output$data1 <- renderRHandsontable({
-#'       if (!is.null(data_select())) {
-#'         rhandsontable(data_select())
+#'       if (!is.null(data_select$data())) {
+#'         rhandsontable(data_select$data())
 #'       }
 #'     })
 #'
-#'     dataOutputServer("output1",
-#'       data = data_select
-#'     )
 #'   }
 #'
 #'   shinyApp(ui, server)

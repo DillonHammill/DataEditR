@@ -1,3 +1,8 @@
+# DataEditR 0.1.0
+
+* Make the switch to GitHub Actions for continuous integration.
+* Update `dataSelect` and `dataFilter` examples now that the return values are lists instead of reactive expressions.
+
 # DataEditR 0.0.9
 
 * Minor improvements to ensure that the original data is retained when new columns are added or renamed. Requires installation of `rhandsontable` from `install_github("DillonHammill/rhandsontable")`.

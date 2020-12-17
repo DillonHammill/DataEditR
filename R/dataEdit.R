@@ -43,6 +43,8 @@
 #' @param ... additional arguments passed to
 #'   \code{\link[rhandsontable:rhandsontable]{rhandsontable}}.
 #'
+#' @return reactive expression containing the edited data.
+#'
 #' @author Dillon Hammill, \email{Dillon.Hammill@anu.edu.au}
 #'
 #' @importFrom shiny reactive reactiveValues observe observeEvent moduleServer

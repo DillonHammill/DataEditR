@@ -82,6 +82,9 @@ is selected, set to \code{read.csv} by default.}
 \item{...}{additional arguments passed to
 \code{\link[rhandsontable:rhandsontable]{rhandsontable}}.}
 }
+\value{
+reactive expression containing the edited data.
+}
 \description{
 Shiny module for data editing
 }

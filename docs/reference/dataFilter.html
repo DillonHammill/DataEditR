@@ -80,7 +80,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">DataEditR</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.0.9</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.1.0</span>
       </span>
     </div>
 
@@ -180,16 +180,18 @@ indices for filtered <code>rows</code>.</p>
                      <span class='va'>output</span>,
                      <span class='va'>session</span><span class='op'>)</span> <span class='op'>{</span>
     <span class='va'>data_input</span> <span class='op'>&lt;-</span> <span class='fu'><a href='dataInput.html'>dataInputServer</a></span><span class='op'>(</span><span class='st'>"input1"</span><span class='op'>)</span>
-
+    
+    <span class='co'># list with slots data and rows (indices)</span>
     <span class='va'>data_filter</span> <span class='op'>&lt;-</span> <span class='fu'>dataFilterServer</span><span class='op'>(</span><span class='st'>"filter1"</span>,
       data <span class='op'>=</span> <span class='va'>data_input</span>
     <span class='op'>)</span>
 
     <span class='va'>output</span><span class='op'>$</span><span class='va'>data1</span> <span class='op'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/pkg/rhandsontable/man/renderRHandsontable.html'>renderRHandsontable</a></span><span class='op'>(</span><span class='op'>{</span>
-      <span class='kw'>if</span> <span class='op'>(</span><span class='op'>!</span><span class='fu'><a href='https://rdrr.io/r/base/NULL.html'>is.null</a></span><span class='op'>(</span><span class='fu'>data_filter</span><span class='op'>(</span><span class='op'>)</span><span class='op'>)</span><span class='op'>)</span> <span class='op'>{</span>
-        <span class='fu'><a href='https://rdrr.io/pkg/rhandsontable/man/rhandsontable.html'>rhandsontable</a></span><span class='op'>(</span><span class='fu'>data_filter</span><span class='op'>(</span><span class='op'>)</span><span class='op'>)</span>
+      <span class='kw'>if</span> <span class='op'>(</span><span class='op'>!</span><span class='fu'><a href='https://rdrr.io/r/base/NULL.html'>is.null</a></span><span class='op'>(</span><span class='va'>data_filter</span><span class='op'>$</span><span class='fu'>data</span><span class='op'>(</span><span class='op'>)</span><span class='op'>)</span><span class='op'>)</span> <span class='op'>{</span>
+        <span class='fu'><a href='https://rdrr.io/pkg/rhandsontable/man/rhandsontable.html'>rhandsontable</a></span><span class='op'>(</span><span class='va'>data_filter</span><span class='op'>$</span><span class='fu'>data</span><span class='op'>(</span><span class='op'>)</span><span class='op'>)</span>
       <span class='op'>}</span>
     <span class='op'>}</span><span class='op'>)</span>
+    
   <span class='op'>}</span>
 
   <span class='fu'><a href='https://shiny.rstudio.com/reference/shiny/latest/shinyApp.html'>shinyApp</a></span><span class='op'>(</span><span class='va'>ui</span>, <span class='va'>server</span><span class='op'>)</span>

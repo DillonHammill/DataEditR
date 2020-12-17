@@ -44,16 +44,18 @@ if (interactive()) {
                      output,
                      session) {
     data_input <- dataInputServer("input1")
-
+    
+    # list with slots data and rows (indices)
     data_filter <- dataFilterServer("filter1",
       data = data_input
     )
 
     output$data1 <- renderRHandsontable({
-      if (!is.null(data_filter())) {
-        rhandsontable(data_filter())
+      if (!is.null(data_filter$data())) {
+        rhandsontable(data_filter$data())
       }
     })
+    
   }
 
   shinyApp(ui, server)
