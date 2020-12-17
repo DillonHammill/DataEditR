@@ -8,14 +8,13 @@
 [![Project Status: Active – The project has reached a stable, usable
 state and is being actively
 developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
-[![Travis build
-status](https://travis-ci.com/DillonHammill/DataEditR.svg?branch=master)](https://travis-ci.com/DillonHammill/DataEditR)
-[![AppVeyor build
-status](https://ci.appveyor.com/api/projects/status/github/DillonHammill/DataEditR?branch=master&svg=true)](https://ci.appveyor.com/project/DillonHammill/DataEditR)
-[![CRAN
-status](https://www.r-pkg.org/badges/version/DataEditR)](https://CRAN.R-project.org/package=DataEditR)
 [![Lifecycle:
 stable](https://img.shields.io/badge/lifecycle-stable-brightgreen.svg)](https://www.tidyverse.org/lifecycle/#stable)
+[![R build
+status](https://github.com/DillonHammill/DataEditR/workflows/R-CMD-check/badge.svg)](https://github.com/DillonHammill/DataEditR/actions?workflow=R-CMD-check)
+[![CRAN
+status](https://www.r-pkg.org/badges/version/DataEditR)](https://CRAN.R-project.org/package=DataEditR)
+[![CRAN\_Download\_Badge](http://cranlogs.r-pkg.org/badges/grand-total/DataEditR)](http://cran.r-project.org/package=DataEditR)
 <!-- badges: end -->
 
 Manual data entry and editing in R can be tedious, especially if you

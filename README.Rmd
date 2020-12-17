@@ -17,10 +17,10 @@ knitr::opts_chunk$set(
 
 <!-- badges: start -->
 [![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
-[![Travis build status](https://travis-ci.com/DillonHammill/DataEditR.svg?branch=master)](https://travis-ci.com/DillonHammill/DataEditR)
-[![AppVeyor build status](https://ci.appveyor.com/api/projects/status/github/DillonHammill/DataEditR?branch=master&svg=true)](https://ci.appveyor.com/project/DillonHammill/DataEditR)
-[![CRAN status](https://www.r-pkg.org/badges/version/DataEditR)](https://CRAN.R-project.org/package=DataEditR)
 [![Lifecycle: stable](https://img.shields.io/badge/lifecycle-stable-brightgreen.svg)](https://www.tidyverse.org/lifecycle/#stable)
+[![R build status](https://github.com/DillonHammill/DataEditR/workflows/R-CMD-check/badge.svg)](https://github.com/DillonHammill/DataEditR/actions?workflow=R-CMD-check)
+[![CRAN status](https://www.r-pkg.org/badges/version/DataEditR)](https://CRAN.R-project.org/package=DataEditR)
+[![CRAN_Download_Badge](http://cranlogs.r-pkg.org/badges/grand-total/DataEditR)](http://cran.r-project.org/package=DataEditR)
 <!-- badges: end -->
 
 Manual data entry and editing in R can be tedious, especially if you have limited coding experience and are accustomed to using software with a Graphical User Interface (GUI). **DataEditR** is an R package built on shiny and rhandsontable that makes it easy to interactively view, enter, filter and edit data. If you are new to **DataEditR** visit https://dillonhammill.github.io/DataEditR/ to get started. 
