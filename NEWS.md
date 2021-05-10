@@ -2,6 +2,7 @@
 
 * Ensure `dataInput()` searches for data outside `data_edit()`.
 * Prevent loading of highlighted data object in RStudio when data has been supplied to `data_edit()` directly.
+* Allow saving by `write_fun` whenever `save_as` is supplied.
 
 # DataEditR 0.1.0
 
