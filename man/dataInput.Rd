@@ -13,7 +13,8 @@ dataInputServer(
   data = NULL,
   read_fun = "read.csv",
   read_args = NULL,
-  hide = FALSE
+  hide = FALSE,
+  envir = parent.frame()
 )
 }
 \arguments{
@@ -36,6 +37,9 @@ is selected, set to \code{read.csv} by default.}
 
 \item{hide}{logical indicating whether the data input user interface should
 be hidden from the user, set to FALSE by default.}
+
+\item{envir}{the environment in which to search for the supplied data, set to
+the \code{parent.frame()} of \code{dataInput} by default.}
 }
 \description{
 Shiny module for data input

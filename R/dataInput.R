@@ -16,6 +16,8 @@
 #'   \code{read_fun} when reading in files.
 #' @param hide logical indicating whether the data input user interface should
 #'   be hidden from the user, set to FALSE by default.
+#' @param envir the environment in which to search for the supplied data, set to
+#'   the \code{parent.frame()} of \code{dataInput} by default.
 #'
 #' @importFrom shiny fluidRow splitLayout textInput fileInput NS moduleServer
 #'   reactive updateTextInput observeEvent eventReactive
@@ -89,7 +91,8 @@ dataInputServer <- function(id,
                             data = NULL,
                             read_fun = "read.csv",
                             read_args = NULL,
-                            hide = FALSE) {
+                            hide = FALSE,
+                            envir = parent.frame()) {
   
   # SERVER
   moduleServer(id, function(input,
@@ -148,7 +151,8 @@ dataInputServer <- function(id,
     # DATA INPUT
     data_input <- eventReactive(input$data, {
       tryCatch(
-        eval(parse(text = input$data)),
+        eval(parse(text = input$data),
+             envir = envir),
         error = function(e) {
           return(NULL)
         }

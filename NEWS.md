@@ -1,3 +1,8 @@
+# DataEditR 0.1.1
+
+* Ensure `dataInput()` searches for data outside `data_edit()`.
+* Prevent loading of highlighted data object in RStudio when data has been supplied to `data_edit()` directly.
+
 # DataEditR 0.1.0
 
 * Make the switch to GitHub Actions for continuous integration.
