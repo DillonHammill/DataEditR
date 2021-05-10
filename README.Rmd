@@ -20,7 +20,7 @@ knitr::opts_chunk$set(
 [![Lifecycle: stable](https://img.shields.io/badge/lifecycle-stable-brightgreen.svg)](https://www.tidyverse.org/lifecycle/#stable)
 [![R build status](https://github.com/DillonHammill/DataEditR/workflows/R-CMD-check/badge.svg)](https://github.com/DillonHammill/DataEditR/actions?workflow=R-CMD-check)
 [![CRAN status](https://www.r-pkg.org/badges/version/DataEditR)](https://CRAN.R-project.org/package=DataEditR)
-[![CRAN_Download_Badge](http://cranlogs.r-pkg.org/badges/grand-total/DataEditR)](http://cran.r-project.org/package=DataEditR)
+[![CRAN_Download_Badge](https://cranlogs.r-pkg.org/badges/grand-total/DataEditR)](https://cran.r-project.org/package=DataEditR)
 <!-- badges: end -->
 
 Manual data entry and editing in R can be tedious, especially if you have limited coding experience and are accustomed to using software with a Graphical User Interface (GUI). **DataEditR** is an R package built on shiny and rhandsontable that makes it easy to interactively view, enter, filter and edit data. If you are new to **DataEditR** visit https://dillonhammill.github.io/DataEditR/ to get started. 

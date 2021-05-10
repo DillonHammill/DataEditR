@@ -14,7 +14,7 @@ stable](https://img.shields.io/badge/lifecycle-stable-brightgreen.svg)](https://
 status](https://github.com/DillonHammill/DataEditR/workflows/R-CMD-check/badge.svg)](https://github.com/DillonHammill/DataEditR/actions?workflow=R-CMD-check)
 [![CRAN
 status](https://www.r-pkg.org/badges/version/DataEditR)](https://CRAN.R-project.org/package=DataEditR)
-[![CRAN\_Download\_Badge](http://cranlogs.r-pkg.org/badges/grand-total/DataEditR)](http://cran.r-project.org/package=DataEditR)
+[![CRAN\_Download\_Badge](https://cranlogs.r-pkg.org/badges/grand-total/DataEditR)](https://cran.r-project.org/package=DataEditR)
 <!-- badges: end -->
 
 Manual data entry and editing in R can be tedious, especially if you
