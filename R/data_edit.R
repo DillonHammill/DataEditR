@@ -483,13 +483,11 @@ data_edit <- function(x = NULL,
                       stopOnCancel = FALSE)
   
   # SAVE AS
-  if(!is.null(x_edit)) {
-    if(!hide & !is.null(save_as)) {
-      do.call(
-        write_fun,
-        c(list(x_edit, save_as), write_args)
-      )
-    }
+  if(!is.null(x_edit) & !is.null(save_as)) {
+    do.call(
+      write_fun,
+      c(list(x_edit, save_as), write_args)
+    )
   }
   
   # RETURN DATA
