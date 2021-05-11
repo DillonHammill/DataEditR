@@ -40,6 +40,13 @@ library(devtools)
 install_github("DillonHammill/DataEditR")
 ```
 
+To ensure that `DataEditR` works as expected, you will also need to
+install my fork of `rhandsontable`:
+
+``` r
+devtools::install_github("DillonHammill/rhandsontable")
+```
+
 ## Usage
 
 **DataEditR** ships with a series of shiny modules, namely `dataInput`,

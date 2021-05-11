@@ -38,6 +38,11 @@ library(devtools)
 install_github("DillonHammill/DataEditR")
 ```
 
+To ensure that `DataEditR` works as expected, you will also need to install my fork of `rhandsontable`:
+```{r, eval = FALSE}
+devtools::install_github("DillonHammill/rhandsontable")
+```
+
 ## Usage
 
 **DataEditR** ships with a series of shiny modules, namely `dataInput`, `dataSelect`, `dataFilter`, `dataEdit` and `dataOutput` which have been wrapped up into a single function called `data_edit()` to create an interactive data editor. You can use `data_edit()` as a standalone application, or include the relevant modules within your own shiny applications. Alternatively, `DataEditR` also ships with an RStudio add-in should you prefer to interact with it in this way.
