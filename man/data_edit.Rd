@@ -31,7 +31,6 @@ data_edit(
   quiet = FALSE,
   hide = FALSE,
   code = FALSE,
-  auto_sync = FALSE,
   ...
 )
 }
