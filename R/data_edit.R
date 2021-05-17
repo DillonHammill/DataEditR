@@ -101,7 +101,8 @@
 #'   edited data will be written to file after the application is closed.
 #' @param code logical indicating whether the code required to generate the
 #'   edited data should be printed to the console, set to \code{FALSE} by
-#'   default.
+#'   default. Alternatively, users can supply the name of an R script to create
+#'   and store this code.
 #' @param ... not in use.
 #'
 #' @return the edited data as a matrix or data.frame.
@@ -495,7 +496,10 @@ data_edit <- function(x = NULL,
     return(x)
   } else {
     # CODE
-    if(code) {
+    if(is.character(code)) {
+      file.create(code)
+      dput(x_edit, code)
+    } else if(code == TRUE) {
       dput(x_edit)
     }
     return(x_edit)

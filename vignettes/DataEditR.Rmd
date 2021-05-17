@@ -407,6 +407,22 @@ knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEdi
 knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-21.gif')
 ```
 
+## 10. Exporting Code
+
+For reproducibility, it is possible to export the code required to generate the final edited version of your data. Simply set `code = TRUE` within `data_edit()` to print this code to console. Copying and pasting this code into the console will recreate the edited version of your data.
+
+```{r, eval = FALSE}
+data_edit(mtcars,
+          code = TRUE)
+```
+
+Alternatively, users can get `DataEditR` to automatically create a new R script to store this code by providing a name for the R script to `code`. For example, the below code creates a new R script called `mtcars_edit.R` and inserts the code required to programmatically generate the final edited version of your data.
+
+```{r, eval = FALSE}
+data_edit(mtcars,
+          code = "mtcars_edit.R")
+```
+
 ## Summary
 
 **DataEditR** is a lightweight, powerful and intuitive package to allow interactive viewing, entry, filtering and editing of data in R. **DataEditR** also ships with separate shiny modules (namely `dataInput`, `dataSelect`, `dataFilter`, `dataEdit` and `dataOutput`) that can be used by developers in their own shiny applications.

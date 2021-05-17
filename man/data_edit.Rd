@@ -125,7 +125,8 @@ edited data will be written to file after the application is closed.}
 
 \item{code}{logical indicating whether the code required to generate the
 edited data should be printed to the console, set to \code{FALSE} by
-default.}
+default. Alternatively, users can supply the name of an R script to create
+and store this code.}
 
 \item{...}{not in use.}
 }

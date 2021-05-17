@@ -140,7 +140,7 @@ citation("DataEditR")
 #> To cite package 'DataEditR' in publications use:
 #> 
 #>   Dillon Hammill (2021). DataEditR: An Interactive Editor for Viewing,
-#>   Entering, Filtering & Editing Data. R package version 0.1.1.
+#>   Entering, Filtering & Editing Data. R package version 0.1.2.
 #>   https://github.com/DillonHammill/DataEditR
 #> 
 #> A BibTeX entry for LaTeX users is
@@ -149,7 +149,7 @@ citation("DataEditR")
 #>     title = {DataEditR: An Interactive Editor for Viewing, Entering, Filtering & Editing Data},
 #>     author = {Dillon Hammill},
 #>     year = {2021},
-#>     note = {R package version 0.1.1},
+#>     note = {R package version 0.1.2},
 #>     url = {https://github.com/DillonHammill/DataEditR},
 #>   }
 ```
