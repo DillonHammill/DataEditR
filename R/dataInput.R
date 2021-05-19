@@ -121,6 +121,7 @@ dataInputServer <- function(id,
           read_fun,
           c(list(data), read_args)
         )
+        envir <- environment()
         updateTextInput(
           session,
           "data",
