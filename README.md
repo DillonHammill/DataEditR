@@ -71,7 +71,7 @@ add-in should you prefer to interact with it in this way.
 -   return appropriately formatted data as an R object for downstream
     use
 -   code required to create edited data can be optionally printed to the
-    console
+    console or saved to a file
 -   support for custom themes through `shinythemes` package
 -   customisable user interface (title, logo and modules)
 -   row indices are always displayed for easy navigation
