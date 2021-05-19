@@ -497,7 +497,9 @@ data_edit <- function(x = NULL,
   } else {
     # CODE
     if(is.character(code)) {
-      file.create(code)
+      if(!file.exists(code)) {
+        file.create(code)
+      }
       dput(x_edit, code)
     } else if(code == TRUE) {
       dput(x_edit)
