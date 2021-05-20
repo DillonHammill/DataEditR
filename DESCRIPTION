@@ -33,4 +33,4 @@ Language: en-GB
 Suggests: 
     knitr,
     rmarkdown
-VignetteBuilder: rmarkdown
+VignetteBuilder: knitr
