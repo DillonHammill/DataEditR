@@ -146,7 +146,6 @@ knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEdi
 new_col <- matrix(rep(NA, nrow(mtcars)),
                   ncol = 1,
                   dimnames = list(NULL, "test"))
-
 # Edit data with new column added
 data_edit(mtcars,
           col_bind = new_col)
@@ -264,7 +263,6 @@ knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEdi
 # Add character column
 mtcars_new <- cbind(rownames(mtcars), mtcars)
 colnames(mtcars_new) <- "car"
-
 # Convert characters to factors
 mtcars_new <- data_edit(mtcars_new,
                         col_factor = TRUE)
