@@ -8,6 +8,8 @@
 #'   filtered.
 #' @param hide logical indicating whether the data sfiltering user interface
 #'   should be hidden from the user, set to FALSE by default.
+#' @param hover_text text to display on download button when user hovers cursor
+#'   over button, set to NULL by default to turn off hover text.
 #'
 #' @return a list of reactive objects containing the filtered \code{data} and
 #'   indices for filtered \code{rows}.
@@ -17,6 +19,7 @@
 #'   removeUI insertUI selectInput selectizeInput removeModal updateSelectInput
 #' @importFrom shinyjs inlineCSS useShinyjs hidden show
 #' @importFrom htmltools tagList
+#' @importFrom shinyBS addTooltip
 #'
 #' @author Dillon Hammill, \email{Dillon.Hammill@anu.edu.au}
 #'
@@ -77,7 +80,8 @@ dataFilterUI <- function(id) {
 #' @export
 dataFilterServer <- function(id,
                              data = reactive(NULL),
-                             hide = FALSE) {
+                             hide = FALSE,
+                             hover_text = NULL) {
   
   # SERVER
   moduleServer(id, function(input, output, session) {
@@ -88,6 +92,11 @@ dataFilterServer <- function(id,
     # HIDE USER INTERFACE
     if (!hide) {
       show("filter")
+      if(!is.null(hover_text)) {
+        addTooltip(session = session,
+                   id = ns("filter"),
+                   title = "filter rows")
+      }
     }
     
     # VALUES

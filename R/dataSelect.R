@@ -8,6 +8,8 @@
 #'   filtered.
 #' @param hide logical indicating whether the data selection user interface
 #'   should be hidden from the user, set to FALSE by default.
+#' @param hover_text text to display on download button when user hovers cursor
+#'   over button, set to NULL by default to turn off hover text.
 #'
 #' @return a list of reactive objects containing the filtered \code{data} and
 #'   indices for selected \code{columns}.
@@ -18,6 +20,7 @@
 #' @importFrom shinyBS bsButton updateButton
 #' @importFrom htmltools tags
 #' @importFrom shinyjs hidden show
+#' @importFrom shinyBS addTooltip
 #'
 #' @author Dillon Hammill, \email{Dillon.Hammill@anu.edu.au}
 #'
@@ -76,7 +79,8 @@ dataSelectUI <- function(id) {
 #' @export
 dataSelectServer <- function(id,
                              data = reactive(NULL),
-                             hide = FALSE) {
+                             hide = FALSE,
+                             hover_text = NULL) {
   
   # SERVER
   moduleServer(id, function(input, output, session) {
@@ -87,6 +91,11 @@ dataSelectServer <- function(id,
     # HIDE USER INTERFACE
     if (!hide) {
       show("select")
+      if(!is.null(hover_text)) {
+        addTooltip(session = session,
+                   id = ns("select"),
+                   title = "select columns")
+      }
     }
     
     # OBJECTS

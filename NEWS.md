@@ -1,3 +1,7 @@
+# DataEditR 0.1.3
+
+* Display hints when user hovers cursor over buttons.
+
 # DataEditR 0.1.2
 
 * `data_edit()` can now export the code required to generate the final edited version of the data to an R script.

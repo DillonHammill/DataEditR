@@ -14,7 +14,8 @@ dataOutputServer(
   save_as = NULL,
   write_fun = "write.csv",
   write_args = NULL,
-  hide = FALSE
+  hide = FALSE,
+  hover_text = NULL
 )
 }
 \arguments{
@@ -38,6 +39,9 @@ set to \code{"write.csv"} by default.}
 
 \item{hide}{logical indicating whether the data input user interface should
 be hidden from the user, set to FALSE by default.}
+
+\item{hover_text}{text to display on download button when user hovers cursor
+over button, set to NULL by default to turn off hover text.}
 }
 \description{
 Shiny module for data output

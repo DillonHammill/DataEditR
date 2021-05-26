@@ -114,7 +114,7 @@
 #' @importFrom shinyjs useShinyjs hidden show
 #' @importFrom shinythemes shinytheme
 #' @importFrom miniUI gadgetTitleBar
-#' @importFrom shinyBS bsButton updateButton
+#' @importFrom shinyBS bsButton updateButton addTooltip
 #' @importFrom rhandsontable %>%
 #'
 #' @author Dillon Hammill, \email{Dillon.Hammill@anu.edu.au}
@@ -244,7 +244,8 @@ data_edit <- function(x = NULL,
                        icon = icon("sync"))
         ),
         dataOutputUI("output-active"),
-        dataOutputUI("output-update", icon = "file-download"),
+        dataOutputUI("output-update", 
+                     icon = "file-download"),
         hidden(
           bsButton("cut",
                    label = NULL,
@@ -271,7 +272,13 @@ data_edit <- function(x = NULL,
     # SHOW BUTTONS
     if(!hide) {
       show("sync")
+      addTooltip(session = session,
+                 id = "sync",
+                 title = "sychronise")
       show("cut")
+      addTooltip(session = session,
+                 id = "cut",
+                 title = "crop to selection")
     }
     
     # DATA STORAGE
@@ -305,12 +312,14 @@ data_edit <- function(x = NULL,
     # DATA SELECT
     data_select <- dataSelectServer("select1",
                                     data = reactive(values$data),
-                                    hide = hide)
+                                    hide = hide,
+                                    hover_text = "select columns")
     
     # DATA FILTER
     data_filter <- dataFilterServer("filter1",
                                     data = reactive(values$data),
-                                    hide = hide)
+                                    hide = hide,
+                                    hover_text = "filter rows")
     
     # UPDATE FILTERS
     observe({
@@ -402,7 +411,8 @@ data_edit <- function(x = NULL,
                      save_as = save_as,
                      write_fun = write_fun,
                      write_args = write_args,
-                     hide = hide)
+                     hide = hide,
+                     hover_text = "save selection \n to file")
     
     # DATA OUTPUT - DATA ENTIRE
     dataOutputServer("output-update",
@@ -410,7 +420,8 @@ data_edit <- function(x = NULL,
                      save_as = save_as,
                      write_fun = write_fun,
                      write_args = write_args,
-                     hide = hide)
+                     hide = hide,
+                     hover_text = "save to file")
     
     # CUT
     observeEvent(input$cut, {

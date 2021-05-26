@@ -8,7 +8,7 @@
 \usage{
 dataFilterUI(id)
 
-dataFilterServer(id, data = reactive(NULL), hide = FALSE)
+dataFilterServer(id, data = reactive(NULL), hide = FALSE, hover_text = NULL)
 }
 \arguments{
 \item{id}{unique identifier for the module to prevent namespace clashes when
@@ -19,6 +19,9 @@ filtered.}
 
 \item{hide}{logical indicating whether the data sfiltering user interface
 should be hidden from the user, set to FALSE by default.}
+
+\item{hover_text}{text to display on download button when user hovers cursor
+over button, set to NULL by default to turn off hover text.}
 }
 \value{
 a list of reactive objects containing the filtered \code{data} and

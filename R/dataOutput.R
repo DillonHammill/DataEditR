@@ -16,10 +16,13 @@
 #'   be hidden from the user, set to FALSE by default.
 #' @param icon supplied to \code{dataOutputUI} to control the appearance of the
 #'   icon displayed on the download button, set to \code{"download"} by default.
+#' @param hover_text text to display on download button when user hovers cursor
+#'   over button, set to NULL by default to turn off hover text.
 #'
 #' @importFrom shiny downloadButton downloadHandler reactive moduleServer
 #'   is.reactive
 #' @importFrom shinyjs disable enable hidden show
+#' @importFrom shinyBS addTooltip
 #'
 #' @author Dillon Hammill, \email{Dillon.Hammill@anu.edu.au}
 #'
@@ -78,16 +81,25 @@ dataOutputServer <- function(id,
                              save_as = NULL,
                              write_fun = "write.csv",
                              write_args = NULL,
-                             hide = FALSE) {
+                             hide = FALSE,
+                             hover_text = NULL) {
   
   # SERVER
   moduleServer(id, function(input,
                             output,
                             session) {
     
+    # NAMESPACE
+    ns <- session$ns
+    
     # HIDE USER INTERFACE
     if (!hide) {
       show("save")
+      if(!is.null(hover_text)) {
+        addTooltip(session = session,
+                   id = ns("save"),
+                   title = hover_text)
+      }
     }
     
     # VALUES
