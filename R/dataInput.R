@@ -115,8 +115,15 @@ dataInputServer <- function(id,
     # DATA - FILE OR NAME
     if (is.character(data) &
         length(data) == 1) {
-      # FILE NAME
-      if (nzchar(file_ext(data))) {
+      # DATA
+      if(exists(data, envir = envir)) {
+        updateTextInput(
+          session,
+          "data",
+          value = data
+        )
+      # READ IN DATA FROM FILE
+      } else {
         upload <- do.call(
           read_fun,
           c(list(data), read_args)
@@ -127,15 +134,8 @@ dataInputServer <- function(id,
           "data",
           value = "upload"
         )
-        # DATASET NAME
-      } else {
-        updateTextInput(
-          session,
-          "data",
-          value = data
-        )
       }
-      # DIMENSIONS/COLUMN NAMES/NULL
+    # DIMENSIONS/COLUMN NAMES/NULL
     } else {
       template <- data_template(
         data,

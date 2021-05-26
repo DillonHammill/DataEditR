@@ -1,6 +1,7 @@
 # DataEditR 0.1.3
 
 * Display hints when user hovers cursor over buttons.
+* Make sure R objects containing `.` can be loaded into the data editor.
 
 # DataEditR 0.1.2
 
