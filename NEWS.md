@@ -2,6 +2,7 @@
 
 * Display hints when user hovers cursor over buttons.
 * Make sure R objects containing `.` can be loaded into the data editor.
+* Turn on highlighting for columns and rows.
 
 # DataEditR 0.1.2
 

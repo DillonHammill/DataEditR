@@ -494,6 +494,8 @@ data_edit <- function(x = NULL,
                       viewer = viewer,
                       stopOnCancel = FALSE)
   
+  # x_edit <- shiny::shinyApp(ui, server)
+  
   # SAVE AS
   if(!is.null(x_edit) & !is.null(save_as)) {
     do.call(

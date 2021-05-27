@@ -365,6 +365,9 @@ dataEditServer <- function(id,
                         colHeaders = colnames(values$x),
                         rowHeaders = rownames(values$x),
                         manualColumnResize = TRUE,
+                        highlightCol = TRUE,
+                        highlightRow = TRUE,
+                        search = TRUE,
                         ...,
                         afterOnCellMouseDown = java_script(
                           "function(event, coords, th) {
