@@ -98,11 +98,11 @@ if (interactive()) {
 
   server <- function(input, output, session) {
     data_to_edit <- dataInputServer("input-1")
-    data_to_edit <- dataEditServer("edit-1",
+    data_edit <- dataEditServer("edit-1",
       data = data_to_edit
     )
     dataOutputServer("output-1",
-      data = data_to_edit
+      data = data_edit
     )
   }
 
