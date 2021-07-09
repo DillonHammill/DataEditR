@@ -133,7 +133,7 @@ with the master copy of the data." />
 with the master copy of the data.</p>
     </div>
 
-    <pre class="usage"><span class='fu'>dataSyncUI</span><span class='op'>(</span><span class='va'>id</span>, <span class='va'>...</span><span class='op'>)</span>
+    <pre class="usage"><span class='fu'>dataSyncUI</span><span class='op'>(</span><span class='va'>id</span><span class='op'>)</span>
 
 <span class='fu'>dataSyncServer</span><span class='op'>(</span>
   <span class='va'>id</span>,
@@ -202,19 +202,19 @@ over button, set to NULL by default to turn off hover text.</p></td>
  <span class='va'>server</span> <span class='op'>&lt;-</span> <span class='kw'>function</span><span class='op'>(</span><span class='va'>input</span>,
                     <span class='va'>output</span>,
                     <span class='va'>session</span><span class='op'>)</span> <span class='op'>{</span>
- 
+
    <span class='va'>values</span> <span class='op'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/pkg/shiny/man/reactiveValues.html'>reactiveValues</a></span><span class='op'>(</span>
      data <span class='op'>=</span> <span class='cn'>NULL</span>,
      data_subset <span class='op'>=</span> <span class='cn'>NULL</span>
    <span class='op'>)</span>
-  
+
    <span class='va'>data_input</span> <span class='op'>&lt;-</span> <span class='fu'><a href='dataInput.html'>dataInputServer</a></span><span class='op'>(</span><span class='st'>"input1"</span><span class='op'>)</span>
- 
+
   <span class='va'>data_edit</span> <span class='op'>&lt;-</span> <span class='fu'><a href='dataEdit.html'>dataEditServer</a></span><span class='op'>(</span>
      <span class='st'>"edit1"</span>,
      data <span class='op'>=</span> <span class='va'>data_input</span>
    <span class='op'>)</span>
- 
+
    <span class='va'>data_sync</span> <span class='op'>&lt;-</span> <span class='fu'>dataSyncServer</span><span class='op'>(</span>
      <span class='st'>"sync1"</span>,
      data <span class='op'>=</span> <span class='va'>data_input</span>,
@@ -222,7 +222,7 @@ over button, set to NULL by default to turn off hover text.</p></td>
      rows <span class='op'>=</span> <span class='cn'>NULL</span>,
      columns <span class='op'>=</span> <span class='cn'>NULL</span>
    <span class='op'>)</span>
- 
+
   <span class='op'>}</span>
  <span class='fu'><a href='https://rdrr.io/pkg/shiny/man/shinyApp.html'>shinyApp</a></span><span class='op'>(</span><span class='va'>ui</span>, <span class='va'>server</span><span class='op'>)</span>
 <span class='op'>}</span>
