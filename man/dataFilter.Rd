@@ -17,7 +17,7 @@ making multiple calls to this shiny module.}
 \item{data}{an array wrapped in \code{reactive()} containing the data to be
 filtered.}
 
-\item{hide}{logical indicating whether the data sfiltering user interface
+\item{hide}{logical indicating whether the data filtering user interface
 should be hidden from the user, set to FALSE by default.}
 
 \item{hover_text}{text to display on download button when user hovers cursor

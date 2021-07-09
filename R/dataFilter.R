@@ -6,7 +6,7 @@
 #'   making multiple calls to this shiny module.
 #' @param data an array wrapped in \code{reactive()} containing the data to be
 #'   filtered.
-#' @param hide logical indicating whether the data sfiltering user interface
+#' @param hide logical indicating whether the data filtering user interface
 #'   should be hidden from the user, set to FALSE by default.
 #' @param hover_text text to display on download button when user hovers cursor
 #'   over button, set to NULL by default to turn off hover text.
@@ -95,7 +95,7 @@ dataFilterServer <- function(id,
       if(!is.null(hover_text)) {
         addTooltip(session = session,
                    id = ns("filter"),
-                   title = "filter rows")
+                   title = hover_text)
       }
     }
     
@@ -184,10 +184,11 @@ dataFilterServer <- function(id,
               # VALUES
               values$filters[[filter_name]]$column <-
                 input[[paste0(filter_name, "-col")]]
-              
-              # LEVELS
-              if (!is.numeric(values$data[, input[[paste0(filter_name, "-col")]]])) {
-                
+
+              # LEVELS - DROP REQUIRED FOR TIBBLES
+              if (!is.numeric(
+                values$data[, input[[paste0(filter_name, "-col")]], 
+                            drop = TRUE])) {
                 # UPDATE LOGIC
                 updateSelectInput(
                   session,
@@ -207,16 +208,45 @@ dataFilterServer <- function(id,
                   paste0(filter_name, "-levels"),
                   choices = as.vector(
                     unique(
-                      values$data[, input[[paste0(filter_name, "-col")]]]
+                      values$data[, input[[paste0(filter_name, "-col")]], 
+                                  drop = TRUE]
                     )
-                  )
+                  ),
+                  server = TRUE
+                )
+              # NUMERIC
+              } else {
+                # UPDATE LOGIC
+                updateSelectInput(
+                  session,
+                  paste0(filter_name, "-logic"),
+                  choices = c(
+                    "equal",
+                    "not equal",
+                    "greater than",
+                    "less than",
+                    "greater than or equal",
+                    "less than or equal",
+                    "between",
+                    "not between",
+                    "contain",
+                    "not contain"
+                  ),
+                  selected = "equal"
+                )
+                # UPDATE SELECT INPUT
+                updateSelectizeInput(
+                  session,
+                  paste0(filter_name, "-levels"),
+                  choices = NULL,
+                  selected = NULL,
+                  server = TRUE
                 )
               }
             }),
             
             # LOGIC
             logic = observeEvent(input[[paste0(filter_name, "-logic")]], {
-              
               # VALUES
               values$filters[[filter_name]]$logic <-
                 input[[paste0(filter_name, "-logic")]]
@@ -224,7 +254,6 @@ dataFilterServer <- function(id,
             
             # LEVELS
             levels = observeEvent(input[[paste0(filter_name, "-levels")]], {
-              
               # VALUES
               values$filters[[filter_name]]$levels <-
                 input[[paste0(filter_name, "-levels")]]
@@ -232,22 +261,37 @@ dataFilterServer <- function(id,
             
             # DELETE
             delete = observeEvent(input[[paste0(filter_name, "-remove")]], {
-              
               # COLUMN
               removeUI(
-                selector = paste0("div:has(>> #", ns(paste0(filter_name, "-col")), ")")
+                selector = paste0(
+                  "div:has(>> #", 
+                  ns(paste0(filter_name, "-col")),
+                  ")"
+                )
               )
               # LOGIC
               removeUI(
-                selector = paste0("div:has(>> #", ns(paste0(filter_name, "-logic")), ")")
+                selector = paste0(
+                  "div:has(>> #", 
+                  ns(paste0(filter_name, "-logic")), 
+                  ")"
+                )
               )
               # LEVELS
               removeUI(
-                selector = paste0("div:has(>> #", ns(paste0(filter_name, "-levels")), ")")
+                selector = paste0(
+                  "div:has(>> #", 
+                  ns(paste0(filter_name, "-levels")), 
+                  ")"
+                )
               )
               # DELETE
               removeUI(
-                selector = paste0("div:has(>> #", ns(paste0(filter_name, "-remove")), ")")
+                selector = paste0(
+                  "div:has(>> #", 
+                  ns(paste0(filter_name, "-remove")), 
+                  ")"
+                )
               )
               # VALUES
               values$filters[[filter_name]] <- NULL
@@ -303,7 +347,6 @@ dataFilterServer <- function(id,
         lapply(names(values$filters), function(z){
           
           filter_id <- gsub("filter-", "", z)
-          
           filter_ns_name <- ns(z)
           
           # ARGUMENTS
@@ -421,8 +464,10 @@ dataFilterServer <- function(id,
           values$filters[[filter_name]]$column <-
             input[[paste0(filter_name, "-col")]]
           
-          # VALIDATE NUMERIC
-          if (!is.numeric(values$data[, input[[paste0(filter_name, "-col")]]])) {
+          # CHARACTER/FACTOR
+          if (!is.numeric(
+            values$data[, input[[paste0(filter_name, "-col")]], 
+                        drop = TRUE])) {
             
             # UPDATE LOGIC
             updateSelectInput(
@@ -443,16 +488,45 @@ dataFilterServer <- function(id,
               paste0(filter_name, "-levels"),
               choices = as.vector(
                 unique(
-                  values$data[, input[[paste0(filter_name, "-col")]]]
+                  values$data[, input[[paste0(filter_name, "-col")]], 
+                              drop = TRUE]
                 )
-              )
+              ),
+              server = TRUE
+            )
+          # NUMERIC
+          } else {
+            # UPDATE LOGIC
+            updateSelectInput(
+              session,
+              paste0(filter_name, "-logic"),
+              choices = c(
+                "equal",
+                "not equal",
+                "greater than",
+                "less than",
+                "greater than or equal",
+                "less than or equal",
+                "between",
+                "not between",
+                "contain",
+                "not contain"
+              ),
+              selected = "equal"
+            )
+            # UPDATE SELECT INPUT
+            updateSelectizeInput(
+              session,
+              paste0(filter_name, "-levels"),
+              choices = NULL,
+              selected = NULL,
+              server = TRUE
             )
           }
         }),
         
         # LOGIC
         logic = observeEvent(input[[paste0(filter_name, "-logic")]], {
-          
           # VALUES
           values$filters[[filter_name]]$logic <-
             input[[paste0(filter_name, "-logic")]]
@@ -460,7 +534,6 @@ dataFilterServer <- function(id,
         
         # LEVELS
         levels = observeEvent(input[[paste0(filter_name, "-levels")]], {
-          
           # VALUES
           values$filters[[filter_name]]$levels <-
             input[[paste0(filter_name, "-levels")]]
@@ -468,22 +541,37 @@ dataFilterServer <- function(id,
         
         # DELETE
         delete = observeEvent(input[[paste0(filter_name, "-remove")]], {
-          
           # COLUMN
           removeUI(
-            selector = paste0("div:has(>> #", ns(paste0(filter_name, "-col")), ")")
+            selector = paste0(
+              "div:has(>> #", 
+              ns(paste0(filter_name, "-col")),
+              ")"
+            )
           )
           # LOGIC
           removeUI(
-            selector = paste0("div:has(>> #", ns(paste0(filter_name, "-logic")), ")")
+            selector = paste0(
+              "div:has(>> #", 
+              ns(paste0(filter_name, "-logic")), 
+              ")"
+            )
           )
           # LEVELS
           removeUI(
-            selector = paste0("div:has(>> #", ns(paste0(filter_name, "-levels")), ")")
+            selector = paste0(
+              "div:has(>> #", 
+              ns(paste0(filter_name, "-levels")), 
+              ")"
+            )
           )
           # DELETE
           removeUI(
-            selector = paste0("div:has(>> #", ns(paste0(filter_name, "-remove")), ")")
+            selector = paste0(
+              "div:has(>> #", 
+              ns(paste0(filter_name, "-remove")), 
+              ")"
+            )
           )
           # VALUES
           values$filters[[filter_name]] <- NULL
@@ -535,86 +623,91 @@ dataFilterServer <- function(id,
     
     # REMOVE FILTERS
     observeEvent(input$filter_reset, {
-      
       # REMOVE FILTER UI
       lapply(names(values$filters), function(z) {
         # COLUMN
         removeUI(
-          selector = paste0("div:has(>> #", ns(paste0(z, "-col")), ")")
+          selector = paste0(
+            "div:has(>> #", 
+            ns(paste0(z, "-col")), 
+            ")"
+          )
         )
         # LOGIC
         removeUI(
-          selector = paste0("div:has(>> #", ns(paste0(z, "-logic")), ")")
+          selector = paste0(
+            "div:has(>> #", 
+            ns(paste0(z, "-logic")), 
+            ")"
+          )
         )
         # LEVELS
         removeUI(
-          selector = paste0("div:has(>> #", ns(paste0(z, "-levels")), ")")
+          selector = paste0(
+            "div:has(>> #", 
+            ns(paste0(z, "-levels")), 
+            ")"
+          )
         )
         # DELETE
         removeUI(
-          selector = paste0("div:has(>> #", ns(paste0(z, "-remove")), ")")
+          selector = paste0(
+            "div:has(>> #", 
+            ns(paste0(z, "-remove")), 
+            ")"
+          )
         )
       })
-      
       # FLUSH OBSERVERS
       filter_observers <- list()
-      
       # FLUSH FILTERS
       values$filters <- NULL
-      
       # FLUSH ROWS
       values$rows <- NULL
-      
     })
     
     # UPDATE & FILTER
     observeEvent(input$close, {
-      
       # DATA TO FILTER
       subset <- values$data
-      
       # FILTER DATA
       if(length(values$filters) != 0) {
-        
         # FILTER INDICES - ENTIRE DATASET
         ind <- unlist(
           lapply(names(values$filters), function(z) {
-            
             col <- values$filters[[z]]$column
             logic <- values$filters[[z]]$logic
             levels <- values$filters[[z]]$levels
             vals <- subset[, col]
-            
             # NUMERIC LEVELS
             if (is.numeric(vals)) {
               levels <- as.numeric(levels)
             }
-            
-            # LEVELS REQUIRED
+            # LEVELS REQUIRED - DROP REQUIRED FOR TIBBLES
             if (!is.null(levels)) {
               # EQUAL
               if (logic == "equal") {
-                return(which(values$data[, col] %in% levels))
+                return(which(values$data[, col, drop = TRUE] %in% levels))
                 # NOT EQUAL
               } else if (logic == "not equal") {
-                return(which(!values$data[, col] %in% levels))
+                return(which(!values$data[, col, drop = TRUE] %in% levels))
                 # GREATER THAN
               } else if (logic == "greater than") {
-                return(which(values$data[, col] > levels))
+                return(which(values$data[, col, drop = TRUE] > levels))
                 # LESS THAN
               } else if (logic == "less than") {
-                return(which(values$data[, col] < levels))
+                return(which(values$data[, col, drop = TRUE] < levels))
                 # GREATER THAN OR EQUAL
               } else if (logic == "greater than or equal") {
-                return(which(values$data[, col] >= levels))
+                return(which(values$data[, col, drop = TRUE] >= levels))
                 # LESS THAN OR EQUAL
               } else if (logic == "less than or equal") {
-                return(which(values$data[, col] <= levels))
+                return(which(values$data[, col, drop = TRUE] <= levels))
                 # BETWEEN | NOT BETWEEN
               } else if (logic %in% c("between", "not between")) {
                 ind <- which(
-                  values$data[, col] > levels[1] &
-                    values$data[, col] < levels[2]
+                  values$data[, col, drop = TRUE] > levels[1] &
+                    values$data[, col, drop = TRUE] < levels[2]
                 )
                 # BETWEEN
                 if (logic == "between") {
@@ -628,7 +721,7 @@ dataFilterServer <- function(id,
                 ind <- unique(
                   unlist(
                     lapply(levels, function(z) {
-                      which(grepl(z, subset[, col]))
+                      which(grepl(z, subset[, col, drop = TRUE]))
                     })
                   )
                 )
@@ -657,7 +750,6 @@ dataFilterServer <- function(id,
         }
         values$subset <- values$data[values$rows, ]
       }
-      
       # CLOSE POPUP
       removeModal()
     })

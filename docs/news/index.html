@@ -133,6 +133,9 @@
 <li>Display hints when user hovers cursor over buttons.</li>
 <li>Make sure R objects containing <code>.</code> can be loaded into the data editor.</li>
 <li>Turn on highlighting for columns and rows.</li>
+<li>Add <code>dataSync</code> module to handle synchronisation of an edited data subset with the complete dataset.</li>
+<li>Improved support for tibbles.</li>
+<li>Fix <code>dataFilter</code> to ensure the logic and levels are always updated when the column selection changes.</li>
 </ul>
 </div>
     <div id="dataeditr-012" class="section level1">
@@ -151,7 +154,7 @@
 <a href="#dataeditr-011" class="anchor"></a>DataEditR 0.1.1<small> 2021-05-10 </small>
 </h1>
 <ul>
-<li>Ensure <code><a href="../reference/dataInput.html">dataInput()</a></code> searches for data outside <code><a href="../reference/data_edit.html">data_edit()</a></code>.</li>
+<li>Ensure <code>dataInput</code> searches for data outside <code><a href="../reference/data_edit.html">data_edit()</a></code>.</li>
 <li>Prevent loading of highlighted data object in RStudio when data has been supplied to <code><a href="../reference/data_edit.html">data_edit()</a></code> directly.</li>
 <li>Allow saving by <code>write_fun</code> whenever <code>save_as</code> is supplied.</li>
 </ul>

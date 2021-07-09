@@ -94,7 +94,7 @@ dataSelectServer <- function(id,
       if(!is.null(hover_text)) {
         addTooltip(session = session,
                    id = ns("select"),
-                   title = "select columns")
+                   title = hover_text)
       }
     }
     

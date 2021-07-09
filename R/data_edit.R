@@ -238,11 +238,7 @@ data_edit <- function(x = NULL,
         style = "padding-left: 5px; margin-top: 35px;",
         dataSelectUI("select1"),
         dataFilterUI("filter1"),
-        hidden(
-          actionButton("sync", 
-                       label = NULL, 
-                       icon = icon("sync"))
-        ),
+        dataSyncUI("sync1"),
         dataOutputUI("output-active"),
         dataOutputUI("output-update", 
                      icon = "file-download"),
@@ -373,36 +369,15 @@ data_edit <- function(x = NULL,
     })
     
     # SYNC
-    observeEvent(input$sync, {
-      # ENTIRE DATA
-      if(length(values$rows) == 0 & length(values$columns) == 0) {
-        values$data <- values$data_active
-      # DATA
-      } else {
-        # VALUES
-        if(length(values$rows) != 0 & length(values$columns) == 0) {
-          values$data[values$rows, ] <- values$data_active
-        } else if(length(values$rows) == 0 & length(values$columns) != 0) {
-          values$data[ , values$columns] <- values$data_active
-        } else if(length(values$rows) != 0 & length(values$columns) != 0) {
-          values$data[values$rows, values$columns] <- values$data_active
-        }
-        # ROW/COLUMN NAMES
-        if(!is.null(values$data_active)) {
-          # ROW NAMES
-          if(!all(rownames(values$data_active) == 
-                  rownames(values$data)[values$rows])) {
-            rownames(values$data)[values$rows] <- 
-              rownames(values$data_active)
-          }
-          # COLUMN NAMES
-          if(!all(colnames(values$data_active) == 
-                  colnames(values$data)[values$columns])) {
-            colnames(values$data)[values$columns] <- 
-              colnames(values$data_active)
-          }
-        }
-      }
+    data_sync <- dataSyncServer("sync1",
+                                data = reactive(values$data),
+                                data_subset = reactive(values$data_active),
+                                rows = reactive(values$rows),
+                                columns = reactive(values$cols),
+                                hide = hide,
+                                hover_text = "synchronise")
+    observe({
+      values$data <- data_sync()
     })
     
     # DATA OUTPUT - DATA ACTIVE

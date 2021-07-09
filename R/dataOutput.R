@@ -120,6 +120,7 @@ dataOutputServer <- function(id,
         enable("save")
         # FORMAT
         if (!nzchar(trimws(colnames(values$data)[1]))) {
+          # WARNING - SETTING ROWNAMES ON TIBBLES
           rownames(values$data) <- values$data[, 1]
           values$data <- values$data[, -1]
         }

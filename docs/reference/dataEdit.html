@@ -258,11 +258,11 @@ is selected, set to <code>read.csv</code> by default.</p></td>
 
   <span class='va'>server</span> <span class='op'>&lt;-</span> <span class='kw'>function</span><span class='op'>(</span><span class='va'>input</span>, <span class='va'>output</span>, <span class='va'>session</span><span class='op'>)</span> <span class='op'>{</span>
     <span class='va'>data_to_edit</span> <span class='op'>&lt;-</span> <span class='fu'><a href='dataInput.html'>dataInputServer</a></span><span class='op'>(</span><span class='st'>"input-1"</span><span class='op'>)</span>
-    <span class='va'>data_to_edit</span> <span class='op'>&lt;-</span> <span class='fu'>dataEditServer</span><span class='op'>(</span><span class='st'>"edit-1"</span>,
+    <span class='va'>data_edit</span> <span class='op'>&lt;-</span> <span class='fu'>dataEditServer</span><span class='op'>(</span><span class='st'>"edit-1"</span>,
       data <span class='op'>=</span> <span class='va'>data_to_edit</span>
     <span class='op'>)</span>
     <span class='fu'><a href='dataOutput.html'>dataOutputServer</a></span><span class='op'>(</span><span class='st'>"output-1"</span>,
-      data <span class='op'>=</span> <span class='va'>data_to_edit</span>
+      data <span class='op'>=</span> <span class='va'>data_edit</span>
     <span class='op'>)</span>
   <span class='op'>}</span>
 
