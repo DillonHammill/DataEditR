@@ -50,7 +50,7 @@ for each new column.}
 set to TRUE by default.}
 
 \item{col_options}{named list containing the options for columns that use
-dropdown menus or checkboxes.}
+dropdown menus, dates, checkboxes or passwords.}
 
 \item{col_stretch}{logical indicating whether columns should be stretched to
 fill the full width of the display, set to FALSE by default.}

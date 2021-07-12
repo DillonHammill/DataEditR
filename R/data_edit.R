@@ -48,7 +48,7 @@
 #' @param col_edit logical indicating whether columns can be added or removed,
 #'   set to TRUE by default.
 #' @param col_options named list containing the options for columns that use
-#'   dropdown menus or checkboxes.
+#'   dropdown menus, dates, checkboxes or passwords.
 #' @param col_stretch logical indicating whether columns should be stretched to
 #'   fill the full width of the display, set to FALSE by default.
 #' @param col_factor logical indicating whether character columns should be
