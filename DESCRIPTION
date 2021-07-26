@@ -20,7 +20,7 @@ Imports:
   shinyBS,
   shinyjs,
   shinythemes,
-  rhandsontable,
+  rhandsontable (>= 0.3.8),
   rstudioapi,
   htmltools, 
   miniUI,
