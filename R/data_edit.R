@@ -430,14 +430,32 @@ data_edit <- function(x = NULL,
     observeEvent(input$done, {
       # HIDDEN INPUTS - SYNC & RETURN
       if(hide == TRUE) {
+        if(!is.null(values$data_active) & !is.null(save_as)) {
+          do.call(
+            write_fun,
+            c(list(values$data_active, save_as), write_args)
+          )
+        }
         stopApp(values$data_active)
       # VISIBLE INPUTS
       } else {
         # DATA ACTIVE
         if(values$cut) {
+          if(!is.null(values$data_active) & !is.null(save_as)) {
+            do.call(
+              write_fun,
+              c(list(values$data_active, save_as), write_args)
+            )
+          }
           stopApp(values$data_active)
           # DATA UPDATE
         } else {
+          if(!is.null(values$data) & !is.null(save_as)) {
+            do.call(
+              write_fun,
+              c(list(values$data, save_as), write_args)
+            )
+          }
           stopApp(values$data)
         }
       }
@@ -472,12 +490,12 @@ data_edit <- function(x = NULL,
   # x_edit <- shiny::shinyApp(ui, server)
   
   # SAVE AS
-  if(!is.null(x_edit) & !is.null(save_as)) {
-    do.call(
-      write_fun,
-      c(list(x_edit, save_as), write_args)
-    )
-  }
+  # if(!is.null(x_edit) & !is.null(save_as)) {
+  #   do.call(
+  #     write_fun,
+  #     c(list(x_edit, save_as), write_args)
+  #   )
+  # }
   
   # RETURN DATA
   if(is.null(x_edit)) {

@@ -1,3 +1,7 @@
+# DataEditR 0.1.4
+
+* Add support for writing data to `googlesheets` by calling `write_fun` as the application closes.
+
 # DataEditR 0.1.3
 
 * Display hints when user hovers cursor over buttons.
