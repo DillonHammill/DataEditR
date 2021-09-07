@@ -163,9 +163,15 @@ data_edit <- function(x = NULL,
   # PREPARE DATA ---------------------------------------------------------------
   
   # RSTUDIO ADDIN/DATA
-  context <- getActiveDocumentContext()
-  if(is.null(x) & nzchar(context$selection[[1]]$text)) {
-    data <- context$selection[[1]]$text
+  if(Sys.getenv("RSTUDIO") == "1") {
+    context <- getActiveDocumentContext()$selection[[1]]$text
+  } else {
+    context <- ""
+  }
+  
+  # LOAD DATA THROUGH RSTUDIO ADDIN
+  if(is.null(x) & nzchar(context)) {
+    data <- context
   } else {
     if(!is.null(dim(x))) {
       data <- as.character(substitute(x))
