@@ -117,6 +117,7 @@ dataInputServer <- function(id,
         length(data) == 1) {
       # DATA
       if(exists(data, envir = envir)) {
+        # UPDATE INPUT FIELD
         updateTextInput(
           session,
           "data",
@@ -124,10 +125,12 @@ dataInputServer <- function(id,
         )
       # READ IN DATA FROM FILE
       } else {
+        # READ IN DATA
         upload <- do.call(
           read_fun,
           c(list(data), read_args)
         )
+        # UPDATE INPUT FIELD
         envir <- environment()
         updateTextInput(
           session,
@@ -152,13 +155,28 @@ dataInputServer <- function(id,
     
     # DATA INPUT
     data_input <- eventReactive(input$data, {
-      tryCatch(
+      # LOAD INPUT DATA
+      data_input <- tryCatch(
         eval(parse(text = input$data),
              envir = envir),
         error = function(e) {
           return(NULL)
         }
       )
+      # CHECK EMPTY DATA
+      if(!is.null(data_input)) {
+        # NO COLUMNS
+        if(ncol(data_input) == 0) {
+          data_input <- cbind(data_input, 
+                              "V1" = rep("", ncol(data_input)))
+        }
+        # NO ROWS
+        if(nrow(data_input) == 0) {
+          data_input <- rbind(data_input, 
+                              rep("", ncol(data_input)))
+        }
+      }
+      return(data_input)
     })
     
     # FILE INPUT

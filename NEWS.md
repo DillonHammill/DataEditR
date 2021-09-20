@@ -1,5 +1,6 @@
 # DataEditR 0.1.4
 
+* Add checks for empty data within `dataInput` and `dataEdit` to ensure that the supplied data always contains as least a single row and column.
 * Add support for writing data to `googlesheets` by calling `write_fun` as the application closes.
 * Fix `data_edit()` to ensure that we don't search for data through RStudio addin if RStudio is not in use. 
 

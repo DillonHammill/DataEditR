@@ -119,7 +119,6 @@ data_format <- function(data,
         data[, z] <- type.convert(data[, z], as.is = !col_factor)
       }
     }
-    
   }
   
   # FORMATTED DATA
