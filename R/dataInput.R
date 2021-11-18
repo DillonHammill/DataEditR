@@ -172,8 +172,10 @@ dataInputServer <- function(id,
         }
         # NO ROWS
         if(nrow(data_input) == 0) {
+          nms <- colnames(data_input)
           data_input <- rbind(data_input, 
                               rep("", ncol(data_input)))
+          colnames(data_input) <- nms
         }
       }
       return(data_input)
