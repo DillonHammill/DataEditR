@@ -388,6 +388,9 @@ dataEditServer <- function(id,
                           isColHeader = coords.row === -1,
                           input = document.createElement('input'),
                           rect = th.getBoundingClientRect(),
+                          bodyRect = document.body.getBoundingClientRect(),
+                          offsetY = rect.top - bodyRect.top,
+                          offsetX = rect.left - bodyRect.left,
                           addListeners = (events, headers, index) => {
                             events.split(' ').forEach(e => {
                               input.addEventListener(e, () => {
@@ -424,10 +427,10 @@ dataEditServer <- function(id,
                             input.setAttribute('type', 'text');
                             input.style.cssText = '' +
                               'position:absolute;' +
-                              'left:' + rect.left + 'px;' +
-                              'top:' + rect.top + 'px;' +
-                              'width:' + (rect.width - 4) + 'px;' +
-                              'height:' + (rect.height - 4) + 'px;' +
+                              'left:' + offsetX + 'px;' +
+                              'top:' + offsetY + 'px;' +
+                              'width:' + rect.width + 'px;' +
+                              'height:' + rect.height + 'px;' +
                               'z-index:10000;' +
                               'text-align:center';
                             document.body.appendChild(input);
