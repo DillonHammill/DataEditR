@@ -405,7 +405,33 @@ knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEdi
 knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-21.gif')
 ```
 
-## 10. Exporting Code
+## 10. Interactively Edit Googlesheets
+
+`DataEditR` can also be used to interactively edit googlesheets using `googlesheets4`. Simply authorise `googlesheets`, create a new sheet, edit the data using `data_edit()` and write the edited data to the created sheet.
+
+```{r, eval = FALSE}
+library(googlesheets4)
+
+# Authorise
+gs4_auth(
+  email = "username@gmail.com"
+)
+
+# Create a sheet
+ss <- gs4_create(
+  "mtcars"
+)
+
+# Edit data
+mtcars_new <- data_edit(
+  mtcars,
+  save_as = ss,
+  write_fun = "write_sheet",
+  write_args = list(sheet = "mtcars")
+)
+```
+
+## 11. Exporting Code
 
 For reproducibility, it is possible to export the code required to generate the final edited version of your data. Simply set `code = TRUE` within `data_edit()` to print this code to console. Copying and pasting this code into the console will recreate the edited version of your data.
 
