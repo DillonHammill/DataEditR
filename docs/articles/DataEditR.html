@@ -104,7 +104,7 @@
 <p>Simply supply your data in the form of a matrix, data.frame or data.table to <code><a href="../reference/data_edit.html">data_edit()</a></code> to view it in an interactive table. For example, if we wanted to take a look at the <code>mtcars</code> dataset:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="va">mtcars</span><span class="op">)</span></code></pre></div>
-<p><img src="https://raw.githubusercontent.com/DillonHammill/DataEditR/master/articles/DataEditR/DataEditR-1.png" width="90%" style="display: block; margin: auto;"></p>
+<p><img src="https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-1.png" width="90%" style="display: block; margin: auto;"></p>
 <p>The data editor will open in an RStudio <code>"dialog"</code> box by default, but can be optionally displayed in the RStudio viewer pane or a web browser by setting <code>viewer</code> to <code>"viewer"</code> or <code>"browser"</code> respectively.</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="va">mtcars</span>,
@@ -138,7 +138,7 @@
 <p>Rows or columns can be added to the data from within the data editor by right clicking on a cell within the table. This will display a context menu with the options to add or remove rows or columns.</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="va">mtcars</span><span class="op">)</span></code></pre></div>
-<p><img src="https://raw.githubusercontent.com/DillonHammill/DataEditR/master/articles/DataEditR/DataEditR-2.gif" width="90%" style="display: block; margin: auto;"></p>
+<p><img src="https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-2.gif" width="90%" style="display: block; margin: auto;"></p>
 </div>
 <div class="section level3">
 <h3 id="rename-rows-or-columns">3.2 Rename rows or columns<a class="anchor" aria-label="anchor" href="#rename-rows-or-columns"></a>
@@ -146,7 +146,7 @@
 <p><code><a href="../reference/data_edit.html">data_edit()</a></code> has full support for editing row and column names. Simply select the cell that you want to edit and update its value within the table. As outlined above, the row names will appear within the table so that the row indices can be displayed on the left-hand side. The row indices cannot be edited. The new row or column names must be unique!</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="va">mtcars</span><span class="op">)</span></code></pre></div>
-<p><img src="https://raw.githubusercontent.com/DillonHammill/DataEditR/master/articles/DataEditR/DataEditR-3.gif" width="90%" style="display: block; margin: auto;"></p>
+<p><img src="https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-3.gif" width="90%" style="display: block; margin: auto;"></p>
 <p>To prevent users from editing column names, set <code>col_names = FALSE</code> or supply the names of the columns that cannot be edited. For example, if we only wanted to prevent users from editing the name of the <code>mpg</code> column:</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="va">mtcars</span>,
@@ -158,7 +158,7 @@
 <p>To size columns, go to the right-hand border of the cell containing the name of that column and drag the cursor to the desired width.</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="va">mtcars</span><span class="op">)</span></code></pre></div>
-<p><img src="https://raw.githubusercontent.com/DillonHammill/DataEditR/master/articles/DataEditR/DataEditR-4.gif" width="90%" style="display: block; margin: auto;"></p>
+<p><img src="https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-4.gif" width="90%" style="display: block; margin: auto;"></p>
 </div>
 <div class="section level3">
 <h3 id="drag-to-fill">3.4 Drag to fill<a class="anchor" aria-label="anchor" href="#drag-to-fill"></a>
@@ -166,7 +166,7 @@
 <p>Values in cells can be dragged to other cells by selecting the filled cells and dragging the box in the lower right hand corner.</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="va">mtcars</span><span class="op">)</span></code></pre></div>
-<p><img src="https://raw.githubusercontent.com/DillonHammill/DataEditR/master/articles/DataEditR/DataEditR-5.gif" width="90%" style="display: block; margin: auto;"></p>
+<p><img src="https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-5.gif" width="90%" style="display: block; margin: auto;"></p>
 </div>
 <div class="section level3">
 <h3 id="append-columns-or-rows">3.5 Append columns or rows<a class="anchor" aria-label="anchor" href="#append-columns-or-rows"></a>
@@ -180,7 +180,7 @@
 <span class="co"># Edit data with new column added</span>
 <span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="va">mtcars</span>,
           col_bind <span class="op">=</span> <span class="va">new_col</span><span class="op">)</span></code></pre></div>
-<p><img src="https://raw.githubusercontent.com/DillonHammill/DataEditR/master/articles/DataEditR/DataEditR-6.png" width="90%" style="display: block; margin: auto;"></p>
+<p><img src="https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-6.png" width="90%" style="display: block; margin: auto;"></p>
 </div>
 <div class="section level3">
 <h3 id="read-only-columns">3.6 Read-only columns<a class="anchor" aria-label="anchor" href="#read-only-columns"></a>
@@ -201,11 +201,11 @@
 <p>If no data is supplied to <code><a href="../reference/data_edit.html">data_edit()</a></code> an empty data.frame will be constructed with 10 rows and columns. You can then build your data.frame from scratch by adding new rows and columns and annotating the cells.</p>
 <div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="op">)</span></code></pre></div>
-<p><img src="https://raw.githubusercontent.com/DillonHammill/DataEditR/master/articles/DataEditR/DataEditR-7.png" width="90%" style="display: block; margin: auto;"></p>
+<p><img src="https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-7.png" width="90%" style="display: block; margin: auto;"></p>
 <p>The dimensions of the template can be controlled by supplying a vector of the form <code>c(nrow, ncol)</code> to indicate the number of rows and columns to use.</p>
 <div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">20</span>, <span class="fl">15</span><span class="op">)</span><span class="op">)</span></code></pre></div>
-<p><img src="https://raw.githubusercontent.com/DillonHammill/DataEditR/master/articles/DataEditR/DataEditR-8.png" width="90%" style="display: block; margin: auto;"></p>
+<p><img src="https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-8.png" width="90%" style="display: block; margin: auto;"></p>
 </div>
 <div class="section level3">
 <h3 id="start-with-a-labelled-template">4.2 Start with a labelled template<a class="anchor" aria-label="anchor" href="#start-with-a-labelled-template"></a>
@@ -213,7 +213,7 @@
 <p>Alternatively, you can pass a vector of column names to create a data.frame template with pre-defined column names.</p>
 <div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Date"</span>, <span class="st">"Country"</span>, <span class="st">"Temperature"</span>, <span class="st">"Rainfall"</span>, <span class="st">"Visibility"</span>, <span class="st">"Humidity"</span><span class="op">)</span><span class="op">)</span></code></pre></div>
-<p><img src="https://raw.githubusercontent.com/DillonHammill/DataEditR/master/articles/DataEditR/DataEditR-9.png" width="90%" style="display: block; margin: auto;"></p>
+<p><img src="https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-9.png" width="90%" style="display: block; margin: auto;"></p>
 </div>
 </div>
 <div class="section level2">
@@ -226,7 +226,7 @@
 <p>Column selection is supported through the <code>dataSelect</code> module which can be invoked by selecting the crosshairs icon. A pop-up window will open with a series of red buttons labelled with the names of the columns in the dataset. Simply click the buttons for the columns that you want to keep and close the window when you are done. The subsetted data will be displayed in the data editor for editing. The column selection can be changed at any time by selecting the crosshairs icon, there are also additional buttons to optionally add or remove all columns.</p>
 <div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="va">mtcars</span><span class="op">)</span></code></pre></div>
-<p><img src="https://raw.githubusercontent.com/DillonHammill/DataEditR/master/articles/DataEditR/DataEditR-10.gif" width="90%" style="display: block; margin: auto;"></p>
+<p><img src="https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-10.gif" width="90%" style="display: block; margin: auto;"></p>
 </div>
 <div class="section level3">
 <h3 id="row-selection">5.2 Row Selection<a class="anchor" aria-label="anchor" href="#row-selection"></a>
@@ -234,7 +234,7 @@
 <p>Row filtering is supported through the <code>dataFilter</code> module which can be invoked by selecting the filter icon. A pop-up window will open with a series of dropdown boxes. To add a filter, simply select the <code>Add Filter</code> button and indicate the column, logic and levels to filter the data. Individual filters can be deleted by selecting the trash icon next to the relevant filter. All filters can be removed by selecting the <code>Remove Filters</code> buttons. Once you have created all your filters, close the window and the filtered data will be displayed in the data editor for editing.</p>
 <div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="va">mtcars</span><span class="op">)</span></code></pre></div>
-<p><img src="https://raw.githubusercontent.com/DillonHammill/DataEditR/master/articles/DataEditR/DataEditR-11.gif" width="90%" style="display: block; margin: auto;"></p>
+<p><img src="https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-11.gif" width="90%" style="display: block; margin: auto;"></p>
 </div>
 <div class="section level3">
 <h3 id="data-synchronisation">5.3 Data Synchronisation<a class="anchor" aria-label="anchor" href="#data-synchronisation"></a>
@@ -242,7 +242,7 @@
 <p>Changes made to data subsets are not automatically synchronised in the complete dataset to allow for increased flexibility. However, it is possible to synchronise these changes by selecting the sync button. Currently, synchronising data subsets with altered row/column numbers is not supported.</p>
 <div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="va">mtcars</span><span class="op">)</span></code></pre></div>
-<p><img src="https://raw.githubusercontent.com/DillonHammill/DataEditR/master/articles/DataEditR/DataEditR-12.gif" width="90%" style="display: block; margin: auto;"></p>
+<p><img src="https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-12.gif" width="90%" style="display: block; margin: auto;"></p>
 </div>
 <div class="section level3">
 <h3 id="export-data-subsets">5.4 Export Data Subsets<a class="anchor" aria-label="anchor" href="#export-data-subsets"></a>
@@ -251,7 +251,7 @@
 <div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="va">mtcars_subset</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="va">mtcars</span><span class="op">)</span>
 <span class="fu"><a href="https://rdrr.io/r/utils/str.html" class="external-link">str</a></span><span class="op">(</span><span class="va">mtcars_subset</span><span class="op">)</span></code></pre></div>
-<p><img src="https://raw.githubusercontent.com/DillonHammill/DataEditR/master/articles/DataEditR/DataEditR-13.gif" width="90%" style="display: block; margin: auto;"></p>
+<p><img src="https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-13.gif" width="90%" style="display: block; margin: auto;"></p>
 </div>
 </div>
 <div class="section level2">
@@ -287,7 +287,7 @@
                         write_args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>sep <span class="op">=</span> <span class="st">","</span>,
                                           row.names <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span></code></pre></div>
 <p>Alternatively, data can be saved to file by selecting either of the file download buttons as highlighted in the image below. The button of the left is used to save the data subset to file whilst the button on the right is used to save the entire dataset to file.</p>
-<p><img src="https://raw.githubusercontent.com/DillonHammill/DataEditR/master/articles/DataEditR/DataEditR-14.png" width="90%" style="display: block; margin: auto;"></p>
+<p><img src="https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-14.png" width="90%" style="display: block; margin: auto;"></p>
 </div>
 <div class="section level2">
 <h2 id="complex-user-inputs">7. Complex user inputs<a class="anchor" aria-label="anchor" href="#complex-user-inputs"></a>
@@ -301,7 +301,7 @@
 <code class="sourceCode R"><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="va">mtcars</span>,
           col_bind <span class="op">=</span> <span class="st">"fast"</span>,
           col_options <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>fast <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="cn">TRUE</span>,<span class="cn">FALSE</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></code></pre></div>
-<p><img src="https://raw.githubusercontent.com/DillonHammill/DataEditR/master/articles/DataEditR/DataEditR-15.gif" width="90%" style="display: block; margin: auto;"></p>
+<p><img src="https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-15.gif" width="90%" style="display: block; margin: auto;"></p>
 </div>
 <div class="section level3">
 <h3 id="dropdown-menus">7.2 Dropdown menus<a class="anchor" aria-label="anchor" href="#dropdown-menus"></a>
@@ -316,7 +316,7 @@
                                         <span class="st">"orange"</span>,
                                         <span class="st">"green"</span>,
                                         <span class="st">"black"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></code></pre></div>
-<p><img src="https://raw.githubusercontent.com/DillonHammill/DataEditR/master/articles/DataEditR/DataEditR-16.gif" width="90%" style="display: block; margin: auto;"></p>
+<p><img src="https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-16.gif" width="90%" style="display: block; margin: auto;"></p>
 </div>
 <div class="section level3">
 <h3 id="dates">7.3 Dates<a class="anchor" aria-label="anchor" href="#dates"></a>
@@ -325,7 +325,7 @@
 <div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"date"</span>, <span class="st">"time"</span>, <span class="st">"region"</span>, <span class="st">"temperature"</span><span class="op">)</span>,
           col_options <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>date <span class="op">=</span> <span class="st">"date"</span><span class="op">)</span><span class="op">)</span></code></pre></div>
-<p><img src="https://raw.githubusercontent.com/DillonHammill/DataEditR/master/articles/DataEditR/DataEditR-17.gif" width="90%" style="display: block; margin: auto;"></p>
+<p><img src="https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-17.gif" width="90%" style="display: block; margin: auto;"></p>
 </div>
 <div class="section level3">
 <h3 id="passwords">7.4 Passwords<a class="anchor" aria-label="anchor" href="#passwords"></a>
@@ -334,7 +334,7 @@
 <div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"date"</span>, <span class="st">"time"</span>, <span class="st">"user"</span>, <span class="st">"password"</span><span class="op">)</span>,
           col_options <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>password <span class="op">=</span> <span class="st">"password"</span><span class="op">)</span><span class="op">)</span></code></pre></div>
-<p><img src="https://raw.githubusercontent.com/DillonHammill/DataEditR/master/articles/DataEditR/DataEditR-18.gif" width="90%" style="display: block; margin: auto;"></p>
+<p><img src="https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-18.gif" width="90%" style="display: block; margin: auto;"></p>
 </div>
 </div>
 <div class="section level2">
@@ -359,7 +359,7 @@
           logo <span class="op">=</span> <span class="va">car_logo</span>,
           logo_size <span class="op">=</span> <span class="fl">100</span>,
           title <span class="op">=</span> <span class="st">"mtcars"</span><span class="op">)</span></code></pre></div>
-<p><img src="https://raw.githubusercontent.com/DillonHammill/DataEditR/master/articles/DataEditR/DataEditR-19.png" width="90%" style="display: block; margin: auto;"></p>
+<p><img src="https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-19.png" width="90%" style="display: block; margin: auto;"></p>
 </div>
 <div class="section level3">
 <h3 id="custom-themes">8.3 Custom themes<a class="anchor" aria-label="anchor" href="#custom-themes"></a>
@@ -368,14 +368,14 @@
 <div class="sourceCode" id="cb30"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="va">mtcars</span>,
           theme <span class="op">=</span> <span class="st">"cosmo"</span><span class="op">)</span></code></pre></div>
-<p><img src="https://raw.githubusercontent.com/DillonHammill/DataEditR/master/articles/DataEditR/DataEditR-20.png" width="90%" style="display: block; margin: auto;"></p>
+<p><img src="https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-20.png" width="90%" style="display: block; margin: auto;"></p>
 </div>
 </div>
 <div class="section level2">
 <h2 id="rstudio-add-in">9. RStudio Add-in<a class="anchor" aria-label="anchor" href="#rstudio-add-in"></a>
 </h2>
 <p><code>DataEditR</code> also ships with an RStudio add-in should you prefer to interact with your data in this way. Simply highlight the name of a dataset in an active script and select the <code>Interactive Data Editor</code> from the list of <code>Addins</code> in your RStudio session.</p>
-<p><img src="https://raw.githubusercontent.com/DillonHammill/DataEditR/master/articles/DataEditR/DataEditR-21.gif" width="90%" style="display: block; margin: auto;"></p>
+<p><img src="https://raw.githubusercontent.com/DillonHammill/DataEditR/master/vignettes/DataEditR/DataEditR-21.gif" width="90%" style="display: block; margin: auto;"></p>
 </div>
 <div class="section level2">
 <h2 id="interactively-edit-googlesheets">10. Interactively Edit Googlesheets<a class="anchor" aria-label="anchor" href="#interactively-edit-googlesheets"></a>
