@@ -113,27 +113,48 @@ dataInputServer <- function(id,
       stop("'data' should be passed as a vector!")
     }
     
-    # EMPTY DATA
-    if(!all(nzchar(data))) {
-      data <- NULL
+    # EMPTY DATA - DATA MUST BE CHARACTER
+    if(is.null(data)) {
+      data <- c(10,10) # DEFAULT TEMPLATE
     }
     
-    # DATA - FILE OR NAME
-    if(is.character(data) & length(data) == 1) {
-      # DATA
-      if(exists(data, envir = envir)) {
-        # UPDATE INPUT FIELD
+    # IN CASE COVER EMPTY CHARACTERS
+    if(all(!nzchar(data))) {
+      data <- c(10,10)
+    }
+    
+    # DATA - DIMENSIONS
+    if(is.numeric(data)) {
+      # CREATE TEMPLATE
+      template <- data_template(
+        x = data,
+        read_fun = read_fun,
+        read_args = read_args
+      )
+      envir <- environment()
+      updateTextInput(
+        session,
+        "data",
+        value = "template"
+      )
+    # DATA - OBJECT/FILE/COLUMN NAMES
+    } else if(is.character(data)) {
+      # R OBJECT
+      if(all(unlist(lapply(data, "exists", envir = envir)))) {
         updateTextInput(
           session,
           "data",
-          value = data
+          value = data[1] # IS THIS OK?
         )
-      # READ IN DATA FROM FILE
-      } else {
+      # FILE NAME
+      } else if(all(file.exists(data))) {
         # READ IN DATA
         upload <- do.call(
           read_fun,
-          c(list(data), read_args)
+          c(
+            list(data[1]), 
+            read_args
+          )
         )
         # UPDATE INPUT FIELD
         envir <- environment()
@@ -142,20 +163,24 @@ dataInputServer <- function(id,
           "data",
           value = "upload"
         )
+      # COLUMN NAMES
+      } else {
+        # CREATE LABELLED TEMPLATE
+        template <- data_template(
+          x = data,
+          read_fun = read_fun,
+          read_args = read_args
+        )
+        envir <- environment()
+        updateTextInput(
+          session,
+          "data",
+          value = "template"
+        )
       }
-    # DIMENSIONS/COLUMN NAMES/NULL
+    # DATA - UNSUPPORTED
     } else {
-      template <- data_template(
-        data,
-        read_fun,
-        read_args
-      )
-      envir <- environment()
-      updateTextInput(
-        session,
-        "data",
-        value = "template"
-      )
+      stop("'data' must be either a character or numeric vector!")
     }
     
     # DATA INPUT
@@ -170,17 +195,35 @@ dataInputServer <- function(id,
       )
       # CHECK EMPTY DATA
       if(!is.null(data_input)) {
-        # NO COLUMNS
-        if(ncol(data_input) == 0) {
-          data_input <- cbind(data_input, 
-                              "V1" = rep("", ncol(data_input)))
-        }
-        # NO ROWS
-        if(nrow(data_input) == 0) {
-          nms <- colnames(data_input)
-          data_input <- rbind(data_input, 
-                              rep("", ncol(data_input)))
-          colnames(data_input) <- nms
+        # DATA - VECTOR -> ROW
+        if(is.null(dim(data_input))) {
+          data_input <- matrix(
+            data_input,
+            ncol = length(data_input),
+            nrow = 1,
+            dimnames = list(
+              NULL, 
+              if(is.null(names(data_input)) ) {
+                paste0("V", 1:length(data_input))
+              } else {
+                names(data_input)
+              }
+            )
+          )
+        # DATA - ARRAY
+        } else {
+          # NO COLUMNS
+          if(ncol(data_input) == 0) {
+            data_input <- cbind(data_input, 
+                                "V1" = rep("", ncol(data_input)))
+          }
+          # NO ROWS
+          if(nrow(data_input) == 0) {
+            nms <- colnames(data_input)
+            data_input <- rbind(data_input, 
+                                rep("", ncol(data_input)))
+            colnames(data_input) <- nms
+          }
         }
       }
       return(data_input)
