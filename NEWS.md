@@ -1,3 +1,7 @@
+# DataEditR 0.1.5
+
+* Improved handling of highlighted `data_edit()` calls within RStudio.
+
 # DataEditR 0.1.4
 
 * Fix header location on scroll.

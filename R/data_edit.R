@@ -165,6 +165,12 @@ data_edit <- function(x = NULL,
   # RSTUDIO ADDIN/DATA
   if(Sys.getenv("RSTUDIO") == "1") {
     context <- getActiveDocumentContext()$selection[[1]]$text
+    # CHECK DATA_EDIT() CALL HIGHLIGHTED
+    if(nzchar(context)) {
+      if(!exists(context, envir = envir)) {
+        context <- ""
+      }
+    }
   } else {
     context <- ""
   }
