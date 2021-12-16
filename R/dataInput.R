@@ -112,9 +112,14 @@ dataInputServer <- function(id,
     if (!is.null(dim(data))) {
       stop("'data' should be passed as a vector!")
     }
+    
+    # EMPTY DATA
+    if(!all(nzchar(data))) {
+      data <- NULL
+    }
+    
     # DATA - FILE OR NAME
-    if (is.character(data) &
-        length(data) == 1) {
+    if(is.character(data) & length(data) == 1) {
       # DATA
       if(exists(data, envir = envir)) {
         # UPDATE INPUT FIELD

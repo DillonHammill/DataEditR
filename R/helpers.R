@@ -47,8 +47,13 @@ data_template <- function(x = NULL,
     } else if(is.character(x)) {
       # FILE NAME
       if(length(x) == 1 & nzchar(file_ext(x[1]))) {
-        x <- do.call(read_fun,
-                     c(list(x), read_args))
+        x <- do.call(
+          read_fun,
+          c(
+            list(x), 
+            read_args
+          )
+        )
       # COLUMN NAMES
       } else {
         x <- data.frame(
