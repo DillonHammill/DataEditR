@@ -214,14 +214,18 @@ dataInputServer <- function(id,
         } else {
           # NO COLUMNS
           if(ncol(data_input) == 0) {
-            data_input <- cbind(data_input, 
-                                "V1" = rep("", ncol(data_input)))
+            data_input <- cbind(
+              data_input, 
+              "V1" = rep("", ncol(data_input))
+            )
           }
           # NO ROWS
           if(nrow(data_input) == 0) {
             nms <- colnames(data_input)
-            data_input <- rbind(data_input, 
-                                rep("", ncol(data_input)))
+            data_input <- rbind(
+              data_input, 
+              rep("", ncol(data_input))
+            )
             colnames(data_input) <- nms
           }
         }

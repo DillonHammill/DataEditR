@@ -20,6 +20,7 @@ dataEditServer(
   col_factor = FALSE,
   row_bind = NULL,
   row_edit = TRUE,
+  row_index = reactive(NULL),
   quiet = FALSE,
   read_fun = "read.csv",
   read_args = NULL,
@@ -70,6 +71,11 @@ each new column.}
 
 \item{row_edit}{logical indicating whether rows can be added or removed, set
 to TRUE by default.}
+
+\item{row_index}{indicates the starting index for new rows when the data
+supplied to \code{DataEdit()} is a subset of a larger dataset, i.e.
+\code{row_index} indicates the number of rows present in the parental
+dataset.}
 
 \item{quiet}{logical to suppress warnings when using \code{col_options}.}
 

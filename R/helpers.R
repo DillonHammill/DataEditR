@@ -25,7 +25,7 @@ data_template <- function(x = NULL,
       matrix(rep("", 100),
              ncol = 10,
              nrow = 10,
-             dimnames = list(NULL,
+             dimnames = list(1:10,
                              paste0("V", 1:10))),
       stringsAsFactors = FALSE,
       check.names = FALSE
@@ -65,6 +65,11 @@ data_template <- function(x = NULL,
         )
       }
     }
+  }
+  
+  # ROW INDICES
+  if(is.null(rownames(x))) {
+    rownames(x) <- seq_len(nrow(x))
   }
   
   # TEMPLATE
@@ -113,7 +118,8 @@ data_format <- function(data,
         data <- data[, -1, drop = FALSE]
       }
     } else {
-      rownames(data) <- NULL
+      # KEEP ROW INDICES AS ROWNAMES
+      # rownames(data) <- NULL
     }
     # MATRIX - SAME COLUMN CLASS
     if("matrix" %in% data_class) {

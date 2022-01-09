@@ -1,5 +1,6 @@
 # DataEditR 0.1.5
 
+* Fix handling of numeric rownames to ensure maintenance of row indices relative to the master copy.
 * Improved handling of highlighted `data_edit()` calls within RStudio.
 
 # DataEditR 0.1.4

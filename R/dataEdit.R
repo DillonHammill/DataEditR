@@ -16,7 +16,7 @@
 #' @param col_edit logical indicating whether columns can be added or removed,
 #'   set to TRUE by default.
 #' @param col_options a list named with valid columns names and either
-#'   \code{c(TRUE, FALSE)} for checkboxes, a vector of options for dropdowns, 
+#'   \code{c(TRUE, FALSE)} for checkboxes, a vector of options for dropdowns,
 #'   \code{"date"} for date input or \code{"password"} for password input.
 #' @param col_stretch logical indicating whether columns should be stretched to
 #'   fill the full width of the display, set to FALSE by default.
@@ -35,6 +35,10 @@
 #'   each new column.
 #' @param row_edit logical indicating whether rows can be added or removed, set
 #'   to TRUE by default.
+#' @param row_index indicates the starting index for new rows when the data
+#'   supplied to \code{DataEdit()} is a subset of a larger dataset, i.e.
+#'   \code{row_index} indicates the number of rows present in the parental
+#'   dataset.
 #' @param read_fun name of the function to use to read in the data when a file
 #'   is selected, set to \code{read.csv} by default.
 #' @param read_args a named list of additional arguments to pass to
@@ -95,6 +99,7 @@ dataEditServer <- function(id,
                            col_factor = FALSE,
                            row_bind = NULL,
                            row_edit = TRUE,
+                           row_index = reactive(NULL),
                            quiet = FALSE,
                            read_fun = "read.csv",
                            read_args = NULL,
@@ -128,7 +133,8 @@ dataEditServer <- function(id,
     values <- reactiveValues(
       x = NULL, # trigger table render
       data_class = NULL, # original class
-      col_names = NULL# columns cannot be edited
+      col_names = NULL, # columns cannot be edited
+      row_index = NULL # starting index for added rows
     ) 
     
     # DATA
@@ -146,9 +152,10 @@ dataEditServer <- function(id,
         
         # DATA INPUT -----------------------------------------------------------
         
-        data_to_edit <- data_template(data_to_edit,
-                                      read_fun = read_fun,
-                                      read_args = read_args
+        data_to_edit <- data_template(
+          data_to_edit,
+          read_fun = read_fun,
+          read_args = read_args
         )
         
         # EMPTY DATA -----------------------------------------------------------
@@ -232,23 +239,34 @@ dataEditServer <- function(id,
         if (!is.null(rownames(data_to_edit))) {
           # EMPTY ROW NAMES - CHARACTER(0)
           if (length(rownames(data_to_edit)) == 0) {
-            rownames(data_to_edit) <- 1:nrow(data_to_edit)
-            # NUMERIC ROW NAMES
+            rownames(data_to_edit) <- seq_len(nrow(data_to_edit))
+          # NUMERIC ROW NAMES
           } else if (all(!is.na(suppressWarnings(as.numeric(rownames(data_to_edit)))))) {
-            rownames(data_to_edit) <- 1:nrow(data_to_edit)
-            # CHARACTER ROW NAMES
+            # MAINTAIN INDICES TO MASTER COPY
+            # rownames(data_to_edit) <- 1:nrow(data_to_edit)
+          # CHARACTER ROW NAMES
           } else {
             data_to_edit <- cbind(rownames(data_to_edit), data_to_edit)
             colnames(data_to_edit)[1] <- " "
-            rownames(data_to_edit) <- 1:nrow(data_to_edit) # display row indices in table
+            rownames(data_to_edit) <- seq_len(nrow(data_to_edit)) # INDICES 
           }
         } else {
-          rownames(data_to_edit) <- 1:nrow(data_to_edit)
+          rownames(data_to_edit) <- seq_len(nrow(data_to_edit))
         }
         # DATA RENDER TABLE
         return(data_to_edit)
       } else {
         return(NULL)
+      }
+    })
+    
+    # ROW INDEX
+    observe({
+      # PROTECT AGAINST DUPLICATE ROW INDICES
+      if(is.null(values$row_index)) {
+        values$row_index <- nrow(data_to_edit())
+      } else {
+        values$row_index <- max(c(row_index(), as.numeric(rownames(values$x))))
       }
     })
     
@@ -262,6 +280,7 @@ dataEditServer <- function(id,
       # OLD VALUES
       x_old <- values$x
       x_new <- hot_to_r(input$x)
+      # TODO: MORE SENSIBLE DEFAULT?
       # NA ROW NAMES - MATCH DATA_FORMAT()
       if (!nzchar(trimws(colnames(x_new)[1]))) {
         ind <- which(is.na(x_new[, 1]))
@@ -275,9 +294,17 @@ dataEditServer <- function(id,
           )
         }
       }
-      # ORDER ROW INDICES
-      rownames(x_new) <- 1:nrow(x_new)
-      # RENDER
+      # ROWS ADDED - NEW INDICES REQUIRED
+      if(nrow(x_new) > nrow(x_old)) {
+        # RENDER - AUTOMATED INDEX ASSIGNMENT
+        values$x <- x_new
+        # FIX ROW INDICES
+        row_ind <- which(!rownames(x_new) %in% rownames(x_old))
+        rownames(x_new)[row_ind] <- values$row_index + seq_along(row_ind)
+        # INCREMENT INDEX TRACKER
+        values$row_index <- values$row_index + length(row_ind)
+      }
+      # RE-RENDER
       values$x <- x_new
       # REVERT READONLY COLUMNS
       if (!is.null(col_readonly)) {
@@ -350,7 +377,7 @@ dataEditServer <- function(id,
         rownames(x_old) <- new_row_names
         values$x <- x_old
         # REVERT TO ORIGINAL ROW NAMES - RE-RENDER
-        rownames(x_old) <- 1:nrow(x_old)
+        rownames(x_old) <- old_row_names
         values$x <- x_old
       }
       # ROW NAMES - NOT IN USE

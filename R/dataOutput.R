@@ -118,7 +118,7 @@ dataOutputServer <- function(id,
         disable("save")
       } else {
         enable("save")
-        # FORMAT
+        # FORMAT ROWNAMES - NUMERIC ROWNAMES ARE RETAINED (ROW INDICES)
         if (!nzchar(trimws(colnames(values$data)[1]))) {
           # WARNING - SETTING ROWNAMES ON TIBBLES
           rownames(values$data) <- values$data[, 1]
