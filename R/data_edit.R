@@ -236,7 +236,11 @@ data_edit <- function(x = NULL,
   # USER INTERFACE
   ui <- fluidPage(
     title,
-    theme = shinytheme(theme),
+    theme = if(is.null(theme)) {
+      NULL
+    } else {
+      shinythemes::shinytheme(theme)
+    },
     useShinyjs(),
     fluidRow(
       column(
