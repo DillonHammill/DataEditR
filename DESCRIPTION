@@ -19,7 +19,7 @@ Imports:
   shiny (>= 1.5.0),
   shinyBS,
   shinyjs,
-  shinythemes,
+  bslib,
   rhandsontable (>= 0.3.8),
   rstudioapi,
   htmltools, 

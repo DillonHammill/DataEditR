@@ -112,7 +112,7 @@
 #' @importFrom shiny runGadget dialogViewer browserViewer paneViewer splitLayout
 #'   fluidPage column stopApp reactiveValues actionButton insertUI
 #' @importFrom shinyjs useShinyjs hidden show
-#' @importFrom shinythemes shinytheme
+#' @importFrom bslib bs_theme
 #' @importFrom miniUI gadgetTitleBar
 #' @importFrom shinyBS bsButton updateButton addTooltip
 #' @importFrom rhandsontable %>%
@@ -239,7 +239,14 @@ data_edit <- function(x = NULL,
     theme = if(is.null(theme)) {
       NULL
     } else {
-      shinythemes::shinytheme(theme)
+      if("bs_theme" %in% class(theme)) {
+        theme
+      } else {
+        bs_theme(
+          version = 3, # version 4 places DONE on left
+          bootswatch = theme
+        )
+      }
     },
     useShinyjs(),
     fluidRow(
