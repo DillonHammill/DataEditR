@@ -151,7 +151,7 @@ data_bind_cols <- function(data = NULL,
       # NEW COLUMNS
       if (is.null(dim(col_bind))) {
         # COLUMNS AS LIST
-        if (class(col_bind) == "list") {
+        if (inherits(col_bind, "list")) {
           # NAMES
           if (is.null(names(col_bind))) {
             names(col_bind) <- paste0("V", length(col_bind))
@@ -167,12 +167,13 @@ data_bind_cols <- function(data = NULL,
           col_bind <- do.call("cbind", col_bind)
           # COLUMN NAMES
         } else {
-          col_bind <- matrix(rep("", nrow(data) * length(col_bind)),
-                             ncol = length(col_bind),
-                             dimnames = list(
-                               rownames(data),
-                               col_bind
-                             )
+          col_bind <- matrix(
+            rep("", nrow(data) * length(col_bind)),
+            ncol = length(col_bind),
+            dimnames = list(
+              rownames(data),
+              col_bind
+            )
           )
         }
       }
@@ -202,7 +203,7 @@ data_bind_rows <- function(data = NULL,
       # NEW ROWS
       if (is.null(dim(row_bind))) {
         # ROWS AS LIST
-        if (class(row_bind) == "list") {
+        if (inherits(row_bind, "list")) {
           # NAMES NOT NECESSARY
           # LENGTHS
           ind <- which(!unlist(lapply(row_bind, length)) == ncol(data))
@@ -215,12 +216,13 @@ data_bind_rows <- function(data = NULL,
           row_bind <- do.call("rbind", row_bind)
           # ROW NAMES
         } else {
-          row_bind <- matrix(rep("", ncol(data) * length(row_bind)),
-                             nrow = length(row_bind),
-                             dimnames = list(
-                               row_bind,
-                               colnames(data)
-                             )
+          row_bind <- matrix(
+            rep("", ncol(data) * length(row_bind)),
+            nrow = length(row_bind),
+            dimnames = list(
+              row_bind,
+              colnames(data)
+            )
           )
         }
       }
