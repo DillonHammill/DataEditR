@@ -1,0 +1,33 @@
+url: https://dillonhammill.github.io/DataEditR/
+
+template:
+  bootstrap: 5
+
+reference:
+- title: Interactive Data Editor
+  desc: >
+    DataEditR ships with a single function called `data_edit()` that provides an
+    interactive interface to view, enter, filter and edit data. DataEditR also
+    ships with an RStudio add-in that can be accessed through the `Addins` menu.
+  contents:
+  - data_edit
+
+- title: DataEditR Shiny Modules
+  desc: >
+    DataEditR is built using a series of shiny modules that work together to 
+    allow users to view, filter, edit and export their data. Using these shiny 
+    modules, users can integrate DataEditR features into their own custom Shiny 
+    applications.
+  contents:
+  - dataInput
+  - dataEdit
+  - dataFilter
+  - dataSelect
+  - dataSync
+  - dataOutput
+
+articles:
+- title : DataEditR
+  navbar: ~
+  contents:
+  - DataEditR

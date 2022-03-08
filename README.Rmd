@@ -57,7 +57,7 @@ devtools::install_github("DillonHammill/rhandsontable")
 - save edited data to file using any writing function (e.g. `write.csv()`)
 - return appropriately formatted data as an R object for downstream use
 - code required to create edited data can be optionally printed to the console or saved to a file
-- support for custom themes through `shinythemes` package
+- support for custom themes through `bslib` package
 - customisable user interface (title, logo and modules)
 - row indices are always displayed for easy navigation
 - switch between datasets or files without having to leave the application

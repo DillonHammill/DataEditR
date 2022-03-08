@@ -13,3 +13,4 @@
 vignettes/DataEditR/
 man/figures/DataEditR/
 ^\.github$
+^_pkgdown\.yml$

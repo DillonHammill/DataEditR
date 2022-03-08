@@ -386,11 +386,25 @@ knitr::include_graphics('https://raw.githubusercontent.com/DillonHammill/DataEdi
 
 ### 8.3 Custom themes
 
-`data_edit()` makes use of the `shinythemes` package to customise the appearance of the data editor. You can explore the different themes by supplying the name of a valid `shinythemes` theme to the `theme` argument.
+`data_edit()` makes use of the `bslib` package to customise the appearance of the data editor. You can explore the different themes by supplying the name of a preset [bslib](https://bootswatch.com/3/) theme to the `theme` argument. Alternatively, you can create your own custom `bs_theme` and supply that object to `theme` instead. 
 
 ```{r, eval = FALSE}
-data_edit(mtcars,
-          theme = "cosmo")
+# Preset theme
+data_edit(
+  mtcars,
+  theme = "cosmo"
+)
+
+# Custom theme
+library(bslib)
+custom_theme <- bs_theme(
+  version = 3,
+  bootswatch = "cosmo"
+)
+data_edit(
+  mtcars,
+  theme = custom_theme
+)
 ```
 
 ```{r, echo=FALSE, fig.align="center", out.width = '90%'}

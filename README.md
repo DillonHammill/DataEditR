@@ -72,7 +72,7 @@ add-in should you prefer to interact with it in this way.
     use
 -   code required to create edited data can be optionally printed to the
     console or saved to a file
--   support for custom themes through `shinythemes` package
+-   support for custom themes through `bslib` package
 -   customisable user interface (title, logo and modules)
 -   row indices are always displayed for easy navigation
 -   switch between datasets or files without having to leave the
@@ -139,8 +139,8 @@ citation("DataEditR")
 #> 
 #> To cite package 'DataEditR' in publications use:
 #> 
-#>   Dillon Hammill (2021). DataEditR: An Interactive Editor for Viewing,
-#>   Entering, Filtering & Editing Data. R package version 0.1.4.
+#>   Dillon Hammill (2022). DataEditR: An Interactive Editor for Viewing,
+#>   Entering, Filtering & Editing Data. R package version 0.1.5.
 #>   https://github.com/DillonHammill/DataEditR
 #> 
 #> A BibTeX entry for LaTeX users is
@@ -148,8 +148,8 @@ citation("DataEditR")
 #>   @Manual{,
 #>     title = {DataEditR: An Interactive Editor for Viewing, Entering, Filtering & Editing Data},
 #>     author = {Dillon Hammill},
-#>     year = {2021},
-#>     note = {R package version 0.1.4},
+#>     year = {2022},
+#>     note = {R package version 0.1.5},
 #>     url = {https://github.com/DillonHammill/DataEditR},
 #>   }
 ```
