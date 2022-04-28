@@ -90,6 +90,7 @@ function to make it easy to interactively update data saved to file.</p>
   quiet <span class="op">=</span> <span class="cn">FALSE</span>,
   hide <span class="op">=</span> <span class="cn">FALSE</span>,
   code <span class="op">=</span> <span class="cn">FALSE</span>,
+  <span class="va">cancel</span>,
   <span class="va">...</span>
 <span class="op">)</span></code></pre></div>
     </div>
@@ -189,6 +190,9 @@ edited data will be written to file after the application is closed.</p></dd>
 edited data should be printed to the console, set to <code>FALSE</code> by
 default. Alternatively, users can supply the name of an R script to create
 and store this code.</p></dd>
+<dt>cancel</dt>
+<dd><p>optional value to return when the user hits the <code>cancel</code>
+button, set to the supplied data by default.</p></dd>
 <dt>...</dt>
 <dd><p>not in use.</p></dd>
 </dl></div>
