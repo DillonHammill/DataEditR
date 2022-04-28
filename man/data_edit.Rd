@@ -31,6 +31,7 @@ data_edit(
   quiet = FALSE,
   hide = FALSE,
   code = FALSE,
+  cancel,
   ...
 )
 }
@@ -127,6 +128,9 @@ edited data will be written to file after the application is closed.}
 edited data should be printed to the console, set to \code{FALSE} by
 default. Alternatively, users can supply the name of an R script to create
 and store this code.}
+
+\item{cancel}{optional value to return when the user hits the \code{cancel}
+button, set to the supplied data by default.}
 
 \item{...}{not in use.}
 }

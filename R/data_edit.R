@@ -103,6 +103,8 @@
 #'   edited data should be printed to the console, set to \code{FALSE} by
 #'   default. Alternatively, users can supply the name of an R script to create
 #'   and store this code.
+#' @param cancel optional value to return when the user hits the \code{cancel}
+#'   button, set to the supplied data by default.
 #' @param ... not in use.
 #'
 #' @return the edited data as a matrix or data.frame.
@@ -153,6 +155,7 @@ data_edit <- function(x = NULL,
                       quiet = FALSE,
                       hide = FALSE,
                       code = FALSE,
+                      cancel,
                       ...) {
   
   # DATA ENVIRONMENT -----------------------------------------------------------
@@ -184,6 +187,11 @@ data_edit <- function(x = NULL,
     } else {
       data <- x
     }
+  }
+
+  # CANCEL
+  if(missing(cancel)) {
+    cancel <- x
   }
   
   # PREPARE SHINY COMPONENTS ---------------------------------------------------
@@ -547,7 +555,7 @@ data_edit <- function(x = NULL,
   
   # RETURN DATA
   if(is.null(x_edit)) {
-    return(x)
+    return(cancel)
   } else {
     # CODE
     if(is.character(code)) {
