@@ -1,3 +1,7 @@
+# DataEditR 0.1.6
+
+* Update FontAwesome icon names.
+
 # DataEditR 0.1.5
 
 * Add `cancel` argument to `data_edit()` to allow control over return value when the data editor is deliberately closed by the user, set to the original input dat by default.

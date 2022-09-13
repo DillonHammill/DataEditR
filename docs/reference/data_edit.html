@@ -16,7 +16,7 @@ function to make it easy to interactively update data saved to file."><meta prop
     
     <a class="navbar-brand me-2" href="../index.html">DataEditR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.5</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.6</small>
 
     
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -103,102 +103,159 @@ Tibbles are also supported but will be coerced to data.frames. An empty
 table can be created by specifying the dimensions in a vector of the form
 <code>c(nrow, ncol)</code> or the names of the columns to include in the
 template.</p></dd>
+
+
 <dt>col_bind</dt>
 <dd><p>additional columns to add to the data prior to loading into
 editor, can be either an array containing the new data, a vector containing
 the new column names for empty columns or a named list containing a vector
 for each new column.</p></dd>
+
+
 <dt>col_edit</dt>
 <dd><p>logical indicating whether columns can be added or removed,
 set to TRUE by default.</p></dd>
+
+
 <dt>col_options</dt>
 <dd><p>named list containing the options for columns that use
 dropdown menus, dates, checkboxes or passwords.</p></dd>
+
+
 <dt>col_stretch</dt>
 <dd><p>logical indicating whether columns should be stretched to
 fill the full width of the display, set to FALSE by default.</p></dd>
+
+
 <dt>col_factor</dt>
 <dd><p>logical indicating whether character columns should be
 converted to factors prior to returning the edited data, set to FALSE by
 default.</p></dd>
+
+
 <dt>col_names</dt>
 <dd><p>logical indicating whether column names can be edited or a
 vector of column names that cannot be edited, set to TRUE by default to
 allow editing of column names.</p></dd>
+
+
 <dt>col_readonly</dt>
 <dd><p>names of columns that cannot be edited. Users will be
 able to edit values but these will be reverted to the original values.
 Column names for these column cannot be edited either.</p></dd>
+
+
 <dt>row_bind</dt>
 <dd><p>additional rows to add to the data prior to loading into
 editor, can be either an array containing the new data, a vector containing
 the new row names for empty rows or a named list containing a vector for
 each new column.</p></dd>
+
+
 <dt>row_edit</dt>
 <dd><p>logical indicating whether rows can be added or removed, set
 to TRUE by default.</p></dd>
+
+
 <dt>save_as</dt>
 <dd><p>name of a csv file to which the edited data should be saved.</p></dd>
+
+
 <dt>title</dt>
 <dd><p>optional title to include above the data editor.</p></dd>
+
+
 <dt>logo</dt>
 <dd><p>optional package logo to include in title above the data editor,
 must be supplied as path to logo png.</p></dd>
+
+
 <dt>logo_size</dt>
 <dd><p>width of the logo in pixels, set to 30 pixels by default.</p></dd>
+
+
 <dt>logo_side</dt>
 <dd><p>can be either <code>"left"</code> or <code>"right"</code> to determine
 the position of the logo relative to the title, set to <code>"left"</code> by
 default.</p></dd>
+
+
 <dt>viewer</dt>
 <dd><p>can be either <code>"dialog"</code>, <code>"browser"</code> or
 <code>"pane"</code> to open the application in a dialog box, browser or RStudio
 viewer pane. First letter abbreviations are allowed, set to <code>"dialog"</code>
 by default.</p></dd>
+
+
 <dt>viewer_height</dt>
 <dd><p>numeric to control the height of the viewer in pixels
 when <code>viewer</code> is set to <code>"dialog"</code>, set 800 by default.</p></dd>
+
+
 <dt>viewer_width</dt>
 <dd><p>numeric to control the width of the viewer in pixels when
 <code>viewer</code> is set to <code>"dialog"</code>, set to 1200 by default.</p></dd>
+
+
 <dt>theme</dt>
 <dd><p>valid shinytheme name, set to "yeti" by default.</p></dd>
+
+
 <dt>read_fun</dt>
 <dd><p>name of the function to use to read in the data when <code>x</code>
 is the name of a file, set to <code>read.csv</code> by default.</p></dd>
+
+
 <dt>read_args</dt>
 <dd><p>a named list of additional arguments to pass to
 <code>read_fun</code>.</p></dd>
+
+
 <dt>write_fun</dt>
 <dd><p>name of the function to use to write the edited version of
 <code>x</code> to a file, set to <code>write.csv</code> by default. Only requirement is
 that the first argument accepts the edited data and the second argument
 accepts the file name supplied to <code>save_as</code>.</p></dd>
+
+
 <dt>write_args</dt>
 <dd><p>a named list of additional arguments to pass to
 <code>write_fun</code>.</p></dd>
+
+
 <dt>quiet</dt>
 <dd><p>logical indicating whether messages should be suppressed, set to
 FALSE by default.</p></dd>
+
+
 <dt>hide</dt>
 <dd><p>logical indicating whether the <code>dataInput</code> and
 <code>dataOutput</code> modules should be visible to the user within the
 application. If <code>hide = FALSE</code> and <code>save_as</code> is specified, the
 edited data will be written to file after the application is closed.</p></dd>
+
+
 <dt>code</dt>
 <dd><p>logical indicating whether the code required to generate the
 edited data should be printed to the console, set to <code>FALSE</code> by
 default. Alternatively, users can supply the name of an R script to create
 and store this code.</p></dd>
+
+
 <dt>cancel</dt>
 <dd><p>optional value to return when the user hits the <code>cancel</code>
 button, set to the supplied data by default.</p></dd>
+
+
 <dt>...</dt>
 <dd><p>not in use.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>the edited data as a matrix or data.frame.</p>
+    
+
+<p>the edited data as a matrix or data.frame.</p>
     </div>
     <div class="section level2">
     <h2 id="author">Author<a class="anchor" aria-label="anchor" href="#author"></a></h2>
@@ -224,7 +281,7 @@ button, set to the supplied data by default.</p></dd>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.2.</p>
+  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.5.</p>
 </div>
 
     </footer></div>
