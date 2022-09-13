@@ -76,7 +76,7 @@ dataSyncUI <- function(id) {
     actionButton(
       NS(id, "sync"), 
       label = NULL, 
-      icon = icon("sync")
+      icon = icon("rotate")
     )
   )
   
@@ -101,9 +101,11 @@ dataSyncServer <- function(id,
     if (!hide) {
       show("sync")
       if(!is.null(hover_text)) {
-        addTooltip(session = session,
-                   id = ns("sync"),
-                   title = hover_text)
+        addTooltip(
+          session = session,
+          id = ns("sync"),
+          title = hover_text
+        )
       }
     }
     

@@ -272,13 +272,15 @@ data_edit <- function(x = NULL,
         dataSyncUI("sync1"),
         dataOutputUI("output-active"),
         dataOutputUI("output-update", 
-                     icon = "file-download"),
+                     icon = "file-arrow-down"),
         hidden(
-          bsButton("cut",
-                   label = NULL,
-                   icon = icon("cut"),
-                   style = "danger",
-                   type = "action")
+          bsButton(
+            "cut",
+            label = NULL,
+            icon = icon("scissors"),
+            style = "danger",
+            type = "action"
+          )
         )
       )
     ),
@@ -299,13 +301,17 @@ data_edit <- function(x = NULL,
     # SHOW BUTTONS
     if(!hide) {
       show("sync")
-      addTooltip(session = session,
-                 id = "sync",
-                 title = "sychronise")
+      addTooltip(
+        session = session,
+        id = "sync",
+        title = "sychronise"
+      )
       show("cut")
-      addTooltip(session = session,
-                 id = "cut",
-                 title = "crop to selection")
+      addTooltip(
+        session = session,
+        id = "cut",
+        title = "crop to selection"
+      )
     }
     
     # DATA STORAGE
