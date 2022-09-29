@@ -51,6 +51,7 @@
 #'
 #' @author Dillon Hammill, \email{Dillon.Hammill@anu.edu.au}
 #'
+#' @importFrom utils type.convert
 #' @importFrom shiny reactive reactiveValues observe observeEvent moduleServer
 #' @importFrom rhandsontable rhandsontable hot_to_r hot_context_menu hot_col
 #'   renderRHandsontable rHandsontableOutput %>%
