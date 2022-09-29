@@ -68,7 +68,10 @@ dataSelectUI <- function(id) {
     actionButton(
       NS(id, "select"),
       label = NULL,
-      icon = icon("crosshairs"),
+      icon = icon(
+        "glyphicon glyphicon-screenshot",
+        lib = "glyphicon"
+      ),
       style = "margin-left: 0px;"
     )
   )

@@ -69,7 +69,10 @@ dataFilterUI <- function(id) {
     actionButton(
       NS(id, "filter"),
       label = NULL,
-      icon = icon("filter"),
+      icon = icon(
+        "glyphicon glyphicon-filter",
+        lib = "glyphicon"
+      ),
       style = "margin-left: 0px;"
     )
   )

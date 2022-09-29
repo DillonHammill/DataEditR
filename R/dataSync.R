@@ -71,12 +71,15 @@ NULL
 #' @rdname dataSync
 #' @export
 dataSyncUI <- function(id) {
-  
+
   hidden(
     actionButton(
       NS(id, "sync"), 
       label = NULL, 
-      icon = icon("rotate")
+      icon = icon(
+        "glyphicon glyphicon-refresh",
+        lib = "glyphicon"
+      )
     )
   )
   

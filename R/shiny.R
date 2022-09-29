@@ -4,7 +4,7 @@
 #' @noRd
 customDownloadButton <- function(outputId, 
                                  label = "Download",
-                                 icon = "download",
+                                 icon = "glyphicon glyphicon save",
                                  ...){
   tags$a(
     id = outputId, 
@@ -12,7 +12,10 @@ customDownloadButton <- function(outputId,
     href = "", 
     target = "_blank", 
     download = NA, 
-    icon(icon), 
+    icon(
+      icon,
+      lib = "glyphicon"
+    ), 
     label,
     ...
   )

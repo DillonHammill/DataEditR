@@ -272,12 +272,15 @@ data_edit <- function(x = NULL,
         dataSyncUI("sync1"),
         dataOutputUI("output-active"),
         dataOutputUI("output-update", 
-                     icon = "file-arrow-down"),
+                     icon = "glyphicon glyphicon-save-file"),
         hidden(
           bsButton(
             "cut",
             label = NULL,
-            icon = icon("scissors"),
+            icon = icon(
+              "glyphicon glyphicon-scissors",
+              lib = "glyphicon"
+            ),
             style = "danger",
             type = "action"
           )
