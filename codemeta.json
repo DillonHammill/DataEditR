@@ -123,6 +123,6 @@
   "releaseNotes": "https://github.com/DillonHammill/DataEditR/blob/master/NEWS.md",
   "readme": "https://github.com/DillonHammill/DataEditR/blob/master/README.md",
   "fileSize": "4293.178KB",
-  "contIntegration": ["https://travis-ci.com/DillonHammill/dataeditR", "https://ci.appveyor.com/project/DillonHammill/dataeditR"],
+  "contIntegration": "https://github.com/DillonHammill/DataEditR/actions",
   "developmentStatus": "https://www.repostatus.org/#active"
 }
