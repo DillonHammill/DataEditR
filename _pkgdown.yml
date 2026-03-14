@@ -12,6 +12,14 @@ reference:
   contents:
   - data_edit
 
+- title: Code Generation
+  desc: >
+    DataEditR can generate tidyverse-style code to reproduce data edits using
+    `dplyr` verbs. The `data_code()` function compares an original and edited
+    dataset and returns a code string that transforms one into the other.
+  contents:
+  - data_code
+
 - title: DataEditR Shiny Modules
   desc: >
     DataEditR is built using a series of shiny modules that work together to 

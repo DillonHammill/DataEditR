@@ -717,7 +717,7 @@ dataFilterServer <- function(id,
                   return(ind)
                   # NOT BETWEEN
                 } else if (logic == "not between") {
-                  return(seq_len(ncol(values$data))[-ind])
+                  return(seq_len(nrow(values$data))[-ind])
                 }
                 # CONTAINS | NOT CONTAINS
               } else if (logic %in% c("contain", "not contain")) {
@@ -733,7 +733,7 @@ dataFilterServer <- function(id,
                   return(ind)
                   # NOT CONTAIN
                 } else if (logic == "not contain") {
-                  return(seq_len(ncol(values$data))[-ind])
+                  return(seq_len(nrow(values$data))[-ind])
                 }
               }
               # REMOVE FILTERS WITHOUT LEVELS
@@ -744,7 +744,9 @@ dataFilterServer <- function(id,
           })
         )
         if(length(values$filters) > 1) {
-          values$rows <- ind[duplicated(ind)] # intersection
+          cnt_table <- table(ind)
+          intersection <- names(cnt_table)[cnt_table == length(values$filters)]
+          values$rows <- as.numeric(intersection)
         } else {
           values$rows <- ind
         }

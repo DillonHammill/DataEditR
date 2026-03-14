@@ -13,6 +13,7 @@ data_edit(
   col_factor = FALSE,
   col_names = TRUE,
   col_readonly = NULL,
+  col_hide = NULL,
   row_bind = NULL,
   row_edit = TRUE,
   save_as = NULL,
@@ -32,6 +33,7 @@ data_edit(
   hide = FALSE,
   code = FALSE,
   cancel,
+  track = NULL,
   ...
 )
 }
@@ -67,6 +69,9 @@ allow editing of column names.}
 \item{col_readonly}{names of columns that cannot be edited. Users will be
 able to edit values but these will be reverted to the original values.
 Column names for these column cannot be edited either.}
+
+\item{col_hide}{names of columns to hide from the editor. Hidden columns
+will not be visible or editable but will be retained in the returned data.}
 
 \item{row_bind}{additional rows to add to the data prior to loading into
 editor, can be either an array containing the new data, a vector containing
@@ -124,13 +129,21 @@ FALSE by default.}
 application. If \code{hide = FALSE} and \code{save_as} is specified, the
 edited data will be written to file after the application is closed.}
 
-\item{code}{logical indicating whether the code required to generate the
-edited data should be printed to the console, set to \code{FALSE} by
-default. Alternatively, users can supply the name of an R script to create
-and store this code.}
+\item{code}{logical indicating whether tidyverse code required to replicate
+the data edits should be printed to the console, set to \code{FALSE} by
+default. Alternatively, users can supply the name of an R script to write
+the code to. The generated code uses \code{dplyr} verbs such as
+\code{rename()}, \code{select()}, \code{mutate()}, \code{slice()}, and
+\code{tibble::add_row()} to replicate column renames, column
+additions/removals, cell value changes, and row additions/removals.}
 
 \item{cancel}{optional value to return when the user hits the \code{cancel}
 button, set to the supplied data by default.}
+
+\item{track}{can be set to \code{TRUE} to highlight cells that have
+been edited or added to the original data with a default blue border, or a
+valid CSS color (e.g. \code{"#FF0000"} or \code{"red"}) to use a custom
+border color. Set to \code{NULL} by default to disable highlighting.}
 
 \item{...}{not in use.}
 }

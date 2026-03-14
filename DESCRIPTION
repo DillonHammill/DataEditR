@@ -1,7 +1,7 @@
 Package: DataEditR
 Title: An Interactive Editor for Viewing, Entering, Filtering & Editing Data
-Version: 0.1.6
-Date: 2022-09-13
+Version: 1.0.0
+Date: 2026-03-13
 Authors@R: 
     person(given = "Dillon",
            family = "Hammill",
@@ -28,7 +28,7 @@ Imports:
 License: GPL-2
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.2.0
+RoxygenNote: 7.3.3
 Language: en-GB
 Suggests: 
     knitr,

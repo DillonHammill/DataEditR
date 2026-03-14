@@ -1,3 +1,60 @@
+# DataEditR 1.0.0
+
+## Major New Features
+
+* Add change tracking with the new `track` parameter in `data_edit()` and
+  `dataEditServer()`. Set `track = TRUE` to highlight edited and added cells
+  with a blue border, or pass a CSS color string (e.g. `track = "red"`) for a
+  custom highlight colour. Uses Handsontable's `afterRenderer` hook and
+  name-based cell matching so that inserted rows or columns no longer cause all
+  subsequent cells to appear changed.
+* Add tidyverse-style code generation via the new `data_code()` function and
+  updated `code` argument in `data_edit()`. Instead of `dput()` output, the
+  editor now generates human-readable `dplyr` pipe code using `rename()`,
+  `select()`, `mutate()`, `slice()`, and `tibble::add_row()` to replicate
+  column renames, additions/removals, cell value changes, and row
+  additions/removals. Row names (e.g. those in `mtcars`) are preserved via
+  `tibble::rownames_to_column()` / `tibble::column_to_rownames()`.
+
+## Automatic Data Synchronisation
+
+* Remove the sync button in favour of automatic data synchronisation. Changes
+  made to filtered or selected data subsets are now automatically merged back
+  into the master copy of the data as they are made.
+* Fix bug where column indices were not passed to the sync logic
+  (`values$cols` instead of `values$columns`).
+* Add `auto` parameter to `dataSyncServer()` to allow automatic synchronisation
+  when used as a standalone module.
+* Improve performance by preventing unnecessary table re-renders after data
+  synchronisation. Filter and select modules no longer reset on every sync.
+
+## Bug Fixes
+
+* Fix factor column crash: passing a data frame with factor columns no longer
+  causes an error in `hot_context_menu`. Factor columns are now converted to
+  character before rendering and converted back on output via `col_factor`.
+* Fix `dataFilter` "not between" and "not contain" filter logic which
+  incorrectly used `ncol()` instead of `nrow()`, causing wrong row indices to
+  be returned.
+* Fix `dataFilter` multi-filter intersection which used `duplicated()` and
+  missed rows matching all filters when no duplicates existed. Now uses
+  `table()` to correctly compute the intersection.
+* Fix stale `input$x` race condition in `dataEditServer()` when switching
+  reactive data. A `data_loading` flag now prevents the old table's
+  `input$x` from overwriting `values$x` before the new data has rendered.
+
+# DataEditR 0.1.7
+
+* Remove the sync button in favour of automatic data synchronisation. Changes 
+  made to filtered or selected data subsets are now automatically merged back 
+  into the master copy of the data as they are made.
+* Fix bug where column indices were not passed to the sync logic 
+  (`values$cols` instead of `values$columns`).
+* Add `auto` parameter to `dataSyncServer()` to allow automatic synchronisation
+  when used as a standalone module.
+* Improve performance by preventing unnecessary table re-renders after data 
+  synchronisation. Filter and select modules no longer reset on every sync.
+
 # DataEditR 0.1.6
 
 * Update FontAwesome icon names.

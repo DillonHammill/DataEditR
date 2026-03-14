@@ -50,12 +50,14 @@ devtools::install_github("DillonHammill/rhandsontable")
 ## Usage
 
 **DataEditR** ships with a series of shiny modules, namely `dataInput`,
-`dataSelect`, `dataFilter`, `dataEdit` and `dataOutput` which have been
-wrapped up into a single function called `data_edit()` to create an
-interactive data editor. You can use `data_edit()` as a standalone
+`dataSelect`, `dataFilter`, `dataEdit`, `dataSync` and `dataOutput` which
+have been wrapped up into a single function called `data_edit()` to create
+an interactive data editor. You can use `data_edit()` as a standalone
 application, or include the relevant modules within your own shiny
-applications. Alternatively, `DataEditR` also ships with an RStudio
-add-in should you prefer to interact with it in this way.
+applications. A standalone `data_code()` function is also available for
+generating tidyverse-style code from data edits. Alternatively, `DataEditR`
+also ships with an RStudio add-in should you prefer to interact with it in
+this way.
 
 #### General features:
 
@@ -70,8 +72,8 @@ add-in should you prefer to interact with it in this way.
     (e.g. `write.csv()`)
 -   return appropriately formatted data as an R object for downstream
     use
--   code required to create edited data can be optionally printed to the
-    console or saved to a file
+-   tidyverse-style code generation to reproduce edits using `dplyr`
+    verbs (via `data_code()`)
 -   support for custom themes through `bslib` package
 -   customisable user interface (title, logo and modules)
 -   row indices are always displayed for easy navigation
@@ -82,6 +84,10 @@ add-in should you prefer to interact with it in this way.
 
 -   column selection using the `dataSelect` module
 -   row selection using the `dataFilter` module
+-   automatic synchronisation of edits to filtered or selected data
+    subsets with the master dataset
+-   change tracking to visually highlight edited and added cells
+    (`track` parameter)
 -   edit row or column names
 -   addition or removal of rows or columns
 -   manual column resizing
@@ -91,6 +97,7 @@ add-in should you prefer to interact with it in this way.
     dropdown menus)
 -   support for readonly columns to prevent users from editing certain
     columns
+-   support for factor columns (automatically converted for editing)
 -   control over which column names can be edited
 -   stretch columns horizontally to fill available space
 -   programmatically add columns or rows to data prior to loading into
@@ -139,8 +146,8 @@ citation("DataEditR")
 #> 
 #> To cite package 'DataEditR' in publications use:
 #> 
-#>   Dillon Hammill (2022). DataEditR: An Interactive Editor for Viewing,
-#>   Entering, Filtering & Editing Data. R package version 0.1.5.
+#>   Dillon Hammill (2026). DataEditR: An Interactive Editor for Viewing,
+#>   Entering, Filtering & Editing Data. R package version 1.0.0.
 #>   https://github.com/DillonHammill/DataEditR
 #> 
 #> A BibTeX entry for LaTeX users is
@@ -148,8 +155,8 @@ citation("DataEditR")
 #>   @Manual{,
 #>     title = {DataEditR: An Interactive Editor for Viewing, Entering, Filtering & Editing Data},
 #>     author = {Dillon Hammill},
-#>     year = {2022},
-#>     note = {R package version 0.1.5},
+#>     year = {2026},
+#>     note = {R package version 1.0.0},
 #>     url = {https://github.com/DillonHammill/DataEditR},
 #>   }
 ```

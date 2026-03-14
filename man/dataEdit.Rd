@@ -17,6 +17,7 @@ dataEditServer(
   col_stretch = FALSE,
   col_names = TRUE,
   col_readonly = NULL,
+  col_hide = NULL,
   col_factor = FALSE,
   row_bind = NULL,
   row_edit = TRUE,
@@ -24,6 +25,7 @@ dataEditServer(
   quiet = FALSE,
   read_fun = "read.csv",
   read_args = NULL,
+  track = NULL,
   ...
 )
 }
@@ -60,6 +62,10 @@ allow editing of column names.}
 able to edit values but these will be reverted to the original values.
 Column names for these column cannot be edited either.}
 
+\item{col_hide}{names of columns to hide from the editor. Hidden columns
+will not be visible or editable but will be retained in the data returned
+by the module.}
+
 \item{col_factor}{logical indicating whether character columns should be
 converted to factors prior to returning the edited data, set to FALSE by
 default.}
@@ -84,6 +90,11 @@ is selected, set to \code{read.csv} by default.}
 
 \item{read_args}{a named list of additional arguments to pass to
 \code{read_fun} when reading in files.}
+
+\item{track}{can be set to \code{TRUE} to highlight cells that have
+been edited or added to the original data with a default blue border, or a
+valid CSS color (e.g. \code{"#FF0000"} or \code{"red"}) to use a custom
+border color. Set to \code{NULL} by default to disable highlighting.}
 
 \item{...}{additional arguments passed to
 \code{\link[rhandsontable:rhandsontable]{rhandsontable}}.}

@@ -15,11 +15,15 @@
 #'   interface should be hidden from the user, set to FALSE by default.
 #' @param hover_text text to display on download button when user hovers cursor
 #'   over button, set to NULL by default to turn off hover text.
+#' @param auto logical indicating whether data synchronisation should happen
+#'   automatically whenever \code{data_subset} changes. When \code{TRUE}, the
+#'   sync button is not required. Set to \code{FALSE} by default for backward
+#'   compatibility.
 #'
 #' @importFrom shinyjs hidden show
 #' @importFrom shinyBS addTooltip
 #' @importFrom shiny actionButton icon moduleServer eventReactive is.reactive
-#'   reactive
+#'   reactive observe
 #'
 #' @author Dillon Hammill, \email{Dillon.Hammill@anu.edu.au}
 #'
@@ -33,7 +37,6 @@
 #'    useShinyjs(),
 #'    dataInputUI("input1"),
 #'    dataFilterUI("filter1"),
-#'    dataSyncUI("sync1"),
 #'    dataEditUI("edit1")
 #'  )
 #'
@@ -58,7 +61,8 @@
 #'      data = data_input,
 #'      data_subset = data_edit,
 #'      rows = NULL,
-#'      columns = NULL
+#'      columns = NULL,
+#'      auto = TRUE
 #'    )
 #'
 #'   }
@@ -93,7 +97,8 @@ dataSyncServer <- function(id,
                            rows = reactive(NULL),
                            columns = reactive(NULL),
                            hide = FALSE,
-                           hover_text = NULL) {
+                           hover_text = NULL,
+                           auto = FALSE) {
   
   moduleServer(id, function(input, output, session){
     
@@ -101,7 +106,7 @@ dataSyncServer <- function(id,
     ns <- session$ns
     
     # HIDE USER INTERFACE
-    if (!hide) {
+    if (!hide && !auto) {
       show("sync")
       if(!is.null(hover_text)) {
         addTooltip(
@@ -112,8 +117,8 @@ dataSyncServer <- function(id,
       }
     }
     
-    # SYNCHRONISE
-    data_sync <- eventReactive(input$sync, {
+    # SYNC HELPER
+    sync_data <- function() {
       data_old <- data()
       data_new <- data_subset()
       # ROW INDICES
@@ -127,6 +132,13 @@ dataSyncServer <- function(id,
         col_ind <- columns()
       } else {
         col_ind <- columns
+      }
+      # VALIDATE INDICES
+      if(length(row_ind) != 0 && !is.null(data_old)) {
+        row_ind <- row_ind[row_ind <= nrow(data_old)]
+      }
+      if(length(col_ind) != 0 && !is.null(data_old)) {
+        col_ind <- col_ind[col_ind <= ncol(data_old)]
       }
       # ENTIRE DATA
       if(length(row_ind) == 0 & length(col_ind) == 0) {
@@ -144,17 +156,32 @@ dataSyncServer <- function(id,
         # ROW/COLUMN NAMES
         if(!is.null(data_new)) {
           # ROW NAMES
-          if(!all(rownames(data_new) == rownames(data_old)[row_ind])) {
+          if(length(row_ind) != 0 &&
+             !all(rownames(data_new) == rownames(data_old)[row_ind])) {
             rownames(data_old)[row_ind] <- rownames(data_new)
           }
           # COLUMN NAMES
-          if(!all(colnames(data_new) == colnames(data_old)[col_ind])) {
+          if(length(col_ind) != 0 &&
+             !all(colnames(data_new) == colnames(data_old)[col_ind])) {
             colnames(data_old)[col_ind] <- colnames(data_new)
           }
         }
       }
       return(data_old)
-    })
+    }
+    
+    if (auto) {
+      # AUTOMATIC SYNCHRONISATION
+      data_sync <- reactive({
+        data_subset()
+        sync_data()
+      })
+    } else {
+      # MANUAL SYNCHRONISATION (button click)
+      data_sync <- eventReactive(input$sync, {
+        sync_data()
+      })
+    }
     
     # RETURN SYNCHRONISED DATA
     return(

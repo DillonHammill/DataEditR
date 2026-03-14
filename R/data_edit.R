@@ -60,6 +60,8 @@
 #' @param col_readonly names of columns that cannot be edited. Users will be
 #'   able to edit values but these will be reverted to the original values.
 #'   Column names for these column cannot be edited either.
+#' @param col_hide names of columns to hide from the editor. Hidden columns
+#'   will not be visible or editable but will be retained in the returned data.
 #' @param row_bind additional rows to add to the data prior to loading into
 #'   editor, can be either an array containing the new data, a vector containing
 #'   the new row names for empty rows or a named list containing a vector for
@@ -99,12 +101,19 @@
 #'   \code{dataOutput} modules should be visible to the user within the
 #'   application. If \code{hide = FALSE} and \code{save_as} is specified, the
 #'   edited data will be written to file after the application is closed.
-#' @param code logical indicating whether the code required to generate the
-#'   edited data should be printed to the console, set to \code{FALSE} by
-#'   default. Alternatively, users can supply the name of an R script to create
-#'   and store this code.
+#' @param code logical indicating whether tidyverse code required to replicate
+#'   the data edits should be printed to the console, set to \code{FALSE} by
+#'   default. Alternatively, users can supply the name of an R script to write
+#'   the code to. The generated code uses \code{dplyr} verbs such as
+#'   \code{rename()}, \code{select()}, \code{mutate()}, \code{slice()}, and
+#'   \code{tibble::add_row()} to replicate column renames, column
+#'   additions/removals, cell value changes, and row additions/removals.
 #' @param cancel optional value to return when the user hits the \code{cancel}
 #'   button, set to the supplied data by default.
+#' @param track can be set to \code{TRUE} to highlight cells that have
+#'   been edited or added to the original data with a default blue border, or a
+#'   valid CSS color (e.g. \code{"#FF0000"} or \code{"red"}) to use a custom
+#'   border color. Set to \code{NULL} by default to disable highlighting.
 #' @param ... not in use.
 #'
 #' @return the edited data as a matrix or data.frame.
@@ -112,7 +121,7 @@
 #' @importFrom rstudioapi getActiveDocumentContext
 #' @importFrom htmltools img span br div HTML
 #' @importFrom shiny runGadget dialogViewer browserViewer paneViewer splitLayout
-#'   fluidPage column stopApp reactiveValues actionButton insertUI
+#'   fluidPage column stopApp reactiveValues reactiveVal actionButton insertUI
 #' @importFrom shinyjs useShinyjs hidden show
 #' @importFrom bslib bs_theme
 #' @importFrom miniUI gadgetTitleBar
@@ -137,6 +146,7 @@ data_edit <- function(x = NULL,
                       col_factor = FALSE,
                       col_names = TRUE,
                       col_readonly = NULL,
+                      col_hide = NULL,
                       row_bind = NULL,
                       row_edit = TRUE,
                       save_as = NULL,
@@ -156,12 +166,19 @@ data_edit <- function(x = NULL,
                       hide = FALSE,
                       code = FALSE,
                       cancel,
+                      track = NULL,
                       ...) {
   
   # DATA ENVIRONMENT -----------------------------------------------------------
   
   # SEARCH DATA OUTSIDE DATA_EDIT
   envir <- parent.frame()
+  
+  # CODE GENERATION - CAPTURE NAME EARLY (before x is modified)
+  x_name <- tryCatch({
+    nm <- deparse(substitute(x))
+    if (length(nm) == 1 && make.names(nm) == nm) nm else "data"
+  }, error = function(e) "data")
   
   # PREPARE DATA ---------------------------------------------------------------
   
@@ -192,6 +209,11 @@ data_edit <- function(x = NULL,
   # CANCEL
   if(missing(cancel)) {
     cancel <- x
+  }
+  
+  # CODE GENERATION - CAPTURE ORIGINAL DATA
+  if (!isFALSE(code)) {
+    x_original <- if (!is.null(x) && !is.null(dim(x))) x else NULL
   }
   
   # PREPARE SHINY COMPONENTS ---------------------------------------------------
@@ -269,7 +291,6 @@ data_edit <- function(x = NULL,
         style = "padding-left: 5px; margin-top: 35px;",
         dataSelectUI("select1"),
         dataFilterUI("filter1"),
-        dataSyncUI("sync1"),
         dataOutputUI("output-active"),
         dataOutputUI("output-update", 
                      icon = "glyphicon glyphicon-save-file"),
@@ -303,12 +324,6 @@ data_edit <- function(x = NULL,
     
     # SHOW BUTTONS
     if(!hide) {
-      show("sync")
-      addTooltip(
-        session = session,
-        id = "sync",
-        title = "sychronise"
-      )
       show("cut")
       addTooltip(
         session = session,
@@ -326,6 +341,12 @@ data_edit <- function(x = NULL,
       cut = FALSE,
       row_index = NULL
     )
+    
+    # TRIGGER FOR RE-FILTERING (only fires on data input or filter changes)
+    filter_trigger <- reactiveVal(0)
+    
+    # DATA FOR MODULES (only updates on new data input, not auto-sync)
+    data_for_modules <- reactiveVal(NULL)
     
     # DATA INPUT
     data_input <- dataInputServer(
@@ -346,14 +367,18 @@ data_edit <- function(x = NULL,
       values$data <- data_input() %>%
         data_bind_rows(row_bind = row_bind) %>%
         data_bind_cols(col_bind = col_bind)
+      # UPDATE MODULE DATA
+      data_for_modules(values$data)
+      # TRIGGER RE-FILTERING
+      filter_trigger(isolate(filter_trigger()) + 1)
     })
     
-    # FILTERS ALWAYS RESET ON DATA SYNC
+    # FILTERS ALWAYS RESET ON NEW DATA INPUT
     
     # DATA SELECT
     data_select <- dataSelectServer(
       "select1",
-      data = reactive(values$data),
+      data = data_for_modules,
       hide = hide,
       hover_text = "select columns"
     )
@@ -361,7 +386,7 @@ data_edit <- function(x = NULL,
     # DATA FILTER
     data_filter <- dataFilterServer(
       "filter1",
-      data = reactive(values$data),
+      data = data_for_modules,
       hide = hide,
       hover_text = "filter rows"
     )
@@ -370,29 +395,33 @@ data_edit <- function(x = NULL,
     observe({
       values$rows <- data_filter$rows()
       values$columns <- data_select$columns()
+      filter_trigger(isolate(filter_trigger()) + 1)
     })
     
-    # DATA FILTERING
-    observe({
+    # DATA FILTERING - only triggered by filter_trigger changes
+    observeEvent(filter_trigger(), {
+      data <- values$data
+      rows <- values$rows
+      cols <- values$columns
       # ENTIRE DATA
-      if(length(values$rows) == 0 & length(values$columns) == 0) {
-        values$data_active <- values$data
+      if(length(rows) == 0 & length(cols) == 0) {
+        values$data_active <- data
       # DATA SUBSET
       } else {
         # ROWS
-        if(length(values$rows) != 0 & length(values$columns) == 0) {
-          values$data_active <- values$data[values$rows, 
+        if(length(rows) != 0 & length(cols) == 0) {
+          values$data_active <- data[rows, 
                                              , 
                                             drop = FALSE]
         # COLUMNS
-        } else if(length(values$rows) == 0 & length(values$columns) != 0) {
-          values$data_active <- values$data[ , 
-                                            values$columns, 
+        } else if(length(rows) == 0 & length(cols) != 0) {
+          values$data_active <- data[ , 
+                                            cols, 
                                             drop = FALSE]
         # ROWS & COLUMNS
-        } else if(length(values$rows) != 0 & length(values$columns) != 0) {
-          values$data_active <- values$data[values$rows, 
-                                            values$columns, 
+        } else if(length(rows) != 0 & length(cols) != 0) {
+          values$data_active <- data[rows, 
+                                            cols, 
                                             drop = FALSE]
         }
       }
@@ -413,32 +442,60 @@ data_edit <- function(x = NULL,
       col_stretch = col_stretch,
       col_names = col_names,
       col_readonly = col_readonly,
+      col_hide = col_hide,
       col_factor = col_factor,
       row_bind = NULL, # endless loop!
       row_edit = row_edit,
       row_index = reactive({values$row_index}), # row_index + 1 for new rows
-      quiet = quiet
+      quiet = quiet,
+      track = track
     )
     
-    # UPDATE ACTIVE DATA
+    # UPDATE ACTIVE DATA & AUTO-SYNC TO MASTER
     observe({
-      values$data_active <- data_update()
-    })
-    
-    # SYNC
-    data_sync <- dataSyncServer(
-      "sync1",
-      data = reactive(values$data),
-      data_subset = reactive(values$data_active),
-      rows = reactive(values$rows),
-      columns = reactive(values$cols),
-      hide = hide,
-      hover_text = "synchronise"
-    )
-    
-    # DATASYNC - ONLY UPDATE MASTER - REMOVE FILTERS FOR DISPLAY
-    observe({
-      values$data <- data_sync()
+      data_new <- data_update()
+      values$data_active <- data_new
+      # AUTO-SYNC: merge changes back to master copy
+      data_old <- isolate(values$data)
+      row_ind <- isolate(values$rows)
+      col_ind <- isolate(values$columns)
+      if(!is.null(data_old) && !is.null(data_new)) {
+        # VALIDATE INDICES
+        if(length(row_ind) != 0) {
+          row_ind <- row_ind[row_ind <= nrow(data_old)]
+        }
+        if(length(col_ind) != 0) {
+          col_ind <- col_ind[col_ind <= ncol(data_old)]
+        }
+        # ENTIRE DATA
+        if(length(row_ind) == 0 & length(col_ind) == 0) {
+          values$data <- data_new
+        # DATA SUBSET
+        } else {
+          # VALUES
+          if(length(row_ind) != 0 & length(col_ind) == 0) {
+            data_old[row_ind, ] <- data_new
+          } else if(length(row_ind) == 0 & length(col_ind) != 0) {
+            data_old[ , col_ind] <- data_new
+          } else if(length(row_ind) != 0 & length(col_ind) != 0) {
+            data_old[row_ind, col_ind] <- data_new
+          }
+          # ROW/COLUMN NAMES
+          if(!is.null(data_new)) {
+            # ROW NAMES
+            if(length(row_ind) != 0 &&
+               !all(rownames(data_new) == rownames(data_old)[row_ind])) {
+              rownames(data_old)[row_ind] <- rownames(data_new)
+            }
+            # COLUMN NAMES
+            if(length(col_ind) != 0 &&
+               !all(colnames(data_new) == colnames(data_old)[col_ind])) {
+              colnames(data_old)[col_ind] <- colnames(data_new)
+            }
+          }
+          values$data <- data_old
+        }
+      }
     })
     
     # DATA OUTPUT - DATA ACTIVE
@@ -568,12 +625,14 @@ data_edit <- function(x = NULL,
   } else {
     # CODE
     if(is.character(code)) {
+      code_text <- data_code(x_original, x_edit, name = x_name)
       if(!file.exists(code)) {
         file.create(code)
       }
-      dput(x_edit, code)
-    } else if(code == TRUE) {
-      dput(x_edit)
+      writeLines(code_text, code)
+    } else if(isTRUE(code)) {
+      code_text <- data_code(x_original, x_edit, name = x_name)
+      cat(code_text)
     }
     return(x_edit)
   }

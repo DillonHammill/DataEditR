@@ -15,7 +15,8 @@ dataSyncServer(
   rows = reactive(NULL),
   columns = reactive(NULL),
   hide = FALSE,
-  hover_text = NULL
+  hover_text = NULL,
+  auto = FALSE
 )
 }
 \arguments{
@@ -35,6 +36,11 @@ interface should be hidden from the user, set to FALSE by default.}
 
 \item{hover_text}{text to display on download button when user hovers cursor
 over button, set to NULL by default to turn off hover text.}
+
+\item{auto}{logical indicating whether data synchronisation should happen
+automatically whenever \code{data_subset} changes. When \code{TRUE}, the
+sync button is not required. Set to \code{FALSE} by default for backward
+compatibility.}
 }
 \description{
 The purpose of this module is to merge changes made to a subset of the data
@@ -50,7 +56,6 @@ if(interactive()){
    useShinyjs(),
    dataInputUI("input1"),
    dataFilterUI("filter1"),
-   dataSyncUI("sync1"),
    dataEditUI("edit1")
  )
 
@@ -75,7 +80,8 @@ if(interactive()){
      data = data_input,
      data_subset = data_edit,
      rows = NULL,
-     columns = NULL
+     columns = NULL,
+     auto = TRUE
    )
 
   }
