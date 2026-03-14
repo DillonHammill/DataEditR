@@ -2,6 +2,7 @@
 title: "DataEditR"
 output: 
   rmarkdown::html_vignette:
+    self_contained: false
     includes:
       in_header: logo.html
 vignette: >
@@ -10,10 +11,17 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-```{r, include = FALSE}
+```{r setup, include = FALSE}
+# Standard knitr setup for reduced vignette size
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
+  # dpi = 72,
+  # fig.width = 6,
+  # fig.height = 4,
+  # out.width = "70%",
+  # dev = "jpeg",
+  # dev.args = list(quality = 50)
 )
 ```
 
