@@ -1,10 +1,9 @@
-pandoc: 2.17.1.1
-pkgdown: 2.0.5
+pandoc: 3.1.1
+pkgdown: 2.2.0
 pkgdown_sha: ~
 articles:
   DataEditR: DataEditR.html
-last_built: 2022-09-13T01:35Z
+last_built: 2026-03-14T16:56Z
 urls:
   reference: https://dillonhammill.github.io/DataEditR/reference
   article: https://dillonhammill.github.io/DataEditR/articles
-

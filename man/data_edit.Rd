@@ -70,8 +70,8 @@ allow editing of column names.}
 able to edit values but these will be reverted to the original values.
 Column names for these column cannot be edited either.}
 
-\item{col_hide}{names of columns to hide from the editor. Hidden columns
-will not be visible or editable but will be retained in the returned data.}
+\item{col_hide}{names of columns to hide from the editor. Hidden columns will
+not be visible or editable but will be retained in the returned data.}
 
 \item{row_bind}{additional rows to add to the data prior to loading into
 editor, can be either an array containing the new data, a vector containing
@@ -140,10 +140,10 @@ additions/removals, cell value changes, and row additions/removals.}
 \item{cancel}{optional value to return when the user hits the \code{cancel}
 button, set to the supplied data by default.}
 
-\item{track}{can be set to \code{TRUE} to highlight cells that have
-been edited or added to the original data with a default blue border, or a
-valid CSS color (e.g. \code{"#FF0000"} or \code{"red"}) to use a custom
-border color. Set to \code{NULL} by default to disable highlighting.}
+\item{track}{can be set to \code{TRUE} to highlight cells that have been
+edited or added to the original data with a default blue border, or a valid
+CSS color (e.g. \code{"#FF0000"} or \code{"red"}) to use a custom border
+color. Set to \code{NULL} by default to disable highlighting.}
 
 \item{...}{not in use.}
 }
@@ -151,7 +151,7 @@ border color. Set to \code{NULL} by default to disable highlighting.}
 the edited data as a matrix or data.frame.
 }
 \description{
-code{data_edit} is a shiny application built on \code{rhandsontable} that is
+\code{data_edit} is a shiny application built on \code{rhandsontable} that is
 designed to make it easy to interactively view, enter or edit data without
 any coding. \code{data_edit} is also a wrapper for any reading or writing
 function to make it easy to interactively update data saved to file.

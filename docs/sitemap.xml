@@ -1,48 +1,20 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc>https://dillonhammill.github.io/DataEditR/404.html</loc>
-  </url>
-  <url>
-    <loc>https://dillonhammill.github.io/DataEditR/articles/DataEditR.html</loc>
-  </url>
-  <url>
-    <loc>https://dillonhammill.github.io/DataEditR/articles/index.html</loc>
-  </url>
-  <url>
-    <loc>https://dillonhammill.github.io/DataEditR/authors.html</loc>
-  </url>
-  <url>
-    <loc>https://dillonhammill.github.io/DataEditR/CODE_OF_CONDUCT.html</loc>
-  </url>
-  <url>
-    <loc>https://dillonhammill.github.io/DataEditR/index.html</loc>
-  </url>
-  <url>
-    <loc>https://dillonhammill.github.io/DataEditR/news/index.html</loc>
-  </url>
-  <url>
-    <loc>https://dillonhammill.github.io/DataEditR/reference/dataEdit.html</loc>
-  </url>
-  <url>
-    <loc>https://dillonhammill.github.io/DataEditR/reference/dataFilter.html</loc>
-  </url>
-  <url>
-    <loc>https://dillonhammill.github.io/DataEditR/reference/dataInput.html</loc>
-  </url>
-  <url>
-    <loc>https://dillonhammill.github.io/DataEditR/reference/dataOutput.html</loc>
-  </url>
-  <url>
-    <loc>https://dillonhammill.github.io/DataEditR/reference/dataSelect.html</loc>
-  </url>
-  <url>
-    <loc>https://dillonhammill.github.io/DataEditR/reference/dataSync.html</loc>
-  </url>
-  <url>
-    <loc>https://dillonhammill.github.io/DataEditR/reference/data_edit.html</loc>
-  </url>
-  <url>
-    <loc>https://dillonhammill.github.io/DataEditR/reference/index.html</loc>
-  </url>
+<urlset xmlns = 'http://www.sitemaps.org/schemas/sitemap/0.9'>
+<url><loc>https://dillonhammill.github.io/DataEditR/404.html</loc></url>
+<url><loc>https://dillonhammill.github.io/DataEditR/articles/DataEditR.html</loc></url>
+<url><loc>https://dillonhammill.github.io/DataEditR/articles/index.html</loc></url>
+<url><loc>https://dillonhammill.github.io/DataEditR/authors.html</loc></url>
+<url><loc>https://dillonhammill.github.io/DataEditR/CODE_OF_CONDUCT.html</loc></url>
+<url><loc>https://dillonhammill.github.io/DataEditR/copilot-instructions.html</loc></url>
+<url><loc>https://dillonhammill.github.io/DataEditR/index.html</loc></url>
+<url><loc>https://dillonhammill.github.io/DataEditR/news/index.html</loc></url>
+<url><loc>https://dillonhammill.github.io/DataEditR/reference/dataEdit.html</loc></url>
+<url><loc>https://dillonhammill.github.io/DataEditR/reference/dataFilter.html</loc></url>
+<url><loc>https://dillonhammill.github.io/DataEditR/reference/dataInput.html</loc></url>
+<url><loc>https://dillonhammill.github.io/DataEditR/reference/dataOutput.html</loc></url>
+<url><loc>https://dillonhammill.github.io/DataEditR/reference/dataSelect.html</loc></url>
+<url><loc>https://dillonhammill.github.io/DataEditR/reference/dataSync.html</loc></url>
+<url><loc>https://dillonhammill.github.io/DataEditR/reference/data_code.html</loc></url>
+<url><loc>https://dillonhammill.github.io/DataEditR/reference/data_edit.html</loc></url>
+<url><loc>https://dillonhammill.github.io/DataEditR/reference/index.html</loc></url>
 </urlset>
+

@@ -31,7 +31,7 @@
 
 #' An interactive editor for viewing, entering and editing data
 #'
-#' code{data_edit} is a shiny application built on \code{rhandsontable} that is
+#' \code{data_edit} is a shiny application built on \code{rhandsontable} that is
 #' designed to make it easy to interactively view, enter or edit data without
 #' any coding. \code{data_edit} is also a wrapper for any reading or writing
 #' function to make it easy to interactively update data saved to file.
@@ -60,8 +60,8 @@
 #' @param col_readonly names of columns that cannot be edited. Users will be
 #'   able to edit values but these will be reverted to the original values.
 #'   Column names for these column cannot be edited either.
-#' @param col_hide names of columns to hide from the editor. Hidden columns
-#'   will not be visible or editable but will be retained in the returned data.
+#' @param col_hide names of columns to hide from the editor. Hidden columns will
+#'   not be visible or editable but will be retained in the returned data.
 #' @param row_bind additional rows to add to the data prior to loading into
 #'   editor, can be either an array containing the new data, a vector containing
 #'   the new row names for empty rows or a named list containing a vector for
@@ -110,10 +110,10 @@
 #'   additions/removals, cell value changes, and row additions/removals.
 #' @param cancel optional value to return when the user hits the \code{cancel}
 #'   button, set to the supplied data by default.
-#' @param track can be set to \code{TRUE} to highlight cells that have
-#'   been edited or added to the original data with a default blue border, or a
-#'   valid CSS color (e.g. \code{"#FF0000"} or \code{"red"}) to use a custom
-#'   border color. Set to \code{NULL} by default to disable highlighting.
+#' @param track can be set to \code{TRUE} to highlight cells that have been
+#'   edited or added to the original data with a default blue border, or a valid
+#'   CSS color (e.g. \code{"#FF0000"} or \code{"red"}) to use a custom border
+#'   color. Set to \code{NULL} by default to disable highlighting.
 #' @param ... not in use.
 #'
 #' @return the edited data as a matrix or data.frame.
@@ -122,6 +122,7 @@
 #' @importFrom htmltools img span br div HTML
 #' @importFrom shiny runGadget dialogViewer browserViewer paneViewer splitLayout
 #'   fluidPage column stopApp reactiveValues reactiveVal actionButton insertUI
+#'   isolate
 #' @importFrom shinyjs useShinyjs hidden show
 #' @importFrom bslib bs_theme
 #' @importFrom miniUI gadgetTitleBar

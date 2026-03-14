@@ -11,7 +11,7 @@ Authors@R:
 Description: An interactive editor built on 'rhandsontable' to allow the 
   interactive viewing, entering, filtering and editing of data in R 
   <https://dillonhammill.github.io/DataEditR/>.
-URL: https://github.com/DillonHammill/DataEditR
+URL: https://dillonhammill.github.io/DataEditR
 BugReports: https://github.com/DillonHammill/DataEditR/issues
 Depends:
   R(>= 3.5.0)

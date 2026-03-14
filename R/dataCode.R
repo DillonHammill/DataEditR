@@ -24,6 +24,8 @@
 #'   the console or written to an R script.
 #'
 #' @author Dillon Hammill, \email{Dillon.Hammill@anu.edu.au}
+#' 
+#' @importFrom stats setNames
 #'
 #' @examples
 #' # original data
