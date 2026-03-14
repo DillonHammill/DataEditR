@@ -4,7 +4,7 @@
 ^CODE_OF_CONDUCT\.md$
 ^\.travis\.yml$
 ^codemeta\.json$
-^appveyor\.yml$
+
 ^_pkgdown\.yml$
 ^docs$
 ^pkgdown$
