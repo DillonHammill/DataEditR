@@ -70,5 +70,5 @@ if (interactive()) {
 }
 }
 \author{
-Dillon Hammill, \email{Dillon.Hammill@anu.edu.au}
+Dillon Hammill, \email{dillon.hammill21@gmail.com}
 }

@@ -6,7 +6,7 @@ Authors@R:
     person(given = "Dillon",
            family = "Hammill",
            role = c("aut", "cre"),
-           email = "Dillon.Hammill@anu.edu.au",
+           email = "dillon.hammill21@gmail.com",
            comment = c(ORCID = "0000-0002-1407-7223"))
 Description: An interactive editor built on 'rhandsontable' to allow the 
   interactive viewing, entering, filtering and editing of data in R 

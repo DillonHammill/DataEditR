@@ -21,7 +21,7 @@
 #' @importFrom htmltools tagList
 #' @importFrom shinyBS addTooltip
 #'
-#' @author Dillon Hammill, \email{Dillon.Hammill@anu.edu.au}
+#' @author Dillon Hammill, \email{dillon.hammill21@gmail.com}
 #'
 #' @examples
 #' if (interactive()) {

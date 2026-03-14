@@ -40,7 +40,7 @@ for selected `columns`.
 
 ## Author
 
-Dillon Hammill, <Dillon.Hammill@anu.edu.au>
+Dillon Hammill, <dillon.hammill21@gmail.com>
 
 ## Examples
 

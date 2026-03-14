@@ -23,7 +23,7 @@
 #' @return a character string containing tidyverse code that can be printed to
 #'   the console or written to an R script.
 #'
-#' @author Dillon Hammill, \email{Dillon.Hammill@anu.edu.au}
+#' @author Dillon Hammill, \email{dillon.hammill21@gmail.com}
 #' 
 #' @importFrom stats setNames
 #'

@@ -56,7 +56,7 @@
 #'
 #' @return reactive expression containing the edited data.
 #'
-#' @author Dillon Hammill, \email{Dillon.Hammill@anu.edu.au}
+#' @author Dillon Hammill, \email{dillon.hammill21@gmail.com}
 #'
 #' @importFrom utils type.convert
 #' @importFrom shiny reactive reactiveValues observe observeEvent moduleServer

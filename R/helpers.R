@@ -12,7 +12,7 @@
 #' 
 #' @return data.frame as is or template
 #' 
-#' @author Dillon Hammill, \email{Dillon.Hammill@anu.edu.au}
+#' @author Dillon Hammill, \email{dillon.hammill21@gmail.com}
 #' 
 #' @noRd
 data_template <- function(x = NULL,
@@ -84,7 +84,7 @@ data_template <- function(x = NULL,
 #' @param col_factor indicates whether character columns be converted to
 #'   factors.
 #'
-#' @author Dillon Hammill, \email{Dillon.Hammill@anu.edu.au}
+#' @author Dillon Hammill, \email{dillon.hammill21@gmail.com}
 #'
 #' @importFrom utils type.convert
 #'
