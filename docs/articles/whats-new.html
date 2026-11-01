@@ -114,8 +114,15 @@ milliseconds.</li>
 rows and columns and renamed columns.</li>
 <li>
 <strong>Spreadsheet-style editing</strong>: range selection, copy
-and paste to and from other software, <code>Delete</code> to clear a
-range and <code>Ctrl+D</code> to fill down.</li>
+and paste to and from Excel, Google Sheets and other software (rows are
+added when a pasted block is longer than the table, and formatted
+numbers and dates are converted), <code>Delete</code> to clear a range
+and <code>Ctrl+D</code> to fill down.</li>
+<li>
+<strong>More column types</strong> in <code>col_options</code>:
+date-times, times, text over several lines, web addresses, colours,
+numbers within limits, sliders and star ratings, as well as checkboxes,
+dropdown menus, dates and passwords.</li>
 <li>
 <strong>Review changes</strong>: a panel listing every edited,
 added, removed or renamed cell, row and column with a button to revert
@@ -130,9 +137,11 @@ toolbar.</li>
 bar</strong> with the sum, mean and count of the selected cells, and a
 sheet of <strong>keyboard shortcuts</strong> (<code>?</code>).</li>
 <li>
-<strong>Safer typing</strong>: typing text into a number or date
-column asks whether to store <code>NA</code>, convert the column to text
-or cancel, instead of silently converting the column.</li>
+<strong>Safer typing and pasting</strong>: text in a number, date or
+<code>TRUE</code>/<code>FALSE</code> column, or a value outside a
+column’s options or limits, makes the editor ask whether to store
+<code>NA</code>, convert the column to text or cancel, instead of
+silently converting the column.</li>
 <li>
 <strong>Types are preserved</strong>: numbers, dates, logicals and
 text that looks like a number keep their type, and matrices, tibbles and
@@ -243,6 +252,10 @@ than <code>NULL</code>.</li>
 no longer required either. <code>DBI</code>, <code>dbplyr</code> and a
 database backend (e.g. <code>RSQLite</code>) are only needed to edit
 database tables.</p>
+<p><strong>DataEditR</strong> remains licensed under GPL-2. It bundles
+Tabulator 6.7.1 (MIT licence) and icons based on Lucide (ISC licence),
+both compatible with GPL-2; the <code>COPYRIGHTS</code> file installed
+with the package lists their copyright notices.</p>
 </div>
 <div class="section level2">
 <h2 id="shiny-modules">Shiny modules<a class="anchor" aria-label="anchor" href="#shiny-modules"></a>

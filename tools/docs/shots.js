@@ -404,6 +404,10 @@ const scenarios = {
     await shot(page, "template-size");
     await done(page);
   },
+  async types(page) {
+    await shot(page, "col-types");
+    await done(page);
+  },
   async template(page) {
     await shot(page, "template");
     await done(page);

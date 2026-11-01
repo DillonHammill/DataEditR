@@ -132,8 +132,9 @@ changes, see the code that reproduces your edits, export the data and
 see the keyboard shortcuts;</li>
 <li>the <strong>grid</strong>, which shows the row indices on the left,
 a type badge (<code>abc</code> for text, <code>123</code> for numbers,
-<code>date</code>, <code>T/F</code> for logicals) next to each column
-name, and a filter box under each column name;</li>
+<code>date</code> for dates, <code>dttm</code> for date-times,
+<code>time</code> for times, <code>T/F</code> for logicals) next to each
+column name, and a filter box under each column name;</li>
 <li>the <strong>status bar</strong> showing how many rows and columns
 are on screen, a summary of the selected cells and a summary of your
 changes.</li>
@@ -217,10 +218,17 @@ the new value or <code>Esc</code> to cancel. Values are checked against
 the type of the column: numbers are stored as numbers, dates as dates
 and <code>TRUE</code>/<code>FALSE</code> as logicals. Typing
 <code>NA</code> or clearing a cell stores a missing value.</p>
-<p>If you type something that does not fit a number or date column,
-<code><a href="../reference/data_edit.html">data_edit()</a></code> asks what you would like to do instead of
-silently converting the whole column to text. You can store a missing
-value, convert the column to text or cancel the edit.</p>
+<p>Values typed in other common formats are converted for you:
+<code>1,234.5</code> or <code>45%</code> in a number column,
+<code>15/03/2024</code> in a date column (see <a href="#copy-and-paste-with-spreadsheets">Copy and paste with
+spreadsheets</a> for how the order of day and month is decided) and
+<code>yes</code> or <code>no</code> in a
+<code>TRUE</code>/<code>FALSE</code> column.</p>
+<p>If you type something that does not fit a number, date or
+<code>TRUE</code>/<code>FALSE</code> column, <code><a href="../reference/data_edit.html">data_edit()</a></code>
+asks what you would like to do instead of silently converting the whole
+column to text. You can store a missing value, convert the column to
+text or cancel the edit.</p>
 <p><img src="images/edit-cells.gif" width="100%" style="display: block; margin: auto;"></p>
 </div>
 <div class="section level3">
@@ -242,7 +250,51 @@ with the cells below it and press <code>Ctrl+D</code> (or choose
 <code>Fill down</code> from the right-click menu).</p>
 </div>
 <div class="section level3">
-<h3 id="undo-and-redo">3.3 Undo and redo<a class="anchor" aria-label="anchor" href="#undo-and-redo"></a>
+<h3 id="copy-and-paste-with-spreadsheets">3.3 Copy and paste with spreadsheets<a class="anchor" aria-label="anchor" href="#copy-and-paste-with-spreadsheets"></a>
+</h3>
+<p>Copy cells in Excel, Google Sheets, LibreOffice or any other software
+that copies tables as text, click a cell in the data editor and press
+<code>Ctrl+V</code>:</p>
+<ul>
+<li>The block is pasted from the selected cell. Selecting a larger range
+that is a multiple of the block (e.g. ten cells for a single value)
+fills the range by repeating the block.</li>
+<li>If the block has more rows than there are below the selected cell,
+rows are added at the end of the data (unless
+<code>row_edit = FALSE</code>). Values beyond the last column are
+ignored.</li>
+<li>Line endings from Windows, Mac or Linux, the line break that
+spreadsheets add after the last row, and cells containing line breaks,
+tabs or quotes are all handled.</li>
+<li>Values are converted to the type of their column. Formatted numbers
+such as <code>1,234.5</code>, <code>$12.50</code> or <code>45%</code>
+become <code>1234.5</code>, <code>12.5</code> and <code>0.45</code>.
+Dates such as <code>15/03/2024</code>, <code>15.03.2024</code> or
+<code>2024/3/15</code> become <code>2024-03-15</code>: whether the day
+or the month comes first is worked out from values such as
+<code>15/03</code> that can only be read one way, and otherwise follows
+the language of your browser (month first for US English).
+<code>yes</code>/<code>no</code>, <code>TRUE</code>/<code>FALSE</code>
+and <code>1</code>/<code>0</code> become logicals.</li>
+<li>If some values still do not fit their column (for example
+<code>n/a</code> in a numeric column, or a value that is not one of the
+options of a dropdown menu), the data editor asks once for the whole
+paste whether to store them as missing values, convert the column to
+text or cancel the paste.</li>
+<li>Read-only columns are skipped. When rows are filtered or columns are
+hidden, the block is pasted into the rows and columns on screen.</li>
+<li>A paste is a single step that can be undone, and the pasted cells
+are selected afterwards.</li>
+</ul>
+<p><img src="images/paste.gif" width="100%" style="display: block; margin: auto;"></p>
+<p><code>Ctrl+C</code> copies the selected cells both as text and as a
+table, so they can be pasted into spreadsheets, documents or back into
+the data editor. Missing values are copied as empty cells, logicals as
+<code>TRUE</code> and <code>FALSE</code>, and cells containing line
+breaks or tabs are quoted, as spreadsheets expect.</p>
+</div>
+<div class="section level3">
+<h3 id="undo-and-redo">3.4 Undo and redo<a class="anchor" aria-label="anchor" href="#undo-and-redo"></a>
 </h3>
 <p>Every change can be undone with <code>Ctrl+Z</code> (or the undo
 button in the toolbar) and redone with <code>Ctrl+Y</code> (or the redo
@@ -253,7 +305,7 @@ a single step, as shown at the end of the animation above. Undo and redo
 are also available from the right-click menus.</p>
 </div>
 <div class="section level3">
-<h3 id="addition-or-removal-of-rows-or-columns">3.4 Addition or removal of rows or columns<a class="anchor" aria-label="anchor" href="#addition-or-removal-of-rows-or-columns"></a>
+<h3 id="addition-or-removal-of-rows-or-columns">3.5 Addition or removal of rows or columns<a class="anchor" aria-label="anchor" href="#addition-or-removal-of-rows-or-columns"></a>
 </h3>
 <p>Rows or columns can be added to the data from within the data editor
 by right clicking on a cell or a column header. This will display a
@@ -275,7 +327,7 @@ respectively.</p>
 <span>          col_edit <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
-<h3 id="rename-rows-or-columns">3.5 Rename rows or columns<a class="anchor" aria-label="anchor" href="#rename-rows-or-columns"></a>
+<h3 id="rename-rows-or-columns">3.6 Rename rows or columns<a class="anchor" aria-label="anchor" href="#rename-rows-or-columns"></a>
 </h3>
 <p><code><a href="../reference/data_edit.html">data_edit()</a></code> has full support for editing row and column
 names. Double-click a column header (or choose
@@ -293,7 +345,7 @@ renaming the <code>mpg</code> column:</p>
 <span>          col_names <span class="op">=</span> <span class="st">"mpg"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
-<h3 id="resize-columns">3.6 Resize columns<a class="anchor" aria-label="anchor" href="#resize-columns"></a>
+<h3 id="resize-columns">3.7 Resize columns<a class="anchor" aria-label="anchor" href="#resize-columns"></a>
 </h3>
 <p>To resize columns, go to the right-hand border of the header of that
 column and drag the cursor to the desired width (shown at the end of the
@@ -303,7 +355,7 @@ the editor instead, see <a href="#stretch-columns-to-fill-page">Stretch
 columns to fill page</a>.</p>
 </div>
 <div class="section level3">
-<h3 id="find-values">3.7 Find values<a class="anchor" aria-label="anchor" href="#find-values"></a>
+<h3 id="find-values">3.8 Find values<a class="anchor" aria-label="anchor" href="#find-values"></a>
 </h3>
 <p>Press <code>Ctrl+F</code> or click <code>Find in data</code> to
 search the rows and columns on screen. The first matching cell is
@@ -314,7 +366,7 @@ search.</p>
 <p><img src="images/find.gif" width="100%" style="display: block; margin: auto;"></p>
 </div>
 <div class="section level3">
-<h3 id="append-columns-or-rows">3.8 Append columns or rows<a class="anchor" aria-label="anchor" href="#append-columns-or-rows"></a>
+<h3 id="append-columns-or-rows">3.9 Append columns or rows<a class="anchor" aria-label="anchor" href="#append-columns-or-rows"></a>
 </h3>
 <p><code><a href="../reference/data_edit.html">data_edit()</a></code> can perform <code>rbind</code> and
 <code>cbind</code> operations internally to append new rows or columns
@@ -339,7 +391,7 @@ that rows are bound before columns.</p>
 <span>          col_bind <span class="op">=</span> <span class="st">"notes"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
-<h3 id="read-only-and-hidden-columns">3.9 Read-only and hidden columns<a class="anchor" aria-label="anchor" href="#read-only-and-hidden-columns"></a>
+<h3 id="read-only-and-hidden-columns">3.10 Read-only and hidden columns<a class="anchor" aria-label="anchor" href="#read-only-and-hidden-columns"></a>
 </h3>
 <p>If you would like to prevent values from being edited in certain
 columns, you can supply the names of the columns that cannot be edited
@@ -358,7 +410,7 @@ they are kept in place in the returned data.</p>
 <span>          col_hide <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"vs"</span>, <span class="st">"am"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
-<h3 id="factor-columns">3.10 Factor columns<a class="anchor" aria-label="anchor" href="#factor-columns"></a>
+<h3 id="factor-columns">3.11 Factor columns<a class="anchor" aria-label="anchor" href="#factor-columns"></a>
 </h3>
 <p><code><a href="../reference/data_edit.html">data_edit()</a></code> fully supports data frames with factor
 columns. Factor columns are converted to character for editing so that
@@ -548,11 +600,94 @@ on screen. Files are named after <code>save_as</code> (with
 <h2 id="complex-user-inputs">7. Complex user inputs<a class="anchor" aria-label="anchor" href="#complex-user-inputs"></a>
 </h2>
 <p><code><a href="../reference/data_edit.html">data_edit()</a></code> can also be used to accept complex inputs
-from users and these inputs can be restricted by adding columns with
-checkboxes, dropdown menus, date pickers or password fields. To use this
-feature, the options for the columns must be supplied in a named list
-through the <code>col_options</code> argument. Columns with options can
-still be renamed, and users can still add or remove other columns.</p>
+from users, and these inputs can be restricted, by giving columns a
+specific input such as checkboxes, dropdown menus, date pickers, numbers
+within limits or ratings. To use this feature, the inputs for the
+columns must be supplied in a named list through the
+<code>col_options</code> argument. Columns with options can still be
+renamed, and users can still add or remove other columns.</p>
+<table class="table">
+<colgroup>
+<col width="51%">
+<col width="17%">
+<col width="31%">
+</colgroup>
+<thead><tr class="header">
+<th>
+<code>col_options</code> entry</th>
+<th>Input</th>
+<th>Returned as</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td><code>c(TRUE, FALSE)</code></td>
+<td>checkbox</td>
+<td>logical</td>
+</tr>
+<tr class="even">
+<td><code>c("A", "B", "C")</code></td>
+<td>dropdown menu of the values</td>
+<td>character</td>
+</tr>
+<tr class="odd">
+<td><code>"date"</code></td>
+<td>date picker</td>
+<td><code>Date</code></td>
+</tr>
+<tr class="even">
+<td><code>"datetime"</code></td>
+<td>date and time picker</td>
+<td><code>POSIXct</code></td>
+</tr>
+<tr class="odd">
+<td><code>"time"</code></td>
+<td>time picker</td>
+<td>character (<code>"HH:MM"</code>)</td>
+</tr>
+<tr class="even">
+<td><code>"textarea"</code></td>
+<td>text over several lines</td>
+<td>character</td>
+</tr>
+<tr class="odd">
+<td><code>"password"</code></td>
+<td>hidden text</td>
+<td>character</td>
+</tr>
+<tr class="even">
+<td><code>"url"</code></td>
+<td>web address with a button to open it</td>
+<td>character</td>
+</tr>
+<tr class="odd">
+<td>
+<code>"colour"</code> (or <code>"color"</code>)</td>
+<td>colour with a swatch</td>
+<td>character</td>
+</tr>
+<tr class="even">
+<td><code>c(min = 0, max = 10, step = 0.5)</code></td>
+<td>number within limits (any of the three)</td>
+<td>numeric</td>
+</tr>
+<tr class="odd">
+<td><code>"slider"</code></td>
+<td>slider and bar for numbers from 0 to 100</td>
+<td>numeric</td>
+</tr>
+<tr class="even">
+<td><code>"rating"</code></td>
+<td>rating from 0 to 5 stars</td>
+<td>numeric</td>
+</tr>
+</tbody>
+</table>
+<p>The defaults of sliders and ratings can be changed with a list,
+e.g. <code>list(type = "slider", min = 0, max = 1, step = 0.05)</code>
+or <code>list(type = "rating", stars = 10)</code>. Columns are converted
+to the type their input needs when the data editor opens, and values
+that do not fit a column’s input, whether typed or pasted, are caught
+before they are stored.</p>
 <p>The animations in this section use the following data, with all four
 kinds of input and a read-only <code>mpg</code> column:</p>
 <div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
@@ -619,7 +754,7 @@ option to <code>col_options</code>. The column is returned as a
 <code>Date</code> column.</p>
 <div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"date"</span>, <span class="st">"time"</span>, <span class="st">"region"</span>, <span class="st">"temperature"</span><span class="op">)</span>,</span>
-<span>          col_options <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>date <span class="op">=</span> <span class="st">"date"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<span>          col_options <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>date <span class="op">=</span> <span class="st">"date"</span>, time <span class="op">=</span> <span class="st">"time"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p><img src="images/col-date.gif" width="100%" style="display: block; margin: auto;"></p>
 </div>
 <div class="section level3">
@@ -638,6 +773,75 @@ the name of the column and <code>"password"</code> as the option to
 <p>The values are only hidden on screen: they are returned (and saved
 with <code>save_as</code>) as plain text.</p>
 </div>
+<div class="section level3">
+<h3 id="more-column-types">7.5 More column types<a class="anchor" aria-label="anchor" href="#more-column-types"></a>
+</h3>
+<p>The animation below uses sample records with the other column
+types:</p>
+<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">samples</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  sample <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"S-01"</span>, <span class="st">"S-02"</span>, <span class="st">"S-03"</span>, <span class="st">"S-04"</span>, <span class="st">"S-05"</span><span class="op">)</span>,</span>
+<span>  notes <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Clear.\nStored at 4\u00b0C"</span>, <span class="st">"Slightly cloudy"</span>, <span class="cn">NA</span>,</span>
+<span>            <span class="st">"Re-run\nfollowing QC"</span>, <span class="st">"Clear"</span><span class="op">)</span>,</span>
+<span>  received <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"2024-03-15 09:30:00"</span>, <span class="st">"2024-03-15 11:05:00"</span>,</span>
+<span>               <span class="st">"2024-03-16 08:45:00"</span>, <span class="cn">NA</span>, <span class="st">"2024-03-18 14:20:00"</span><span class="op">)</span>,</span>
+<span>  start <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"09:30"</span>, <span class="st">"10:15"</span>, <span class="cn">NA</span>, <span class="st">"13:00"</span>, <span class="st">"15:45"</span><span class="op">)</span>,</span>
+<span>  ph <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">7.1</span>, <span class="fl">6.8</span>, <span class="fl">7.4</span>, <span class="cn">NA</span>, <span class="fl">7.0</span><span class="op">)</span>,</span>
+<span>  done <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">100</span>, <span class="fl">60</span>, <span class="fl">25</span>, <span class="fl">0</span>, <span class="fl">80</span><span class="op">)</span>,</span>
+<span>  quality <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">5</span>, <span class="fl">3</span>, <span class="fl">4</span>, <span class="cn">NA</span>, <span class="fl">2</span><span class="op">)</span>,</span>
+<span>  protocol <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"https://www.protocols.io"</span>, <span class="cn">NA</span>, <span class="st">"https://www.r-project.org"</span>,</span>
+<span>               <span class="cn">NA</span>, <span class="cn">NA</span><span class="op">)</span>,</span>
+<span>  label <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"#1D4ED8"</span>, <span class="st">"orange"</span>, <span class="st">"seagreen"</span>, <span class="st">"#E11D48"</span>, <span class="st">"purple"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="va">samples</span>,</span>
+<span>          col_options <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>notes <span class="op">=</span> <span class="st">"textarea"</span>,</span>
+<span>                             received <span class="op">=</span> <span class="st">"datetime"</span>,</span>
+<span>                             start <span class="op">=</span> <span class="st">"time"</span>,</span>
+<span>                             ph <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>min <span class="op">=</span> <span class="fl">0</span>, max <span class="op">=</span> <span class="fl">14</span>, step <span class="op">=</span> <span class="fl">0.1</span><span class="op">)</span>,</span>
+<span>                             done <span class="op">=</span> <span class="st">"slider"</span>,</span>
+<span>                             quality <span class="op">=</span> <span class="st">"rating"</span>,</span>
+<span>                             protocol <span class="op">=</span> <span class="st">"url"</span>,</span>
+<span>                             label <span class="op">=</span> <span class="st">"colour"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p><img src="images/col-types.png" width="100%" style="display: block; margin: auto;"></p>
+<p><img src="images/col-types.gif" width="100%" style="display: block; margin: auto;"></p>
+<ul>
+<li>
+<strong>Text over several lines</strong> (<code>"textarea"</code>):
+the cell grows to show every line. <code>Enter</code> saves the text
+like in any other cell, while <code>Shift+Enter</code> or
+<code>Alt+Enter</code> starts a new line.</li>
+<li>
+<strong>Date-times and times</strong> (<code>"datetime"</code>,
+<code>"time"</code>): pickers for both. Date-time columns are returned
+as <code>POSIXct</code>; times are returned as text such as
+<code>"14:30"</code>, which <code><a href="https://rdrr.io/r/base/difftime.html" class="external-link">as.difftime()</a></code> or the
+<code>hms</code> package can convert. Columns that are already
+<code>POSIXct</code> can be typed into without an option
+(e.g. <code>2024-03-15 14:30</code>).</li>
+<li>
+<strong>Numbers within limits</strong>
+(<code>c(min = , max = , step = )</code>): values outside the limits are
+flagged, and the <code>step</code> sets how much the arrows of the
+number box change the value.</li>
+<li>
+<strong>Sliders and ratings</strong> (<code>"slider"</code>,
+<code>"rating"</code>): a bar shows each value; double-click to drag the
+slider (or use the arrow keys) or to click a star. Clear a cell with
+<code>Delete</code> to store a missing value.</li>
+<li>
+<strong>Web addresses</strong> (<code>"url"</code>): addresses
+starting with <code>http://</code>, <code>https://</code> or
+<code>mailto:</code> get a button that opens them in a new tab;
+double-click the cell to edit the address.</li>
+<li>
+<strong>Colours</strong> (<code>"colour"</code>): a swatch is shown
+for colours the browser understands, i.e. hex codes such as
+<code>"#1D4ED8"</code> and CSS colour names such as
+<code>"orange"</code> (some R colour names, such as
+<code>"grey50"</code>, are shown without a swatch).</li>
+</ul>
+</div>
 </div>
 <div class="section level2">
 <h2 id="customisation">8. Customisation<a class="anchor" aria-label="anchor" href="#customisation"></a>
@@ -652,7 +856,7 @@ the menus.</p>
 <p>If you would like to make full use of the space available to you, you
 can set <code>col_stretch = TRUE</code> to stretch the columns to fill
 the full width of the display.</p>
-<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="va">iris</span>,</span>
 <span>          col_stretch <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
 <p><img src="images/stretch.png" width="100%" style="display: block; margin: auto;"></p>
@@ -668,7 +872,7 @@ instructions to the user through <code>title</code>. Use
 <code>logo_size</code> to set the width of the logo in pixels and
 <code>logo_side</code> to place it on the <code>"left"</code> or
 <code>"right"</code> of the title.</p>
-<div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb29"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">logo</span> <span class="op">&lt;-</span> <span class="st">"https://raw.githubusercontent.com/DillonHammill/DataEditR/master/man/figures/logo.png"</span></span>
 <span><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="va">mtcars</span>,</span>
 <span>          logo <span class="op">=</span> <span class="va">logo</span>,</span>
@@ -684,7 +888,7 @@ supplying the name of a <a href="https://bootswatch.com/" class="external-link">
 theme to the <code>theme</code> argument. Alternatively, you can create
 your own custom <code>bs_theme</code> and supply that object to
 <code>theme</code> instead.</p>
-<div class="sourceCode" id="cb29"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb30"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Preset theme</span></span>
 <span><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span></span>
 <span>  <span class="va">mtcars</span>,</span>
@@ -712,7 +916,7 @@ your own custom <code>bs_theme</code> and supply that object to
 button, for example when <code><a href="../reference/data_edit.html">data_edit()</a></code> is used to collect
 data from users. When <code>save_as</code> is supplied the data is still
 written to file when <code>Done</code> is pressed.</p>
-<div class="sourceCode" id="cb30"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb31"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Name"</span>, <span class="st">"Email"</span>, <span class="st">"Attending"</span><span class="op">)</span>,</span>
 <span>          col_options <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>Attending <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="cn">TRUE</span>, <span class="cn">FALSE</span><span class="op">)</span><span class="op">)</span>,</span>
 <span>          save_as <span class="op">=</span> <span class="st">"rsvp.csv"</span>,</span>
@@ -748,13 +952,13 @@ whose value differs from the original, as well as all cells in newly
 added rows or columns, will be highlighted. Highlights follow undo, redo
 and reverts, and inserting rows or columns does not cause other cells to
 appear changed.</p>
-<div class="sourceCode" id="cb31"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb32"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="va">mtcars</span>,</span>
 <span>          track <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
 <p><img src="images/track.png" width="100%" style="display: block; margin: auto;"></p>
 <p>You can pass any valid CSS color to <code>track</code> to customise
 the highlight colour. For example, to use red:</p>
-<div class="sourceCode" id="cb32"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb33"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="va">mtcars</span>,</span>
 <span>          track <span class="op">=</span> <span class="st">"red"</span><span class="op">)</span></span></code></pre></div>
 </div>
@@ -766,7 +970,7 @@ your own shiny applications through <code><a href="../reference/dataEdit.html">d
 <code><a href="../reference/dataEditCommit.html">dataEditChanges()</a></code> returns a summary of the changes that
 have not been saved yet, and <code><a href="../reference/dataEditCommit.html">dataEditCommit()</a></code> saves them,
 after which the highlights are cleared:</p>
-<div class="sourceCode" id="cb33"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb34"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://shiny.posit.co/" class="external-link">shiny</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dillonhammill.github.io/DataEditR/">DataEditR</a></span><span class="op">)</span></span>
 <span></span>
@@ -795,6 +999,10 @@ after which the highlights are cleared:</p>
 <h2 id="keyboard-shortcuts">10. Keyboard shortcuts<a class="anchor" aria-label="anchor" href="#keyboard-shortcuts"></a>
 </h2>
 <table class="table">
+<colgroup>
+<col width="44%">
+<col width="55%">
+</colgroup>
 <thead><tr class="header">
 <th>Action</th>
 <th>Shortcut</th>
@@ -811,45 +1019,51 @@ after which the highlights are cleared:</p>
 </td>
 </tr>
 <tr class="odd">
+<td>New line in a text area</td>
+<td>
+<code>Shift+Enter</code> or <code>Alt+Enter</code>
+</td>
+</tr>
+<tr class="even">
 <td>Undo / redo</td>
 <td>
 <code>Ctrl+Z</code> / <code>Ctrl+Y</code>
 </td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>Select a range</td>
 <td>Click and drag, <code>Shift</code>+click</td>
 </tr>
-<tr class="odd">
-<td>Copy / paste range</td>
+<tr class="even">
+<td>Copy / paste range (also to and from spreadsheets)</td>
 <td>
 <code>Ctrl+C</code> / <code>Ctrl+V</code>
 </td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>Clear selected cells</td>
 <td><code>Delete</code></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>Fill down</td>
 <td><code>Ctrl+D</code></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>Find in data</td>
 <td>
 <code>Ctrl+F</code>, then <code>Enter</code> /
 <code>Shift+Enter</code>
 </td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>Rename column</td>
 <td>Double-click header</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>Row and column menus</td>
 <td>Right-click</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>Show the shortcuts</td>
 <td><code>?</code></td>
 </tr>
@@ -879,7 +1093,7 @@ Connect with <code>DBI</code>, pass a <code>dbplyr</code> lazy table
 loaded into the editor. Changes are staged while you edit and written to
 the database in a single transaction when you press <code>Done</code>
 and confirm the summary of changes.</p>
-<div class="sourceCode" id="cb34"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb35"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dplyr.tidyverse.org" class="external-link">dplyr</a></span><span class="op">)</span></span>
 <span><span class="va">con</span> <span class="op">&lt;-</span> <span class="fu">DBI</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/DBI/man/dbConnect.html" class="external-link">dbConnect</a></span><span class="op">(</span><span class="fu">RSQLite</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/RSQLite/man/SQLite.html" class="external-link">SQLite</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"cars.sqlite"</span><span class="op">)</span></span>
 <span></span>
@@ -902,7 +1116,7 @@ googlesheets using <code>googlesheets4</code>. Simply authorise
 <code>googlesheets4</code>, create a new sheet, edit the data using
 <code><a href="../reference/data_edit.html">data_edit()</a></code> and write the edited data to the created
 sheet.</p>
-<div class="sourceCode" id="cb35"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb36"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://googlesheets4.tidyverse.org" class="external-link">googlesheets4</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Authorise</span></span>
@@ -948,12 +1162,12 @@ code uses <code>dplyr</code> verbs such as <code><a href="https://rdrr.io/pkg/dp
 <code><a href="https://rdrr.io/pkg/tibble/man/add_row.html" class="external-link">tibble::add_row()</a></code> to replicate your edits. Copying and
 pasting this code into the console will recreate the edited version of
 your data.</p>
-<div class="sourceCode" id="cb36"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb37"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="va">mtcars</span>,</span>
 <span>          code <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
 <p>For example, renaming a column, modifying a cell value, removing a
 row and adding a new row might produce code like:</p>
-<div class="sourceCode" id="cb37"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb38"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dplyr.tidyverse.org" class="external-link">dplyr</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">mtcars</span> <span class="op">&lt;-</span> <span class="va">mtcars</span> <span class="op"><a href="https://rdrr.io/pkg/magrittr/man/pipe.html" class="external-link">%&gt;%</a></span></span>
@@ -980,7 +1194,7 @@ create a new R script to store this code by providing a name for the R
 script to <code>code</code>. For example, the below code creates a new R
 script called <code>mtcars_edit.R</code> and inserts the code required
 to programmatically generate the final edited version of your data.</p>
-<div class="sourceCode" id="cb38"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb39"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="va">mtcars</span>,</span>
 <span>          code <span class="op">=</span> <span class="st">"mtcars_edit.R"</span><span class="op">)</span></span></code></pre></div>
 </div>
@@ -990,7 +1204,7 @@ to programmatically generate the final edited version of your data.</p>
 <p>The <code><a href="../reference/data_code.html">data_code()</a></code> function can also be used outside of
 <code><a href="../reference/data_edit.html">data_edit()</a></code> to generate code from any pair of original and
 edited data frames:</p>
-<div class="sourceCode" id="cb39"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb40"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dillonhammill.github.io/DataEditR/">DataEditR</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Original data</span></span>
@@ -1022,7 +1236,7 @@ edited data frames:</p>
 <p>The data editor is also available as a shiny module, so you can add
 an editable table to your own shiny applications with
 <code><a href="../reference/dataEdit.html">dataEditUI()</a></code> and <code><a href="../reference/dataEdit.html">dataEditServer()</a></code>:</p>
-<div class="sourceCode" id="cb40"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb41"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://shiny.posit.co/" class="external-link">shiny</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dillonhammill.github.io/DataEditR/">DataEditR</a></span><span class="op">)</span></span>
 <span></span>

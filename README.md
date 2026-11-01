@@ -102,8 +102,10 @@ reproduces your edits.
 - undo and redo (`Ctrl+Z` / `Ctrl+Y`)
 - edit cells, row names and column names
 - add or remove rows and columns from the context menus
-- range selection, copy and paste to and from other software
-  (e.g. Excel), fill down (`Ctrl+D`) and clearing of selected cells
+- range selection, copy and paste to and from spreadsheets (Excel,
+  Google Sheets, LibreOffice), with rows added as needed and formatted
+  numbers and dates converted, fill down (`Ctrl+D`) and clearing of
+  selected cells
 - filter rows by typing under the column headers (ranges, value lists,
   text)
 - show or hide columns from the `Columns` menu
@@ -113,8 +115,9 @@ reproduces your edits.
 - asks before a typed value would turn a number or date column into text
 - edits to filtered data are applied directly to the complete dataset
 - change tracking to visually highlight edited and added cells (`track`)
-- custom column types to simplify user input (checkboxes, dropdown
-  menus, dates and passwords)
+- column types to simplify user input: checkboxes, dropdown menus,
+  dates, date-times, times, text over several lines, passwords, web
+  addresses, colours, numbers within limits, sliders and star ratings
 - read-only and hidden columns
 - support for factor columns (automatically converted for editing)
 - control over which rows, columns and column names can be edited
@@ -136,6 +139,14 @@ applications.
 user interface of **DataEditR** has been inspired by the
 [editData](https://github.com/cardiomoon/editData) package which is a
 great alternative to **DataEditR**.
+
+## Licence
+
+**DataEditR** is released under the GPL-2 licence. It bundles the
+[Tabulator](https://tabulator.info) JavaScript library (MIT licence) and
+icons based on [Lucide](https://lucide.dev) (ISC licence); see the
+[COPYRIGHTS](https://github.com/DillonHammill/DataEditR/blob/master/inst/COPYRIGHTS)
+file for their copyright notices.
 
 ## Code of Conduct
 

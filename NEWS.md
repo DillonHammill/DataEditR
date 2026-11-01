@@ -18,6 +18,20 @@
 * Spreadsheet-style range selection, copy/paste, Delete to clear a range and
   Ctrl+D to fill down. Double-click a header to rename a column; right-click
   rows or headers to insert/delete rows and columns.
+* Pasting from Excel, Google Sheets and LibreOffice handles Windows line
+  endings, the trailing line break and quoted cells with line breaks, adds
+  rows when the block is longer than the table, converts formatted numbers
+  (`1,234.5`, `$12`, `45%`), `d/m/y` and `m/d/y` dates and yes/no, and asks
+  once about values that do not fit their columns. Copying quotes cells with
+  line breaks and copies an HTML table for spreadsheets.
+* New column types in `col_options`: `"datetime"`, `"time"`, `"textarea"`,
+  `"url"`, `"colour"`, `"slider"`, `"rating"` and numbers within limits
+  (`c(min = 0, max = 10, step = 0.5)`), alongside checkboxes, dropdowns,
+  `"date"` and `"password"`. Values that do not fit a column's input are
+  caught whether they are typed or pasted.
+* Dates are only read from complete `YYYY-MM-DD` values (`as.Date()` read
+  `15/03/2024` as the year 15); other formats are converted in the browser
+  before they reach R.
 * `col_options` no longer disables adding or removing columns, and
   `col_readonly` columns are locked in the grid rather than reverted after
   editing.

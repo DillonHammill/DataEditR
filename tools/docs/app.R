@@ -44,6 +44,33 @@ res <- switch(
                      title = "Car data", logo = logo, logo_size = 26),
   track = data_edit(mtcars, viewer = noview, quiet = TRUE, track = TRUE),
   gif = data_edit(mtcars, viewer = noview, quiet = TRUE, track = TRUE),
+  paste = data_edit(c("Sample", "Collected", "Weight", "Passed"),
+                    viewer = noview, quiet = TRUE,
+                    col_options = list(Collected = "date",
+                                       Weight = c(min = 0, max = 100),
+                                       Passed = c(TRUE, FALSE))),
+  types = {
+    samples <- data.frame(
+      sample = c("S-01", "S-02", "S-03", "S-04", "S-05"),
+      notes = c("Clear.\nStored at 4\u00b0C", "Slightly cloudy", NA,
+                "Re-run\nfollowing QC", "Clear"),
+      received = c("2024-03-15 09:30:00", "2024-03-15 11:05:00",
+                   "2024-03-16 08:45:00", NA, "2024-03-18 14:20:00"),
+      start = c("09:30", "10:15", NA, "13:00", "15:45"),
+      ph = c(7.1, 6.8, 7.4, NA, 7.0),
+      done = c(100, 60, 25, 0, 80),
+      quality = c(5, 3, 4, NA, 2),
+      protocol = c("https://www.protocols.io", NA, "https://www.r-project.org",
+                   NA, NA),
+      label = c("#1D4ED8", "orange", "seagreen", "#E11D48", "purple"),
+      stringsAsFactors = FALSE
+    )
+    data_edit(samples, viewer = noview, quiet = TRUE,
+              col_options = list(notes = "textarea", received = "datetime",
+                                 start = "time", ph = c(min = 0, max = 14, step = 0.1),
+                                 done = "slider", quality = "rating",
+                                 protocol = "url", label = "colour"))
+  },
   readme = data_edit(mtcars, viewer = noview, quiet = TRUE, track = TRUE,
                      save_as = file.path(out, "mtcars_edited.csv")),
   stretch = data_edit(iris[1:20, ], viewer = noview, quiet = TRUE,

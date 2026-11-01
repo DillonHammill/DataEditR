@@ -535,6 +535,112 @@ const scenarios = {
     await sleep(1500);
   },
 
+  // paste a block copied from a spreadsheet into a labelled template
+  async paste(page) {
+    const block = [
+      ["S-01", "15/03/2024", "45.2", "yes"],
+      ["S-02", "16/03/2024", "51.8", "no"],
+      ["S-03", "18/03/2024", "47.0", "yes"],
+      ["S-04", "19/03/2024", "n/a", "yes"],
+      ["S-05", "20/03/2024", "49.3", "no"],
+      ["S-06", "21/03/2024", "52.6", "yes"],
+    ];
+    const text = block.map((r) => r.join("\t")).join("\r\n") + "\r\n";
+    await record(page, "paste", async () => {
+      await caption(page, "Copy cells in Excel, Google Sheets or LibreOffice…");
+      await page.evaluate((rows) => {
+        const box = document.createElement("div");
+        box.id = "demo-sheet";
+        box.style.cssText = "position:fixed;right:24px;top:150px;z-index:2147483645;background:#fff;" +
+          "border:1px solid #CBD5E1;border-radius:8px;box-shadow:0 8px 24px rgba(15,23,42,.18);" +
+          "font:12px Inter,system-ui,sans-serif;color:#0F172A;padding:10px 12px;";
+        box.innerHTML = '<div style="font-weight:600;margin-bottom:6px;color:#166534">Copied from a spreadsheet</div>' +
+          '<table style="border-collapse:collapse">' + rows.map((r) => "<tr>" + r.map((v) =>
+            '<td style="border:1px dashed #16A34A;padding:3px 8px">' + v + "</td>").join("") + "</tr>").join("") +
+          "</table>";
+        document.body.appendChild(box);
+      }, block);
+      await sleep(2200);
+      await caption(page, "…click a cell and press Ctrl+V");
+      await clickAt(page, await cell(page, 1, "c1"));
+      await sleep(700);
+      await page.evaluate((t) => {
+        document.getElementById("demo-sheet").remove();
+        const table = document.getElementById("edit1-grid").__editr.table;
+        const dt = new DataTransfer();
+        dt.setData("text/plain", t);
+        table.element.dispatchEvent(new ClipboardEvent("paste", { clipboardData: dt, bubbles: true, cancelable: true }));
+      }, text);
+      await page.waitForSelector(".editr-guard");
+      await sleep(600);
+      await caption(page, "Values that do not fit their column are flagged once");
+      await sleep(2600);
+      await clickAt(page, await el(page, '.editr-guard [data-act="na"]'));
+      await settle(page, 900);
+      await caption(page, "Rows are added, dates and yes/no are converted");
+      await sleep(2600);
+      await caption(page, "");
+    });
+  },
+
+  // the column types from col_options
+  async types(page) {
+    await record(page, "col-types", async () => {
+      await caption(page, "textarea: Shift+Enter starts a new line");
+      let p = await cell(page, 3, "c2");
+      await clickAt(page, p, { clickCount: 2 });
+      await page.waitForSelector(".tabulator-cell.tabulator-editing textarea");
+      await type(page, "Haemolysed", 70);
+      await page.keyboard.down("Shift");
+      await page.keyboard.press("Enter");
+      await page.keyboard.up("Shift");
+      await type(page, "Discard", 70);
+      await page.keyboard.press("Enter");
+      await settle(page, 900);
+      await caption(page, "c(min = 0, max = 14): values outside the limits are flagged");
+      p = await cell(page, 4, "c5");
+      await clickAt(page, p, { clickCount: 2 });
+      await page.waitForSelector(".tabulator-cell.tabulator-editing input");
+      await type(page, "17", 120);
+      await page.keyboard.press("Enter");
+      await page.waitForSelector(".editr-guard");
+      await sleep(1800);
+      await clickAt(page, await el(page, '.editr-guard [data-act="cancel"]'));
+      await settle(page, 500);
+      await editCell(page, 4, "c5", "7.2");
+      await caption(page, "\"rating\": click a star");
+      p = await cell(page, 4, "c7");
+      await clickAt(page, p, { clickCount: 2 });
+      await page.waitForSelector(".tabulator-cell.tabulator-editing svg");
+      await sleep(500);
+      const star = await page.evaluate(() => {
+        const s = document.querySelectorAll(".tabulator-cell.tabulator-editing svg")[3].getBoundingClientRect();
+        return { x: s.x + s.width / 2, y: s.y + s.height / 2 };
+      });
+      await clickAt(page, star);
+      await settle(page, 900);
+      await caption(page, "\"slider\": drag to set a value from 0 to 100");
+      p = await cell(page, 4, "c6");
+      await clickAt(page, p, { clickCount: 2 });
+      await page.waitForSelector(".tabulator-cell.tabulator-editing input[type=range]");
+      const r = await page.evaluate(() => {
+        const b = document.querySelector(".tabulator-cell.tabulator-editing input[type=range]").getBoundingClientRect();
+        return { x: b.x, y: b.y + b.height / 2, w: b.width };
+      });
+      await moveTo(page, { x: r.x + 4, y: r.y });
+      await page.mouse.down();
+      await page.mouse.move(r.x + r.w * 0.45, r.y, { steps: 16 });
+      await page.mouse.up();
+      await sleep(300);
+      await page.keyboard.press("Enter");
+      await settle(page, 900);
+      await caption(page, "\"url\": open the address in a new tab");
+      await moveTo(page, await el(page, ".editr-url-open"));
+      await sleep(1600);
+      await caption(page, "");
+    });
+  },
+
   // README: a tour of the main features
   async readme(page) {
     await record(page, "readme", async () => {

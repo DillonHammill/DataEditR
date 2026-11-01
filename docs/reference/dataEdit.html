@@ -151,9 +151,22 @@ set to TRUE by default.</p></dd>
 
 
 <dt>col_options</dt>
-<dd><p>a list named with valid columns names and either
-<code>c(TRUE, FALSE)</code> for checkboxes, a vector of options for dropdowns,
-<code>"date"</code> for date input or <code>"password"</code> for password input.
+<dd><p>a list named with valid column names and the input to
+use for each column:</p><ul><li><p><code>c(TRUE, FALSE)</code>: checkboxes;</p></li>
+<li><p>a vector of values, e.g. <code>c("A", "B", "C")</code>: a dropdown menu;</p></li>
+<li><p><code>"date"</code> or <code>"datetime"</code>: a date or date-time picker
+(the column is returned as <code>Date</code> or <code>POSIXct</code>);</p></li>
+<li><p><code>"time"</code>: a time picker (<code>"HH:MM"</code> text);</p></li>
+<li><p><code>"textarea"</code>: text over several lines;</p></li>
+<li><p><code>"password"</code>: hidden text;</p></li>
+<li><p><code>"url"</code>: web addresses with a button to open them;</p></li>
+<li><p><code>"colour"</code> (or <code>"color"</code>): colours shown with a swatch;</p></li>
+<li><p><code>c(min = 0, max = 10, step = 1)</code> (any of the three): numbers
+within limits;</p></li>
+<li><p><code>"slider"</code>: a slider and bar for numbers from 0 to 100;</p></li>
+<li><p><code>"rating"</code>: a rating from 0 to 5 stars.</p></li>
+</ul><p>Use <code>list(type = "slider", min = 0, max = 1, step = 0.1)</code> or
+<code>list(type = "rating", stars = 10)</code> to change the defaults.
 Unlike earlier versions, using <code>col_options</code> no longer disables
 adding or removing columns.</p></dd>
 

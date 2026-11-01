@@ -64,7 +64,7 @@ The data editor has four parts:
 
 * the **header** with the *Cancel* button, the name and size of the data, and the *Done* button;
 * the **toolbar** to open other data, undo and redo changes, show or hide columns, see active filters, find values, review changes, see the code that reproduces your edits, export the data and see the keyboard shortcuts;
-* the **grid**, which shows the row indices on the left, a type badge (`abc` for text, `123` for numbers, `date`, `T/F` for logicals) next to each column name, and a filter box under each column name;
+* the **grid**, which shows the row indices on the left, a type badge (`abc` for text, `123` for numbers, `date` for dates, `dttm` for date-times, `time` for times, `T/F` for logicals) next to each column name, and a filter box under each column name;
 * the **status bar** showing how many rows and columns are on screen, a summary of the selected cells and a summary of your changes.
 
 The data editor will open in an RStudio `"dialog"` box by default, but can be optionally displayed in the RStudio viewer pane or a web browser by setting `viewer` to `"pane"` or `"browser"` respectively. The size of the dialog box is controlled by `viewer_width` and `viewer_height`.
@@ -118,7 +118,9 @@ Many of the tools can also be reached through the keyboard; press `?` inside the
 
 Double-click a cell to edit it, then press `Enter` to save the new value or `Esc` to cancel. Values are checked against the type of the column: numbers are stored as numbers, dates as dates and `TRUE`/`FALSE` as logicals. Typing `NA` or clearing a cell stores a missing value.
 
-If you type something that does not fit a number or date column, `data_edit()` asks what you would like to do instead of silently converting the whole column to text. You can store a missing value, convert the column to text or cancel the edit.
+Values typed in other common formats are converted for you: `1,234.5` or `45%` in a number column, `15/03/2024` in a date column (see [Copy and paste with spreadsheets](#copy-and-paste-with-spreadsheets) for how the order of day and month is decided) and `yes` or `no` in a `TRUE`/`FALSE` column.
+
+If you type something that does not fit a number, date or `TRUE`/`FALSE` column, `data_edit()` asks what you would like to do instead of silently converting the whole column to text. You can store a missing value, convert the column to text or cancel the edit.
 
 ```{r, echo = FALSE, fig.align = "center", out.width = "100%"}
 screenshot("edit-cells.gif")
@@ -134,11 +136,29 @@ screenshot("ranges.gif")
 
 `Ctrl+D` replaces the "drag to fill" handle of earlier versions of **DataEditR**: select the cell to copy together with the cells below it and press `Ctrl+D` (or choose `Fill down` from the right-click menu).
 
-### 3.3 Undo and redo
+### 3.3 Copy and paste with spreadsheets
+
+Copy cells in Excel, Google Sheets, LibreOffice or any other software that copies tables as text, click a cell in the data editor and press `Ctrl+V`:
+
+* The block is pasted from the selected cell. Selecting a larger range that is a multiple of the block (e.g. ten cells for a single value) fills the range by repeating the block.
+* If the block has more rows than there are below the selected cell, rows are added at the end of the data (unless `row_edit = FALSE`). Values beyond the last column are ignored.
+* Line endings from Windows, Mac or Linux, the line break that spreadsheets add after the last row, and cells containing line breaks, tabs or quotes are all handled.
+* Values are converted to the type of their column. Formatted numbers such as `1,234.5`, `$12.50` or `45%` become `1234.5`, `12.5` and `0.45`. Dates such as `15/03/2024`, `15.03.2024` or `2024/3/15` become `2024-03-15`: whether the day or the month comes first is worked out from values such as `15/03` that can only be read one way, and otherwise follows the language of your browser (month first for US English). `yes`/`no`, `TRUE`/`FALSE` and `1`/`0` become logicals.
+* If some values still do not fit their column (for example `n/a` in a numeric column, or a value that is not one of the options of a dropdown menu), the data editor asks once for the whole paste whether to store them as missing values, convert the column to text or cancel the paste.
+* Read-only columns are skipped. When rows are filtered or columns are hidden, the block is pasted into the rows and columns on screen.
+* A paste is a single step that can be undone, and the pasted cells are selected afterwards.
+
+```{r, echo = FALSE, fig.align = "center", out.width = "100%"}
+screenshot("paste.gif")
+```
+
+`Ctrl+C` copies the selected cells both as text and as a table, so they can be pasted into spreadsheets, documents or back into the data editor. Missing values are copied as empty cells, logicals as `TRUE` and `FALSE`, and cells containing line breaks or tabs are quoted, as spreadsheets expect.
+
+### 3.4 Undo and redo
 
 Every change can be undone with `Ctrl+Z` (or the undo button in the toolbar) and redone with `Ctrl+Y` (or the redo button). This includes edits, pasted ranges, cleared or filled cells, added or removed rows and columns, renamed columns and changes reverted from the review panel. A paste, fill or clear of many cells is undone in a single step, as shown at the end of the animation above. Undo and redo are also available from the right-click menus.
 
-### 3.4 Addition or removal of rows or columns
+### 3.5 Addition or removal of rows or columns
 
 Rows or columns can be added to the data from within the data editor by right clicking on a cell or a column header. This will display a context menu with the options to insert rows above or below, delete the selected rows, fill down, or rename, insert, hide or delete columns.
 
@@ -160,7 +180,7 @@ data_edit(mtcars,
           col_edit = FALSE)
 ```
 
-### 3.5 Rename rows or columns
+### 3.6 Rename rows or columns
 
 `data_edit()` has full support for editing row and column names. Double-click a column header (or choose `Rename column` from its menu) to rename it; the new name must be unique and cannot be empty. Row names are edited like any other cell in the `row names` column. The row indices cannot be edited.
 
@@ -175,11 +195,11 @@ data_edit(mtcars,
           col_names = "mpg")
 ```
 
-### 3.6 Resize columns
+### 3.7 Resize columns
 
 To resize columns, go to the right-hand border of the header of that column and drag the cursor to the desired width (shown at the end of the animation above). Columns keep their width while you edit, including when changes are undone or redone. To make the columns fill the width of the editor instead, see [Stretch columns to fill page](#stretch-columns-to-fill-page).
 
-### 3.7 Find values
+### 3.8 Find values
 
 Press `Ctrl+F` or click `Find in data` to search the rows and columns on screen. The first matching cell is selected and the number of matches is shown (e.g. `1 of 7`); press `Enter` to jump to the next match, `Shift+Enter` to go back and `Esc` to clear the search.
 
@@ -187,7 +207,7 @@ Press `Ctrl+F` or click `Find in data` to search the rows and columns on screen.
 screenshot("find.gif")
 ```
 
-### 3.8 Append columns or rows
+### 3.9 Append columns or rows
 
 `data_edit()` can perform `rbind` and `cbind` operations internally to append new rows or columns to the data prior to editing. The new rows or columns can be supplied as a matrix or data.frame, a named list or, for empty rows or columns, a vector of names to the `row_bind` or `col_bind` arguments. If binding both rows and columns, it is important to note that rows are bound before columns.
 
@@ -207,7 +227,7 @@ data_edit(mtcars,
           col_bind = "notes")
 ```
 
-### 3.9 Read-only and hidden columns
+### 3.10 Read-only and hidden columns
 
 If you would like to prevent values from being edited in certain columns, you can supply the names of the columns that cannot be edited to the `col_readonly` argument. Read-only columns show a lock next to their name, and their values and names cannot be changed. For example, if we wanted to prevent the `mpg` column from being edited:
 
@@ -223,7 +243,7 @@ data_edit(mtcars,
           col_hide = c("vs", "am"))
 ```
 
-### 3.10 Factor columns
+### 3.11 Factor columns
 
 `data_edit()` fully supports data frames with factor columns. Factor columns are converted to character for editing so that you can freely enter new values without encountering errors. When the editor is closed, character columns are converted to factors if `col_factor = TRUE` is set.
 
@@ -369,7 +389,24 @@ screenshot("export-menu.png")
 
 ## 7. Complex user inputs
 
-`data_edit()` can also be used to accept complex inputs from users and these inputs can be restricted by adding columns with checkboxes, dropdown menus, date pickers or password fields. To use this feature, the options for the columns must be supplied in a named list through the `col_options` argument. Columns with options can still be renamed, and users can still add or remove other columns.
+`data_edit()` can also be used to accept complex inputs from users, and these inputs can be restricted, by giving columns a specific input such as checkboxes, dropdown menus, date pickers, numbers within limits or ratings. To use this feature, the inputs for the columns must be supplied in a named list through the `col_options` argument. Columns with options can still be renamed, and users can still add or remove other columns.
+
+| `col_options` entry | Input | Returned as |
+|---------------------|-------|-------------|
+| `c(TRUE, FALSE)` | checkbox | logical |
+| `c("A", "B", "C")` | dropdown menu of the values | character |
+| `"date"` | date picker | `Date` |
+| `"datetime"` | date and time picker | `POSIXct` |
+| `"time"` | time picker | character (`"HH:MM"`) |
+| `"textarea"` | text over several lines | character |
+| `"password"` | hidden text | character |
+| `"url"` | web address with a button to open it | character |
+| `"colour"` (or `"color"`) | colour with a swatch | character |
+| `c(min = 0, max = 10, step = 0.5)` | number within limits (any of the three) | numeric |
+| `"slider"` | slider and bar for numbers from 0 to 100 | numeric |
+| `"rating"` | rating from 0 to 5 stars | numeric |
+
+The defaults of sliders and ratings can be changed with a list, e.g. `list(type = "slider", min = 0, max = 1, step = 0.05)` or `list(type = "rating", stars = 10)`. Columns are converted to the type their input needs when the data editor opens, and values that do not fit a column's input, whether typed or pasted, are caught before they are stored.
 
 The animations in this section use the following data, with all four kinds of input and a read-only `mpg` column:
 
@@ -434,7 +471,7 @@ Dates can be entered interactively by selecting the relevant day from a calendar
 
 ```{r, eval = FALSE}
 data_edit(c("date", "time", "region", "temperature"),
-          col_options = list(date = "date"))
+          col_options = list(date = "date", time = "time"))
 ```
 
 ```{r, echo = FALSE, fig.align = "center", out.width = "100%"}
@@ -455,6 +492,52 @@ screenshot("col-password.gif")
 ```
 
 The values are only hidden on screen: they are returned (and saved with `save_as`) as plain text.
+
+### 7.5 More column types
+
+The animation below uses sample records with the other column types:
+
+```{r, eval = FALSE}
+samples <- data.frame(
+  sample = c("S-01", "S-02", "S-03", "S-04", "S-05"),
+  notes = c("Clear.\nStored at 4\u00b0C", "Slightly cloudy", NA,
+            "Re-run\nfollowing QC", "Clear"),
+  received = c("2024-03-15 09:30:00", "2024-03-15 11:05:00",
+               "2024-03-16 08:45:00", NA, "2024-03-18 14:20:00"),
+  start = c("09:30", "10:15", NA, "13:00", "15:45"),
+  ph = c(7.1, 6.8, 7.4, NA, 7.0),
+  done = c(100, 60, 25, 0, 80),
+  quality = c(5, 3, 4, NA, 2),
+  protocol = c("https://www.protocols.io", NA, "https://www.r-project.org",
+               NA, NA),
+  label = c("#1D4ED8", "orange", "seagreen", "#E11D48", "purple")
+)
+
+data_edit(samples,
+          col_options = list(notes = "textarea",
+                             received = "datetime",
+                             start = "time",
+                             ph = c(min = 0, max = 14, step = 0.1),
+                             done = "slider",
+                             quality = "rating",
+                             protocol = "url",
+                             label = "colour"))
+```
+
+```{r, echo = FALSE, fig.align = "center", out.width = "100%"}
+screenshot("col-types.png")
+```
+
+```{r, echo = FALSE, fig.align = "center", out.width = "100%"}
+screenshot("col-types.gif")
+```
+
+* **Text over several lines** (`"textarea"`): the cell grows to show every line. `Enter` saves the text like in any other cell, while `Shift+Enter` or `Alt+Enter` starts a new line.
+* **Date-times and times** (`"datetime"`, `"time"`): pickers for both. Date-time columns are returned as `POSIXct`; times are returned as text such as `"14:30"`, which `as.difftime()` or the `hms` package can convert. Columns that are already `POSIXct` can be typed into without an option (e.g. `2024-03-15 14:30`).
+* **Numbers within limits** (`c(min = , max = , step = )`): values outside the limits are flagged, and the `step` sets how much the arrows of the number box change the value.
+* **Sliders and ratings** (`"slider"`, `"rating"`): a bar shows each value; double-click to drag the slider (or use the arrow keys) or to click a star. Clear a cell with `Delete` to store a missing value.
+* **Web addresses** (`"url"`): addresses starting with `http://`, `https://` or `mailto:` get a button that opens them in a new tab; double-click the cell to edit the address.
+* **Colours** (`"colour"`): a swatch is shown for colours the browser understands, i.e. hex codes such as `"#1D4ED8"` and CSS colour names such as `"orange"` (some R colour names, such as `"grey50"`, are shown without a swatch).
 
 ## 8. Customisation
 
@@ -591,9 +674,10 @@ shinyApp(ui, server)
 |-------------------------|-------------------------------|
 | Edit cell               | Double-click                  |
 | Save / cancel edit      | `Enter` / `Esc`               |
+| New line in a text area | `Shift+Enter` or `Alt+Enter`  |
 | Undo / redo             | `Ctrl+Z` / `Ctrl+Y`           |
 | Select a range          | Click and drag, `Shift`+click |
-| Copy / paste range      | `Ctrl+C` / `Ctrl+V`           |
+| Copy / paste range (also to and from spreadsheets) | `Ctrl+C` / `Ctrl+V` |
 | Clear selected cells    | `Delete`                      |
 | Fill down               | `Ctrl+D`                      |
 | Find in data            | `Ctrl+F`, then `Enter` / `Shift+Enter` |
