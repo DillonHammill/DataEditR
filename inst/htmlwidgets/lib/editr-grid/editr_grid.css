@@ -610,3 +610,36 @@ input.editr-rename {
   padding: 1px 0;
   text-align: right;
 }
+
+/* labelled data: the value with its label; SPSS user-defined missing values */
+.editr_grid .editr-lbl {
+  display: inline-flex;
+  align-items: baseline;
+  /* (the space between the value and its label is for copying and screen
+     readers; flex items do not show it) */
+  gap: 5px;
+  max-width: 100%;
+}
+
+.editr_grid .editr-lbl-code {
+  flex: none;
+  color: #7B8794;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.editr_grid .editr-lbl-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.editr_grid .tabulator-cell.editr-user-na {
+  color: #7B8794;
+  font-style: italic;
+}
+
+.editr-sum-details .editr-sum-label {
+  margin: -4px 0 6px;
+  color: #52606D;
+  font-size: 12px;
+}

@@ -545,6 +545,34 @@ const scenarios = {
     await page.click("#done");
     await sleep(1000);
   },
+  async labelled(page) {
+    await sleep(1000);
+    // the cell editor offers the labels
+    const p = await cell(page, 2, "c3");
+    await page.mouse.click(p.x, p.y, { clickCount: 2 });
+    await sleep(700);
+    await shot(page, "labelled");
+    await page.keyboard.press("Escape");
+    await sleep(300);
+    // the Labels dialog
+    await page.evaluate((g) => document.getElementById(g).__editr.table.getColumn("c2").getElement()
+      .querySelector(".tabulator-header-popup-button").click(), G);
+    await page.waitForSelector(".tabulator-menu");
+    await sleep(300);
+    await page.evaluate(() => [...document.querySelectorAll(".tabulator-menu .tabulator-menu-item")]
+      .find((x) => x.textContent.trim().startsWith("Labels")).click());
+    await page.waitForSelector("#edit1-lb_values");
+    await sleep(900);
+    await page.click("#edit1-lb_values");
+    await page.keyboard.down("Control"); await page.keyboard.press("End"); await page.keyboard.up("Control");
+    await page.keyboard.type("\n3 = Other");
+    await sleep(1500);
+    await shot(page, "labels-dialog");
+    await page.click("#edit1-action_apply");
+    await settle(page, 1200);
+    await page.click("#done");
+    await sleep(1000);
+  },
   async restore(page) {
     await page.waitForSelector("#shiny-modal .modal-dialog");
     await sleep(900);

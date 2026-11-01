@@ -131,6 +131,23 @@ if (scenario == "df") {
                   rules = list("pH is between 0 and 14" = ~ ph >= 0 & ph <= 14),
                   code = code_file))
 
+} else if (scenario == "labelled") {
+  x <- tibble::tibble(
+    id = sprintf("R%02d", 1:8),
+    sex = haven::labelled(c(1, 2, 1, 2, 2, 9, 1, 2),
+                          c(Male = 1, Female = 2, Refused = 9),
+                          label = "Sex of respondent"),
+    q1 = haven::labelled_spss(c(5, 2, -99, 4, 1, 3, 5, 2),
+                              c(`Very low` = 1, Low = 2, Neutral = 3, High = 4,
+                                `Very high` = 5, `No answer` = -99),
+                              na_values = -99, label = "Satisfaction"),
+    country = haven::labelled(c("AU", "NZ", "AU", "US", "AU", "NZ", "AU", "US"),
+                              c(Australia = "AU", `New Zealand` = "NZ"),
+                              label = "Country of residence"),
+    age = structure(c(34, 51, 28, 45, 62, 19, 40, 33), label = "Age in years")
+  )
+  keep(x, quietly(x, code = code_file, save_as = file.path(out, "survey.sav")))
+
 } else if (scenario == "cancel") {
   x <- mtcars[1:3, 1:3]
   keep(x, quietly(x))

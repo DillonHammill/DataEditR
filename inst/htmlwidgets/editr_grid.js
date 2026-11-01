@@ -176,9 +176,73 @@
   }
 
   // a typed or pasted value in the format R expects for this column
+  /* labelled data (see R/labelled.R) ----------------------------------- */
+
+  // value labels of a column: {list: [{value, label}], map: value -> label}
+  function labelsOf(c) {
+    var l = c && c.labels;
+    if (!l || !l.values || (c.option && c.option.type)) return null;
+    if (!l.map) {
+      var names = toArray(l.names);
+      l.list = toArray(l.values).map(function (v, i) {
+        return {value: v, label: String(names[i])};
+      });
+      l.map = {};
+      l.list.forEach(function (x) { l.map[String(x.value)] = x.label; });
+    }
+    return l;
+  }
+
+  function valueLabel(c, v) {
+    var l = labelsOf(c);
+    if (!l || v === null || v === undefined || v === "") return null;
+    var hit = l.map[String(v)];
+    return hit === undefined ? null : hit;
+  }
+
+  // a value with its label, as the cell editor offers it: "1 \u00b7 Male"
+  function labelledText(c, v) {
+    var lab = valueLabel(c, v);
+    return lab === null ? String(v) : v + " \u00b7 " + lab;
+  }
+
+  // SPSS user-defined missing values
+  function userMissing(c, v) {
+    var l = c && c.labels;
+    if (!l || v === null || v === undefined || v === "") return false;
+    var s = String(v);
+    if (toArray(l.na).some(function (x) { return String(x) === s; })) return true;
+    var r = toArray(l.range);
+    var x = Number(v);
+    return r.length === 2 && !isNaN(x) && x >= r[0] && x <= r[1];
+  }
+
+  // the value of a label typed or pasted into a labelled column ("Male" or
+  // "1 \u00b7 Male"), or undefined
+  function labelValue(c, s) {
+    var l = labelsOf(c);
+    if (!l || typeof s !== "string") return undefined;
+    var t = s.trim();
+    var m = /^(.*?)\s*\u00b7\s*(.*)$/.exec(t);
+    if (m && l.map[m[1]] !== undefined && l.map[m[1]] === m[2]) {
+      return l.list.filter(function (x) { return String(x.value) === m[1]; })[0].value;
+    }
+    // a value is itself (text codes such as "AU")
+    if (l.map[t] !== undefined) {
+      return l.list.filter(function (x) { return String(x.value) === t; })[0].value;
+    }
+    var low = t.toLowerCase();
+    var hit = l.list.filter(function (x) { return x.label.toLowerCase() === low; });
+    return hit.length === 1 ? hit[0].value : undefined;
+  }
+
   function normalizeValue(c, v, dmy) {
     if (isBlank(v) || !c) return v;
     var o = c.option || {};
+    if (typeof v === "string" && labelsOf(c)) {
+      var lv = labelValue(c, v);
+      if (lv !== undefined) return lv;
+    }
     if (c.kind === "numeric") return normalizeNumber(v);
     if (c.kind === "date" || c.kind === "datetime") {
       return normalizeDate(v, c.kind, dmy === undefined ? dayFirst([v]) : dmy);
@@ -202,7 +266,9 @@
     }
     if (c.kind === "numeric") {
       var x = typeof s === "number" ? s : Number(s);
-      if (typeof s === "string" && isNaN(x)) return "is not a number";
+      if (typeof s === "string" && isNaN(x)) {
+        return labelsOf(c) ? "is not a number or one of the value labels" : "is not a number";
+      }
       if (o.min !== undefined && o.min !== null && x < o.min) {
         return "is less than " + o.min;
       }
@@ -234,6 +300,10 @@
     if (o.type === "dropdown") return "a dropdown column";
     if (o.type === "rating") return "a rating column (0 to " + o.max + " stars)";
     if (o.type === "time") return "a time column";
+    if (labelsOf(c)) {
+      return c.kind === "numeric" ? "a numeric column with value labels" :
+        "a text column with value labels";
+    }
     if (c.kind === "numeric") {
       if (has(o.min) && has(o.max)) {
         return "a numeric column (" + o.min + " to " + o.max + ")";
@@ -251,6 +321,7 @@
   // can a column whose values do not fit be turned into a text column?
   function canBecomeText(c) {
     var o = c.option || {};
+    if (labelsOf(c)) return false; // the codes would lose their labels
     return !o.type || o.type === "date" || o.type === "datetime";
   }
 
@@ -547,6 +618,7 @@
               v === null || v === undefined ? "" :
                 new Array(String(v).length + 1).join("•"));
           }
+          if (base === "labelled") return labelledNode(grid.colMap[cell.getField()], v, element, bad || problem);
           if (base === "url") return linkNode(v);
           if (base === "progress" && (v === null || v === undefined || v === "")) {
             return document.createTextNode("");
@@ -562,6 +634,30 @@
           return document.createTextNode(
             v === null || v === undefined ? "" : String(v));
         };
+      }
+
+      // the value of a labelled column with its label; SPSS user-defined
+      // missing values are muted
+      function labelledNode(c, v, element, titled) {
+        var na = userMissing(c, v);
+        element.classList.toggle("editr-user-na", na);
+        if (na && !titled) element.title = "User-defined missing value";
+        if (v === null || v === undefined || v === "") return document.createTextNode("");
+        var wrap = document.createElement("span");
+        wrap.className = "editr-lbl";
+        var code = document.createElement("span");
+        code.className = "editr-lbl-code";
+        code.textContent = String(v);
+        wrap.appendChild(code);
+        var lab = valueLabel(c, v);
+        if (lab !== null) {
+          wrap.appendChild(document.createTextNode(" "));
+          var text = document.createElement("span");
+          text.className = "editr-lbl-text";
+          text.textContent = lab;
+          wrap.appendChild(text);
+        }
+        return wrap;
       }
 
       // web addresses get a button that opens them in a new tab (the text
@@ -714,9 +810,13 @@
         var c = grid.colMap[cell.getColumn().getField()] || {};
         var name = c.frozen ? "row names" : c.title;
         var badge = c.option && c.option.type === "time" ? "time" :
-          BADGES[c.kind] || "abc";
-        return '<span class="editr-title"><span class="editr-badge">' +
-          badge + '</span><span class="editr-name">' + escapeHTML(name) +
+          labelsOf(c) ? "lbl" : BADGES[c.kind] || "abc";
+        var varLabel = c.labels && c.labels.label ? String(c.labels.label) : "";
+        return '<span class="editr-title"><span class="editr-badge"' +
+          (badge === "lbl" ? ' title="' + (c.kind === "numeric" ? "Numbers" : "Text") +
+           ' with value labels"' : '') + '>' +
+          badge + '</span><span class="editr-name"' +
+          (varLabel ? ' title="' + escapeHTML(varLabel) + '"' : '') + '>' + escapeHTML(name) +
           '</span>' + (c.readonly ? '<span class="editr-lock">' + ICONS.lock +
           '</span>' : '') + '</span>' +
           (grid.opts.summary !== false && !c.frozen ? summaryHTML(c.field) : "");
@@ -756,8 +856,9 @@
         } else if (s.type === "values") {
           var total = Math.max(1, s.n - s.missing);
           html += '<div class="editr-sum-values">';
+          var lc = grid.colMap[field];
           toArray(s.top).forEach(function (t, i) {
-            var tip = escapeHTML(t.value + ": " + plural(t.n, "row") + " (" + percent(t.n, total) + ")");
+            var tip = escapeHTML(labelledText(lc, t.value) + ": " + plural(t.n, "row") + " (" + percent(t.n, total) + ")");
             html += '<span class="editr-sum-seg editr-sum-seg-' + (i % 5) + '" data-act="value" data-i="' + i +
               '" style="flex-grow:' + t.n + '" title="' + tip + '"></span>';
           });
@@ -880,7 +981,9 @@
         } else if (s.type === "dates") {
           rows = rows.concat([["Earliest", st.min], ["Latest", st.max]]);
         }
-        var html = '<div class="editr-sum-title">' + escapeHTML(c.title) + '</div><table>';
+        var html = '<div class="editr-sum-title">' + escapeHTML(c.title) + '</div>' +
+          (c.labels && c.labels.label ? '<div class="editr-sum-label">' + escapeHTML(c.labels.label) + '</div>' : '') +
+          '<table>';
         rows.forEach(function (r) {
           html += '<tr><th>' + r[0] + '</th><td>' + escapeHTML(r[1] === undefined ? "" : r[1]) + '</td></tr>';
         });
@@ -889,7 +992,7 @@
           var total = Math.max(1, s.n - s.missing);
           html += '<div class="editr-sum-title">Most common</div><table>';
           toArray(s.top).forEach(function (t) {
-            html += '<tr><th>' + escapeHTML(t.value) + '</th><td>' + t.n + ' (' + percent(t.n, total) + ')</td></tr>';
+            html += '<tr><th>' + escapeHTML(labelledText(c, t.value)) + '</th><td>' + t.n + ' (' + percent(t.n, total) + ')</td></tr>';
           });
           html += '</table>';
         }
@@ -908,6 +1011,7 @@
           var v = data[f];
           var empty = v === null || v === undefined || v === "";
           if (p.kind === "missing") {
+            if (userMissing(c, v)) continue;
             if (!empty) return false;
             continue;
           }
@@ -1010,6 +1114,11 @@
           def.headerFilter = "list";
           def.headerFilterParams = {valuesLookup: "all", multiselect: true,
                                     clearable: true, sort: "asc"};
+          if (labelsOf(c)) {
+            def.headerFilterParams.itemFormatter = function (label, value) {
+              return escapeHTML(labelledText(c, value));
+            };
+          }
           def.headerFilterFunc = valuesFilter;
           def.headerFilterPlaceholder = "Any";
           def.headerFilterEmptyCheck = function (v) {
@@ -1040,6 +1149,21 @@
         if (grid.opts.filters !== false) addHeaderFilter(def, c);
         if (c.kind === "numeric") def.hozAlign = "right";
         var o = c.option;
+        var lab = labelsOf(c);
+        if (lab) {
+          // pick a label, or type a value or a label
+          def.editor = c.readonly ? false : "list";
+          def.editorParams = {
+            values: lab.list.map(function (x) {
+              return {label: x.value + " \u00b7 " + x.label, value: x.value};
+            }),
+            autocomplete: true, freetext: true, listOnEmpty: true,
+            allowEmpty: true
+          };
+          def.formatter = makeFormatter("labelled");
+          def.hozAlign = "left";
+          def.minWidth = Math.max(def.minWidth, 110);
+        }
         if (o && o.type === "checkbox") {
           def.editor = c.readonly ? false : "tickCross";
           def.editorParams = {tristate: false};
@@ -1373,6 +1497,9 @@
         if (!grid.opts.db) {
           items.push({label: "Sort ascending", action: ask("sort", {desc: false})});
           items.push({label: "Sort descending", action: ask("sort", {desc: true})});
+        }
+        if (!c.readonly && !grid.opts.db) {
+          items.push({label: "Labels\u2026", action: ask("labels")});
         }
         items.push({label: "Rules\u2026", action: ask("rules")});
         return items;
@@ -1887,10 +2014,10 @@
               c.title + " " + p.lo + "\u2013" + p.hi;
           }
           if (p.kind === "prefix") return c.title + " in " + p.value;
-          return c.title + " is " + p.value;
+          return c.title + " is " + (valueLabel(c, p.value) || p.value);
         }
         if (Array.isArray(v)) {
-          var vals = v.map(String);
+          var vals = v.map(function (x) { return valueLabel(c, x) || String(x); });
           if (vals.length === 1) return c.title + " is " + vals[0];
           return c.title + " is " + vals.slice(0, -1).join(", ") + " or " +
             vals[vals.length - 1];
@@ -2148,6 +2275,7 @@
 
       function formValue(c, v) {
         if (v === null || v === undefined) return "";
+        if (labelsOf(c)) return labelledText(c, v);
         if (c.option && c.option.type === "datetime") return String(v).replace(" ", "T").slice(0, 16);
         return String(v);
       }
@@ -2178,6 +2306,20 @@
           input = document.createElement("textarea");
           input.rows = 3;
           input.value = formValue(c, v);
+        } else if (labelsOf(c)) {
+          // the labels are suggested; other values can be typed
+          input = document.createElement("input");
+          input.type = "text";
+          input.value = formValue(c, v);
+          var dl = document.createElement("datalist");
+          dl.id = el.id + "-form-list-" + c.field;
+          labelsOf(c).list.forEach(function (x) {
+            var op = document.createElement("option");
+            op.value = x.value + " \u00b7 " + x.label;
+            dl.appendChild(op);
+          });
+          input.setAttribute("list", dl.id);
+          input.editrList = dl;
         } else {
           input = document.createElement("input");
           input.type = o.type === "password" ? "password" :
@@ -2197,6 +2339,10 @@
       function formRead(c, input) {
         var x = input.value;
         if (x === "") return null;
+        if (labelsOf(c)) {
+          var lv = labelValue(c, x);
+          if (lv !== undefined) return lv;
+        }
         if (input.tagName === "SELECT" && (c.kind === "logical" ||
             (c.option && c.option.type === "checkbox"))) return x === "TRUE";
         if (c.option && c.option.type === "datetime") return x.replace("T", " ") + (x.length === 16 ? ":00" : "");
@@ -2279,10 +2425,17 @@
           var input = formInput(c, data[field]);
           input.id = el.id + "-form-" + field;
           lab.htmlFor = input.id;
-          lab.innerHTML = '<span class="editr-badge">' + (c.option && c.option.type === "time" ? "time" : BADGES[c.kind] || "abc") +
+          lab.innerHTML = '<span class="editr-badge">' + (c.option && c.option.type === "time" ? "time" : labelsOf(c) ? "lbl" : BADGES[c.kind] || "abc") +
             '</span> ' + escapeHTML(c.frozen ? "row name" : c.title);
+          if (c.labels && c.labels.label) {
+            var hint = document.createElement("span");
+            hint.className = "editr-form-varlabel";
+            hint.textContent = c.labels.label;
+            lab.appendChild(hint);
+          }
           wrap.appendChild(lab);
           wrap.appendChild(input);
+          if (input.editrList) wrap.appendChild(input.editrList);
           var msg = document.createElement("div");
           msg.className = "editr-form-msg";
           wrap.appendChild(msg);

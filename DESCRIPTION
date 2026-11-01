@@ -45,6 +45,7 @@ Suggests:
     DBI,
     dbplyr (>= 2.3.0),
     dplyr (>= 1.1.0),
+    haven (>= 2.4.0),
     jsonlite,
     knitr,
     rlang,

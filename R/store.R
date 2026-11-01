@@ -281,11 +281,14 @@ apply_set_meta <- function(state, op) {
   meta <- state$meta %||% list(factors = list(), auto = list())
   cid <- op$cid
   inverse <- list(type = "set_meta", cid = cid, factor = meta$factors[[cid]],
-                  auto = meta$auto[[cid]])
+                  auto = meta$auto[[cid]], attrs = meta$attrs[[cid]])
   meta$factors[cid] <- list(op$factor)
   meta$auto[cid] <- list(op$auto)
+  # ATTRIBUTES OF PLAIN COLUMNS (FALSE: NONE, NULL: AS OPENED)
+  if ("attrs" %in% names(op)) meta$attrs[cid] <- list(op$attrs)
   meta$factors <- Filter(Negate(is.null), meta$factors)
   meta$auto <- Filter(Negate(is.null), meta$auto)
+  meta$attrs <- Filter(Negate(is.null), meta$attrs)
   state$meta <- meta
   list(state = state, inverse = inverse)
 }
@@ -305,7 +308,12 @@ store_meta <- function(store) {
   for (cid in names(meta$auto)) {
     auto <- if (isTRUE(meta$auto[[cid]])) union(auto, cid) else setdiff(auto, cid)
   }
-  list(factors = factors, auto = auto)
+  attrs <- store$col_attrs %||% list()
+  for (cid in names(meta$attrs)) {
+    a <- meta$attrs[[cid]]
+    attrs[cid] <- if (isFALSE(a)) list(NULL) else list(a)
+  }
+  list(factors = factors, auto = auto, attrs = attrs)
 }
 
 #' Replace the whole state (used by "revert all"); ids keep counting up so
@@ -342,6 +350,10 @@ rbind_rows <- function(x, y) {
     }
     if (inherits(a, "POSIXct")) {
       return(c(a, as.POSIXct(b, tz = attr(a, "tzone") %||% "")))
+    }
+    # haven_labelled VECTORS KEEP THEIR LABELS (vctrs combines them)
+    if (inherits(a, "vctrs_vctr")) {
+      return(c(a, b))
     }
     if (is.character(a) || is.character(b)) {
       return(c(as.character(a), as.character(b)))
@@ -400,7 +412,7 @@ set_values <- function(col, rows, values) {
   }
   # INTEGER COLUMN RECEIVING DOUBLES
   if (is.integer(col) && is.double(parsed)) {
-    col <- as.double(col)
+    col <- if (inherits(col, "haven_labelled")) labelled_as_double(col) else as.double(col)
   }
   col[rows] <- parsed
   col
@@ -530,6 +542,7 @@ editr_store <- function(state) {
   store$view_cols <- NULL # NULL = all columns, otherwise cids
   store$hidden <- character(0) # cids never shown
   store$factors <- list() # cid -> list(levels, ordered) of factor columns
+  store$col_attrs <- list() # cid -> attributes of plain columns (R/labelled.R)
   # CHANGE LOG (see R/log.R)
   store$log <- list() # data frames of entries
   store$notes <- character(0) # step -> note

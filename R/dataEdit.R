@@ -798,6 +798,9 @@ dataEditServer <- function(id,
         spec$to <- req$to
       } else if (req$kind == "sort") {
         spec$desc <- isTRUE(req$desc)
+      } else if (req$kind == "labels") {
+        spec$label <- input$lb_label %||% ""
+        spec$values <- input$lb_values %||% ""
       }
       spec
     }
@@ -860,6 +863,12 @@ dataEditServer <- function(id,
                               rules_spec(ed$store$rule_specs, cid), mine, ns))
         return()
       }
+      if (kind == "labels") {
+        if (!is.null(ed$cfg$db) || cid %in% ed$cfg$readonly) return()
+        action_req(req)
+        showModal(labels_modal(name, data[[name]], ns))
+        return()
+      }
       if (!kind %in% c("formula", "replace", "recode")) return()
       action_req(req)
       showModal(action_modal(
@@ -879,6 +888,13 @@ dataEditServer <- function(id,
       }
       plan <- tryCatch(action_plan(ed$store, ed$cfg, spec),
                        error = function(e) e)
+      # LABELS AS THEY ARE UNTIL SOMETHING IS CHANGED
+      if (identical(spec$kind, "labels") && inherits(plan, "error") &&
+          identical(conditionMessage(plan), "Nothing would change.")) {
+        data <- action_data(ed$store, ed$cfg)
+        col <- data[[match(spec$cid, action_cids(ed$store, ed$cfg, data))]]
+        return(labels_preview_ui(col))
+      }
       action_preview_ui(plan, ed$store, ed$cfg)
     })
 

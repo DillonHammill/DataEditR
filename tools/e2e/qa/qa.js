@@ -533,6 +533,110 @@ const scenarios = {
     await done(page);
   },
 
+  async labelled(page) {
+    const grid = () => L.gridData(page);
+    const val = async (id, f) => (await grid()).find((r) => r.__editr_id__ === id)[f];
+    const cellText = (id, f) => page.evaluate((id, f) => document.querySelector(".editr_grid").__editr.table
+      .getRow(id).getCell(f).getElement().textContent.replace(/\s+/g, " ").trim(), id, f);
+    const chips = () => page.$eval("#edit1-chips", (e) => e.textContent.trim());
+    await sleep(800);
+    // labels in the header and the cells
+    const head = await page.evaluate(() => {
+      const t = document.querySelector(".editr_grid").__editr.table;
+      const el = t.getColumn("c2").getElement();
+      return [el.querySelector(".editr-badge").textContent, el.querySelector(".editr-name").title];
+    });
+    check(head[0] === "lbl" && head[1] === "Sex of respondent", "badge and variable label: " + head);
+    check(await cellText(1, "c2") === "1 Male", "value with its label: " + await cellText(1, "c2"));
+    check(await cellText(3, "c3") === "-99 No answer" && await page.evaluate(() => document.querySelector(".editr_grid").__editr.table
+      .getRow(3).getCell("c3").getElement().classList.contains("editr-user-na")), "user-defined missing value is muted");
+    // a label typed into a cell is stored as its value
+    await L.editCell(page, 1, "c2", "Female");
+    check(await val(1, "c2") === 2, "typed label stored as its value");
+    // text that is neither asks, without turning the codes into text
+    await L.editCell(page, 2, "c2", "nobody");
+    const guard = await page.$$eval(".editr-guard button", (b) => b.map((x) => x.textContent.trim()));
+    check(guard.length === 2 && !guard.some((x) => /text/.test(x)), "guard without convert: " + guard);
+    await page.click('.editr-guard [data-act="cancel"]');
+    await L.settle(page, 600);
+    check(await val(2, "c2") === 2, "cancelled edit kept the value");
+    // pasted labels
+    await L.selectCell(page, 3, "c2");
+    await L.paste(page, "Refused\r\nmale\r\n");
+    check(await val(3, "c2") === 9 && await val(4, "c2") === 1, "pasted labels stored as values");
+    // the Labels dialog
+    const menuButton = (field) => page.evaluate((f) => document.querySelector(".editr_grid").__editr.table
+      .getColumn(f).getElement().querySelector(".tabulator-header-popup-button").click(), field);
+    const pick = (label) => page.evaluate((l) => [...document.querySelectorAll(".tabulator-menu .tabulator-menu-item")]
+      .find((x) => x.textContent.trim().startsWith(l)).click(), label);
+    await menuButton("c2");
+    await sleep(400);
+    await pick("Labels");
+    await page.waitForSelector("#edit1-lb_values");
+    await sleep(900);
+    check(await page.$eval("#edit1-lb_values", (e) => e.value) === "1 = Male\n2 = Female\n9 = Refused", "dialog lists the value labels");
+    await page.click("#edit1-lb_values");
+    await page.keyboard.down("Control"); await page.keyboard.press("End"); await page.keyboard.up("Control");
+    await page.keyboard.type("\n3 = Other");
+    await sleep(1500);
+    const prev = await page.$eval("#edit1-action_preview", (e) => e.textContent.replace(/\s+/g, " "));
+    check(/4 value labels/.test(prev) && /"Other" = 3/.test(prev), "preview: " + prev.slice(0, 160));
+    await page.click("#edit1-action_apply");
+    await L.settle(page, 1500);
+    await L.editCell(page, 6, "c2", "Other");
+    check(await val(6, "c2") === 3, "new label can be typed");
+    // the variable label of a plain column
+    await menuButton("c5");
+    await sleep(400);
+    await pick("Labels");
+    await page.waitForSelector("#edit1-lb_label");
+    await sleep(900);
+    await page.click("#edit1-lb_label", { clickCount: 3 });
+    await page.keyboard.type("Age (years)");
+    await sleep(1200);
+    await page.click("#edit1-action_apply");
+    await L.settle(page, 1500);
+    // the summary lists labelled values and filters by them
+    await page.click('.editr-summary[data-field="c4"] [data-act="value"]');
+    await L.settle(page, 900);
+    check(/country is Australia/.test(await chips()), "chip uses the label: " + await chips());
+    await page.click("#edit1-chips .editr-chip button");
+    await L.settle(page, 700);
+    // the record form suggests labels and stores values
+    await L.selectCell(page, 5, "c1");
+    await page.click("#edit1-open_record");
+    await L.settle(page, 900);
+    check(await page.$eval("#edit1-grid-form-c2", (e) => e.value) === "2 \u00b7 Female", "form shows the label");
+    const opts = await page.$$eval("#edit1-record datalist[id$='-c4'] option", (o) => o.map((x) => x.value));
+    check(opts.join("|") === "AU \u00b7 Australia|NZ \u00b7 New Zealand", "form suggestions: " + opts);
+    await page.click("#edit1-grid-form-c4", { clickCount: 3 });
+    await page.keyboard.type("New Zealand");
+    await page.keyboard.press("Enter");
+    await L.settle(page, 900);
+    check(await val(5, "c4") === "NZ", "form label stored as its value");
+    // a new record
+    await page.evaluate(() => [...document.querySelectorAll("#edit1-record .editr-form-head button")].find((b) => b.textContent === "New").click());
+    await L.settle(page, 900);
+    await page.keyboard.type("R09");
+    await page.keyboard.press("Enter");
+    await L.settle(page, 600);
+    await page.keyboard.type("2 \u00b7 Female");
+    await page.keyboard.press("Enter");
+    await L.settle(page, 600);
+    await page.keyboard.type("-99");
+    await page.keyboard.press("Enter");
+    await L.settle(page, 600);
+    await page.keyboard.type("AU");
+    await page.keyboard.press("Enter");
+    await L.settle(page, 600);
+    await page.keyboard.type("57");
+    await page.keyboard.press("Enter");
+    await L.settle(page, 900);
+    check(await val(9, "c2") === 2 && await val(9, "c3") === -99, "new record from the form");
+    await page.screenshot({ path: path.join(out, "labelled.png") });
+    await done(page);
+  },
+
   async cancel(page) {
     await L.editCell(page, 1, "c2", "99");
     await L.rowMenu(page, 2, "c2", "Delete row");

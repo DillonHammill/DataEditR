@@ -15,6 +15,8 @@
 #   type     list(kind, cid, to)               "numeric", "integer",
 #            "character", "logical", "Date" or "factor"
 #   sort     list(kind, cid, desc)
+#   labels   list(kind, cid, label, values)   the variable label and value
+#            labels ("1 = Male" lines), see R/labelled.R
 #
 # Formulas typed by users are only allowed to use column names and the
 # functions listed below, so a shiny app cannot be made to run other code.
@@ -38,7 +40,7 @@ FORMULA_FUNS <- list(
     "as.Date", "as.POSIXct", "factor", "as.factor", "levels", "droplevels",
     "cut", "findInterval", "months", "weekdays", "julian", "difftime",
     "Sys.Date", "Sys.time", "ISOdate", "nlevels", "is.numeric",
-    "is.character", "is.logical"
+    "is.character", "is.logical", "structure"
   ),
   stats = c("median", "sd", "var", "weighted.mean"),
   dplyr = c(
@@ -46,7 +48,9 @@ FORMULA_FUNS <- list(
     "near", "lag", "lead", "row_number", "n", "first", "last", "nth",
     "cumall", "cumany", "cummean", "dense_rank", "min_rank", "percent_rank",
     "cume_dist", "ntile", "n_distinct", "desc"
-  )
+  ),
+  # LABELLED DATA (ALSO AS haven::f)
+  haven = c("as_factor", "zap_labels", "zap_label", "labelled", "labelled_spss")
 )
 
 #' Names formulas can use that are not columns
@@ -69,10 +73,33 @@ formula_env <- function() {
       assign(f, getExportedValue("dplyr", f), envir = env)
     }
   }
+  if (requireNamespace("haven", quietly = TRUE)) {
+    for (f in FORMULA_FUNS$haven) {
+      assign(f, getExportedValue("haven", f), envir = env)
+    }
+  }
+  # haven::f FOR THE FUNCTIONS ABOVE ONLY
+  assign("::", function(pkg, name) {
+    pkg <- as.character(substitute(pkg))
+    name <- as.character(substitute(name))
+    if (!identical(pkg, "haven") || !name %in% FORMULA_FUNS$haven) {
+      stop(pkg, "::", name, "() cannot be used in formulas.", call. = FALSE)
+    }
+    editr_require("haven", "use labelled data")
+    getExportedValue("haven", name)
+  }, envir = env)
   for (k in FORMULA_CONSTANTS) {
     assign(k, get(k, envir = baseenv()), envir = env)
   }
   env
+}
+
+#' Is a call head haven::f for an allowed f?
+#' @noRd
+haven_call <- function(fn) {
+  is.call(fn) && identical(fn[[1]], as.name("::")) && length(fn) == 3 &&
+    identical(as.character(fn[[2]]), "haven") &&
+    as.character(fn[[3]]) %in% FORMULA_FUNS$haven
 }
 
 #' Parse a formula typed by a user (one R expression)
@@ -109,17 +136,20 @@ formula_check <- function(expr, cols) {
       }
     } else if (is.call(e)) {
       fn <- e[[1]]
-      if (!is.symbol(fn)) {
+      if (haven_call(fn)) {
+        f <- as.character(fn[[3]])
+      } else if (!is.symbol(fn)) {
         stop("Formulas can only call functions by their name.", call. = FALSE)
+      } else {
+        f <- as.character(fn)
       }
-      f <- as.character(fn)
       if (!f %in% funs) {
         stop(f, "() cannot be used in formulas.", call. = FALSE)
       }
       for (a in as.list(e)[-1]) {
         if (!missing(a)) walk(a)
       }
-    } else if (!is.atomic(e) || length(e) > 1) {
+    } else if (!is.null(e) && (!is.atomic(e) || length(e) > 1)) {
       stop("Formulas can only use values, columns and functions.",
            call. = FALSE)
     }
@@ -341,6 +371,27 @@ action_verb <- function(spec, data, cids) {
     out$verb <- paste0("mutate(", q, " = case_match(", base, ", ",
                        paste(pairs, collapse = ", "), ", .default = ", base, "))")
 
+  } else if (kind == "type" && inherits(col, "haven_labelled")) {
+    # VALUE-LABELLED: FACTORS AND TEXT FROM THE LABELS, OTHERS FROM THE CODES
+    # (SPSS USER-DEFINED MISSING VALUES ARE KEPT AS VALUES)
+    to <- spec$to
+    codes <- paste0("haven::zap_labels(", q, ", user_na = TRUE)")
+    expr <- switch(
+      to,
+      numeric = if (is.double(col)) codes else paste0("as.numeric(", codes, ")"),
+      integer = paste0("as.integer(", codes, ")"),
+      character = paste0("as.character(haven::as_factor(", q, "))"),
+      logical = paste0("as.logical(", codes, ")"),
+      Date = if (is.numeric(col)) {
+        paste0("as.Date(", codes, ", origin = \"1970-01-01\")")
+      } else {
+        paste0("as.Date(", codes, ", format = \"%Y-%m-%d\")")
+      },
+      factor = paste0("haven::as_factor(", q, ")"),
+      stop("Unknown column type '", to, "'.", call. = FALSE)
+    )
+    out$verb <- paste0("mutate(", q, " = ", expr, ")")
+
   } else if (kind == "type") {
     to <- spec$to
     from_text <- if (is.factor(col)) paste0("as.character(", q, ")") else q
@@ -364,6 +415,18 @@ action_verb <- function(spec, data, cids) {
 
   } else if (kind == "sort") {
     out$verb <- paste0("arrange(", if (isTRUE(spec$desc)) paste0("desc(", q, ")") else q, ")")
+
+  } else if (kind == "labels") {
+    label <- trimws(as.character(spec$label %||% ""))
+    values <- paste(as.character(spec$values %||% ""), collapse = "\n")
+    if (nzchar(trimws(values)) &&
+        (!(is.numeric(col) || is.character(col)) || is.factor(col))) {
+      stop("Value labels can only be given to numbers and text.", call. = FALSE)
+    }
+    labels <- parse_value_labels(values, col)
+    e <- labels_expr(q, col, labels, if (nzchar(label)) label else NULL)
+    out$verb <- paste0("mutate(", q, " = ", e$expr, ")")
+    out$labels_changed <- e$changed
 
   } else {
     stop("Unknown column action '", kind, "'.", call. = FALSE)
@@ -392,7 +455,7 @@ action_supported <- function(x) {
 #' @noRd
 action_plan <- function(store, cfg, spec) {
   state <- store$state
-  if (!is.null(cfg$db) && spec$kind %in% c("type", "sort")) {
+  if (!is.null(cfg$db) && spec$kind %in% c("type", "sort", "labels")) {
     stop("This cannot be done to a database table.", call. = FALSE)
   }
   if (isTRUE(spec$new) && !isTRUE(cfg$col_edit)) {
@@ -438,8 +501,11 @@ action_plan <- function(store, cfg, spec) {
       stop("The result must keep the type of a database column.", call. = FALSE)
     }
   }
-  changed <- sum(values_differ(column_as_character(before),
-                               column_as_character(stored)))
+  changed <- sum(values_differ(column_as_character(plain_values(before)),
+                               column_as_character(plain_values(stored))))
+  if (a$kind == "labels") changed <- a$labels_changed
+  # VARIABLE LABELS ETC. OF THE RESULT, PUT BACK WHEN ROWS CHANGE
+  attrs <- column_attrs(values) %||% FALSE
   if (a$new) {
     cid <- paste0("c", state$next_cid)
     anchor <- if (is.null(spec$cid)) length(state$cids) else match(spec$cid, state$cids)
@@ -448,12 +514,14 @@ action_plan <- function(store, cfg, spec) {
       list(type = "insert_col", cid = cid, name = a$name, at = at,
            values = stored, action = a),
       list(type = "set_meta", cid = cid,
-           factor = if (is.list(factor)) factor else NULL, auto = FALSE)
+           factor = if (is.list(factor)) factor else NULL, auto = FALSE,
+           attrs = attrs)
     )
   } else {
     ops <- list(
       list(type = "set_col", cid = spec$cid, values = stored, action = a),
-      list(type = "set_meta", cid = spec$cid, factor = factor, auto = FALSE)
+      list(type = "set_meta", cid = spec$cid, factor = factor, auto = FALSE,
+           attrs = attrs)
     )
   }
   list(action = a, ops = ops, before = before, after = values,
@@ -464,6 +532,9 @@ action_plan <- function(store, cfg, spec) {
 #' Words for the type of a column
 #' @noRd
 type_label <- function(x) {
+  if (inherits(x, "haven_labelled")) {
+    return(paste(type_label(plain_values(x)), "with value labels"))
+  }
   if (is.factor(x)) return("factor")
   if (inherits(x, "POSIXct")) return("date-time")
   if (inherits(x, "Date")) return("date")
@@ -536,6 +607,7 @@ code_with_actions <- function(store, cfg, original, start, final, end, name) {
     temp <- editr_store(store$original)
     temp$auto_type <- original$auto_type
     temp$factors <- original$factors
+    temp$col_attrs <- original$col_attrs
     temp$logging <- FALSE
     pieces <- list()
     seg <- start
@@ -622,13 +694,31 @@ same_data <- function(a, b) {
     return(isTRUE(all.equal(unname(a), unname(b), check.attributes = FALSE)))
   }
   # WHOLE NUMBERS MAY COME BACK AS DOUBLES (replace(x, 1, 9))
-  kind <- function(v) if (is.numeric(v) && !is.factor(v)) "numeric" else class(v)
+  kind <- function(v) {
+    if (inherits(v, "haven_labelled")) {
+      class(v)[1]
+    } else if (is.numeric(v) && !is.factor(v)) {
+      "numeric"
+    } else {
+      class(v)
+    }
+  }
   for (i in seq_along(a)) {
     x <- a[[i]]
     y <- b[[i]]
     if (!identical(kind(x), kind(y)) || !identical(levels(x), levels(y)) ||
-        !isTRUE(all.equal(x, y, check.attributes = FALSE))) {
+        !isTRUE(all.equal(plain_values(x), plain_values(y),
+                          check.attributes = FALSE))) {
       return(FALSE)
+    }
+    # VALUE LABELS AND SPSS MISSING VALUES OF LABELLED COLUMNS
+    if (inherits(x, "haven_labelled")) {
+      for (nm in c("labels", "na_values", "na_range")) {
+        if (!identical(as.vector(attr(x, nm)), as.vector(attr(y, nm))) ||
+            !identical(names(attr(x, nm)), names(attr(y, nm)))) {
+          return(FALSE)
+        }
+      }
     }
   }
   TRUE
