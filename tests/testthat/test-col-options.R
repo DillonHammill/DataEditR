@@ -136,3 +136,28 @@ test_that("values outside the limits of an input are reported", {
   expect_message(DataEditR:::editr_prepare(df, col_options = list(p = c(max = 2))),
                  "1 value outside the limits of its number input \\(-Inf to 2\\)")
 })
+
+test_that("colour columns get a palette and R's colour names", {
+  spec <- DataEditR:::col_option_spec
+  expect_null(spec("colour")$palette)
+  expect_identical(as.vector(spec(list(type = "colour", palette = c("red", "#1D4ED8")))$palette),
+                   c("red", "#1D4ED8"))
+  cols <- DataEditR:::r_colours()
+  expect_identical(length(cols$names), length(cols$hex))
+  expect_identical(as.vector(cols$hex[match("grey50", cols$names)]), "#7F7F7F")
+  expect_identical(as.vector(cols$hex[match("green", cols$names)]), "#00FF00")
+  has <- DataEditR:::has_colour_column
+  expect_true(has(list(a = list(type = "dropdown"), b = list(type = "colour"))))
+  expect_false(has(list(a = list(type = "dropdown"))))
+  expect_false(has(list()))
+  # the grid gets the names only when a column shows colours
+  shiny::testServer(dataEditServer, args = list(
+    data = data.frame(a = "grey50"), col_options = list(a = "colour")), {
+    session$flushReact()
+    expect_match(output$grid, '"colours":{"names":["white"', fixed = TRUE)
+  })
+  shiny::testServer(dataEditServer, args = list(data = data.frame(a = "x")), {
+    session$flushReact()
+    expect_no_match(output$grid, '"colours":{', fixed = TRUE)
+  })
+})

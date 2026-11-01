@@ -1073,6 +1073,19 @@ button.editr-change-title:hover {
   font-size: 10px;
 }
 
+/* colour fields: the text box with the colour picker next to it */
+.editr-form-field:has(> .editr-form-colour) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.editr-form-field:has(> .editr-form-colour) > label,
+.editr-form-field:has(> .editr-form-colour) > .editr-form-msg,
+.editr-form-field:has(> .editr-form-colour) > .editr-form-comment {
+  grid-column: 1 / -1;
+}
+
 .editr-form-field.editr-form-changed .editr-form-input {
   background-color: #EFF5FF;
 }

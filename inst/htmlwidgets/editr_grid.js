@@ -532,6 +532,7 @@
         widths: {}, // columns the user resized
         pinned: {}, // new rows stay visible whatever the filters say
         comments: {}, // "id|field" -> {text, user, time}
+        rColours: {}, // R colour name (lower case, no spaces) -> hex
         opts: {},
         ui: {},
         find: {query: "", matches: [], index: -1},
@@ -692,20 +693,211 @@
         return wrap;
       }
 
-      // a swatch next to the colour (hex codes and CSS colour names)
+      // a colour as CSS can draw it: R colour names first (R's "green" and
+      // "gray" are not the CSS ones, and "grey50" is not CSS at all), then
+      // hex codes and CSS names; null when it is not a colour
+      function colourCss(v) {
+        if (v === null || v === undefined) return null;
+        var s = String(v).trim();
+        if (!s) return null;
+        var r = grid.rColours[s.toLowerCase().replace(/\s+/g, "")];
+        if (r) return r;
+        if (/^#([0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(s)) return s;
+        return window.CSS && CSS.supports && CSS.supports("color", s) ? s : null;
+      }
+
+      // a colour as a hex code for <input type="color"> (#RRGGBB)
+      function colourHex(v) {
+        var css = colourCss(v);
+        if (!css) return null;
+        if (/^#[0-9a-f]{6}/i.test(css)) return css.slice(0, 7).toLowerCase();
+        if (/^#[0-9a-f]{3,4}$/i.test(css)) {
+          return ("#" + css[1] + css[1] + css[2] + css[2] + css[3] + css[3]).toLowerCase();
+        }
+        var probe = document.createElement("span");
+        probe.style.color = css;
+        document.body.appendChild(probe);
+        var m = /rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(getComputedStyle(probe).color);
+        probe.remove();
+        if (!m) return null;
+        return "#" + [m[1], m[2], m[3]].map(function (x) {
+          return ("0" + Number(x).toString(16)).slice(-2);
+        }).join("");
+      }
+
+      function swatch(v) {
+        var sw = document.createElement("span");
+        sw.className = "editr-swatch";
+        var css = colourCss(v);
+        if (css) {
+          sw.style.background = css;
+        } else {
+          sw.className += " editr-swatch-none";
+          sw.title = "Not a colour R knows";
+        }
+        return sw;
+      }
+
+      // a swatch next to the colour
       function colourNode(v) {
         var wrap = document.createElement("span");
         wrap.className = "editr-colour";
         if (v === null || v === undefined || v === "") return wrap;
         var s = String(v).trim();
-        var ok = window.CSS && CSS.supports ? CSS.supports("color", s) : true;
-        if (ok) {
-          var sw = document.createElement("span");
-          sw.className = "editr-swatch";
-          sw.style.background = s;
-          wrap.appendChild(sw);
-        }
+        wrap.appendChild(swatch(s));
         wrap.appendChild(document.createTextNode(s));
+        return wrap;
+      }
+
+      // R's default palette and the Okabe-Ito palette (safe for colour
+      // blindness), offered by the colour picker after the column's colours
+      var PALETTE = ["black", "#DF536B", "#61D04F", "#2297E6", "#28E2E5", "#CD0BBC",
+                     "#F5C710", "gray62", "#E69F00", "#56B4E9", "#009E73", "#F0E442",
+                     "#0072B2", "#D55E00", "#CC79A7", "white"];
+
+      // colours offered for a column: its palette (col_options), or the
+      // colours already in it and then the default palette
+      function colourChoices(c) {
+        var o = c.option || {};
+        if (o.palette && toArray(o.palette).length) return toArray(o.palette).map(String);
+        var seen = {}, out = [];
+        var add = function (v) {
+          if (v === null || v === undefined || out.length >= 24) return;
+          var s = String(v).trim();
+          var key = (colourHex(s) || "") + "|" + s.toLowerCase();
+          if (!s || seen[key] || !colourCss(s)) return;
+          seen[key] = true;
+          out.push(s);
+        };
+        var used = 0;
+        (grid.table ? grid.table.getData() : []).some(function (row) {
+          var before = out.length;
+          add(row[c.field]);
+          if (out.length > before) used += 1;
+          return used >= 8;
+        });
+        PALETTE.forEach(add);
+        return out;
+      }
+
+      // colour columns: type a colour, or pick one of the swatches below the
+      // cell, or any colour with the browser's colour picker
+      function colourEditor(cell, onRendered, success, cancel) {
+        var old = cell.getValue();
+        var c = grid.colMap[cell.getField()] || {};
+        var wrap = document.createElement("div");
+        wrap.className = "editr-colour-edit";
+        var sw = document.createElement("span");
+        var input = document.createElement("input");
+        input.type = "text";
+        input.className = "editr-input";
+        input.value = old === null || old === undefined ? "" : String(old);
+        input.setAttribute("aria-label", "Colour");
+        input.setAttribute("autocomplete", "off");
+        wrap.appendChild(sw);
+        wrap.appendChild(input);
+        var paint = function () {
+          var next = swatch(input.value);
+          sw.className = next.className;
+          sw.style.background = next.style.background;
+          sw.title = next.title;
+        };
+        paint();
+        var box = document.createElement("div");
+        box.className = "editr-popup editr-colour-box";
+        box.setAttribute("role", "listbox");
+        box.setAttribute("aria-label", "Colours");
+        colourChoices(c).forEach(function (v) {
+          var b = document.createElement("button");
+          b.type = "button";
+          b.className = "editr-colour-pick";
+          b.setAttribute("role", "option");
+          b.style.background = colourCss(v);
+          b.title = v;
+          b.setAttribute("aria-label", v);
+          b.setAttribute("data-value", v);
+          if (String(old) === v) b.setAttribute("aria-selected", "true");
+          box.appendChild(b);
+        });
+        var custom = document.createElement("label");
+        custom.className = "editr-colour-custom";
+        var picker = document.createElement("input");
+        picker.type = "color";
+        picker.value = colourHex(input.value) || "#2975dd";
+        custom.appendChild(picker);
+        custom.appendChild(document.createTextNode("Other colour\u2026"));
+        box.appendChild(custom);
+
+        var done = false, picking = false;
+        var close = function () {
+          box.remove();
+          window.removeEventListener("scroll", place, true);
+        };
+        var finish = function (v) {
+          if (done) return;
+          done = true;
+          close();
+          v = v === null || v === undefined ? "" : String(v).trim();
+          var before = old === null || old === undefined ? "" : String(old);
+          if (v === before) cancel(); else success(v === "" ? null : v);
+        };
+        var stop = function () {
+          if (done) return;
+          done = true;
+          close();
+          cancel();
+        };
+        var place = function () {
+          var r = cell.getElement().getBoundingClientRect();
+          box.style.top = (r.bottom + window.scrollY + 4) + "px";
+          var left = r.left + window.scrollX;
+          var maxLeft = window.scrollX + document.documentElement.clientWidth -
+            box.getBoundingClientRect().width - 8;
+          box.style.left = Math.max(8, Math.min(left, maxLeft)) + "px";
+        };
+        input.addEventListener("input", paint);
+        input.addEventListener("blur", function () {
+          if (!picking) finish(input.value);
+        });
+        input.addEventListener("keydown", function (e) {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            finish(input.value);
+          } else if (e.key === "Escape") {
+            e.preventDefault();
+            stop();
+          }
+        });
+        input.addEventListener("mousedown", function (e) { e.stopPropagation(); });
+        // clicks in the box keep the focus in the text box
+        box.addEventListener("mousedown", function (e) {
+          if (e.target === picker || e.target === custom) {
+            picking = true;
+          } else {
+            e.preventDefault();
+          }
+        });
+        box.addEventListener("click", function (e) {
+          var b = e.target.closest && e.target.closest(".editr-colour-pick");
+          if (b) finish(b.getAttribute("data-value"));
+        });
+        picker.addEventListener("input", function () {
+          input.value = picker.value;
+          paint();
+        });
+        picker.addEventListener("change", function () { finish(picker.value); });
+        picker.addEventListener("blur", function () {
+          picking = false;
+          if (!done) input.focus({preventScroll: true});
+        });
+        onRendered(function () {
+          box.style.position = "absolute";
+          document.body.appendChild(box);
+          place();
+          window.addEventListener("scroll", place, true);
+          input.focus({preventScroll: true});
+          input.select();
+        });
         return wrap;
       }
 
@@ -1205,6 +1397,7 @@
           def.formatter = makeFormatter("url");
         } else if (o && o.type === "colour") {
           def.formatter = makeFormatter("colour");
+          def.editor = c.readonly ? false : colourEditor;
         } else if (o && o.type === "number") {
           def.editor = c.readonly ? false : "number";
           def.editorParams = {selectContents: true};
@@ -2682,6 +2875,26 @@
           });
           input.setAttribute("list", dl.id);
           input.editrList = dl;
+        } else if (o.type === "colour") {
+          // the text box with a swatch that opens the colour picker
+          input = document.createElement("input");
+          input.type = "text";
+          input.value = formValue(c, v);
+          var pick = document.createElement("input");
+          pick.type = "color";
+          pick.className = "editr-form-colour";
+          pick.setAttribute("aria-label", "Pick a colour for " + c.title);
+          pick.value = colourHex(input.value) || "#000000";
+          pick.disabled = !!c.readonly;
+          pick.addEventListener("change", function () {
+            input.value = pick.value;
+            input.dispatchEvent(new Event("change"));
+          });
+          input.addEventListener("input", function () {
+            var hex = colourHex(input.value);
+            if (hex) pick.value = hex;
+          });
+          input.editrList = pick;
         } else {
           input = document.createElement("input");
           input.type = o.type === "password" ? "password" :
@@ -2852,6 +3065,8 @@
               input.value = formValue(c, v);
             }
           }
+          var pick = wrap.querySelector(".editr-form-colour");
+          if (pick && input) pick.value = colourHex(input.value) || "#000000";
           var key = data[ID] + "|" + field;
           var bad = invalidReason(c, v);
           var problem = grid.problems[key];
@@ -3006,6 +3221,13 @@
         toArray(opts.changed).forEach(function (k) { grid.changed[k] = true; });
         grid.problems = problemMap(opts.problems);
         grid.comments = commentSet(opts.comments);
+        grid.rColours = {};
+        if (opts.colours) {
+          var hex = toArray(opts.colours.hex);
+          toArray(opts.colours.names).forEach(function (n, i) {
+            grid.rColours[String(n).toLowerCase().replace(/\s+/g, "")] = hex[i];
+          });
+        }
         grid.summary = opts.summary_data || {};
         grid.picks = {};
         var pref = null;

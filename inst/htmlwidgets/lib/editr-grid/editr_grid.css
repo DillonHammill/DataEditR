@@ -413,12 +413,93 @@ input.editr-rename {
   gap: 8px;
 }
 
-.editr-swatch {
+.editr_grid .editr-swatch {
   flex: none;
   width: 14px;
   height: 14px;
   border-radius: 3px;
+  background: transparent;
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15);
+}
+
+/* a value that is not a colour */
+.editr_grid .editr-swatch.editr-swatch-none {
+  background: transparent;
+  box-shadow: none;
+  border: 1px dashed #9AA5B1;
+  box-sizing: border-box;
+}
+
+/* colour editor: swatch and text box in the cell, swatches below it */
+.editr_grid .tabulator .tabulator-cell .editr-colour-edit {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 100%;
+  padding-left: 8px;
+}
+
+.editr_grid .tabulator .tabulator-cell .editr-colour-edit .editr-input {
+  flex: 1;
+  min-width: 0;
+  padding-left: 0;
+}
+
+.editr-colour-box {
+  display: grid;
+  grid-template-columns: repeat(8, 22px);
+  gap: 6px;
+  padding: 10px;
+}
+
+.editr-colour-pick {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.18);
+  cursor: pointer;
+}
+
+.editr-colour-pick:hover,
+.editr-colour-pick:focus-visible {
+  outline: 2px solid #2975DD;
+  outline-offset: 1px;
+}
+
+.editr-colour-pick[aria-selected="true"] {
+  outline: 2px solid #1F2933;
+  outline-offset: 1px;
+}
+
+.editr-colour-custom {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 2px 0 0;
+  color: #1D4ED8;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.editr-colour-custom input[type="color"],
+.editr-form-colour {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid #CBD2D9;
+  border-radius: 4px;
+  background: #FFFFFF;
+  cursor: pointer;
+}
+
+.editr-form-colour {
+  width: 32px;
+  height: 31px;
+  margin-left: 6px;
 }
 
 .editr_grid .tabulator .tabulator-cell .editr-input {

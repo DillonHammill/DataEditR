@@ -79,7 +79,11 @@
 #'   \item \code{"textarea"}: text over several lines;
 #'   \item \code{"password"}: hidden text;
 #'   \item \code{"url"}: web addresses with a button to open them;
-#'   \item \code{"colour"} (or \code{"color"}): colours shown with a swatch;
+#'   \item \code{"colour"} (or \code{"color"}): colours (R colour names such
+#'   as \code{"grey50"} or hex codes such as \code{"#1D4ED8"}) shown with a
+#'   swatch and edited with a colour picker. Set the colours the picker
+#'   offers with \code{list(type = "colour", palette = c("red", "#1D4ED8"))};
+#'   any colour can still be typed or picked;
 #'   \item \code{c(min = 0, max = 10, step = 1)} (any of the three): numbers
 #'   within limits;
 #'   \item \code{"slider"}: a slider and bar for numbers from 0 to 100;
@@ -498,6 +502,7 @@ dataEditServer <- function(id,
           },
           db = !is.null(cfg$db),
           comments = comments_grid(store),
+          colours = if (has_colour_column(cfg$col_options)) r_colours(),
           db_rows = if (!is.null(cfg$db)) {
             list(loaded = nrow(store$state$data), total = cfg$db$total,
                  filtered = !is.null(cfg$db$filter), readonly = isTRUE(cfg$db$readonly))
