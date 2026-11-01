@@ -74,6 +74,9 @@ const { check } = L;
     console.log("fill down");
     await L.selectCell(page, 4, "c5");
     await L.selectCell(page, 6, "c5", true);
+    await L.sleep(300);
+    const sel = await page.$eval("#edit1-selection", (e) => e.textContent);
+    check(/Selection hp . Sum 390 . Mean 130 . Count 3/.test(sel), "status bar sums the selection: " + sel);
     await L.key(page, "d", true);
     data = await L.gridData(page);
     const hp = [4, 5, 6].map((id) => data.find((r) => r.__editr_id__ === id).c5);
@@ -95,69 +98,131 @@ const { check } = L;
     const status = await page.$eval("#edit1-status", (e) => e.textContent);
     check(/edited/.test(status), "status shows change summary: '" + status + "'");
 
-    console.log("column select modal");
-    await page.click("#select1-select");
-    await page.waitForSelector("#select1-button-1", { visible: true });
-    await page.click("#select1-button-1");
-    await L.sleep(200);
-    await page.click("#select1-button-2");
-    await L.sleep(200);
-    await page.click("#select1-close");
-    await L.settle(page, 1200);
-    cols = await L.columns(page);
-    check(JSON.stringify(cols.map((c) => c.title)) === JSON.stringify([" ", "mpg", "cylinders"]),
-          "only selected columns shown (plus row names): " + cols.map((c) => c.title).join(","));
+    console.log("columns menu");
+    await page.click("#edit1-columns");
+    await page.waitForSelector(".editr-columns-menu");
+    for (const name of ["hp", "V1"]) {
+      await page.evaluate((n) => {
+        const l = [...document.querySelectorAll(".editr-columns-list label")].find((x) => x.textContent.trim() === n);
+        l.querySelector("input").click();
+      }, name);
+    }
+    await page.mouse.click(900, 700);
+    await L.settle(page);
+    const visibleTitles = async () => page.evaluate(() => document.getElementById("edit1-grid").__editr.table.getColumns()
+      .filter((c) => c.getField() && c.getField() !== "__editr_add__" && c.isVisible()).map((c) => c.getDefinition().title));
+    let vis = await visibleTitles();
+    check(JSON.stringify(vis) === JSON.stringify([" ", "mpg", "cylinders"]), "hp and V1 hidden: " + vis.join(","));
+    check((await page.$eval("#edit1-columns_count", (e) => e.textContent)) === "2 of 4", "toolbar shows 2 of 4 columns");
 
-    console.log("row filter modal");
+    console.log("header filter (values list)");
     const before = await L.gridData(page);
     const six = before.filter((r) => Number(r.c3) === 6).map((r) => r.__editr_id__);
-    await page.click("#filter1-filter");
-    await page.waitForSelector("#filter1-filter-1-col", { timeout: 5000 });
-    await L.sleep(500);
-    await page.evaluate(() => {
-      $("#filter1-filter-1-col")[0].selectize.setValue("cylinders");
+    const fbox = await page.evaluate(() => {
+      const t = document.getElementById("edit1-grid").__editr.table;
+      const i = t.getColumn("c3").getElement().querySelector(".tabulator-header-filter input");
+      const b = i.getBoundingClientRect();
+      return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
     });
-    await L.sleep(800);
+    await page.mouse.click(fbox.x, fbox.y);
+    await page.waitForSelector(".tabulator-edit-list .tabulator-edit-list-item", { timeout: 3000 });
+    const opts = await page.$$eval(".tabulator-edit-list .tabulator-edit-list-item", (e) => e.map((x) => x.textContent.trim()));
+    check(opts.includes("6") && opts.includes("4"), "filter offers the column's values: " + opts.join(","));
     await page.evaluate(() => {
-      $("#filter1-filter-1-logic")[0].selectize.setValue("equal");
-      const s = $("#filter1-filter-1-levels")[0].selectize;
-      s.addOption({ value: "6", label: "6" });
-      s.setValue(["6"]);
+      [...document.querySelectorAll(".tabulator-edit-list .tabulator-edit-list-item")].find((x) => x.textContent.trim() === "6").dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
-    await L.sleep(800);
-    await page.click("#filter1-close");
-    await L.settle(page, 1500);
-    data = await L.gridData(page);
+    await L.sleep(300);
+    await page.mouse.click(900, 700);
+    await L.settle(page, 800);
+    data = await page.evaluate(() => document.getElementById("edit1-grid").__editr.table.getData("active"));
     check(JSON.stringify(data.map((r) => r.__editr_id__)) === JSON.stringify(six),
-          "filtered to cyl == 6 rows " + JSON.stringify(six) + " got " + JSON.stringify(data.map((r) => r.__editr_id__)));
+          "filtered to cylinders == 6 rows " + JSON.stringify(six) + " got " + JSON.stringify(data.map((r) => r.__editr_id__)));
+    const chip = await page.$eval("#edit1-chips", (e) => e.textContent.trim());
+    check(chip === "cylinders is 6", "filter chip shown: '" + chip + "'");
+    const rowsText = await page.$eval("#edit1-rows", (e) => e.textContent);
+    check(rowsText.startsWith(six.length + " of 8 rows"), "status bar row count: " + rowsText);
 
     console.log("editing inside the filtered view");
     await L.editCell(page, six[0], "c2", "99");
     await L.rowMenu(page, six[0], "c2", "Insert row below");
-    data = await L.gridData(page);
-    check(data.length === six.length + 1, "new row visible in filtered view");
+    data = await page.evaluate(() => document.getElementById("edit1-grid").__editr.table.getData("active"));
+    check(data.length === six.length + 1, "new row stays visible under the filter");
     await page.click("#edit1-undo");
     await L.settle(page);
-    data = await L.gridData(page);
+    data = await page.evaluate(() => document.getElementById("edit1-grid").__editr.table.getData("active"));
     check(data.length === six.length, "undo removed it again");
 
-    console.log("clear view");
-    await page.click("#select1-select");
-    await page.waitForSelector("#select1-select_none", { visible: true });
-    await page.click("#select1-select_none");
-    await L.sleep(200);
-    await page.click("#select1-close");
-    await L.settle(page, 1000);
-    await page.click("#filter1-filter");
-    await page.waitForSelector("#filter1-filter_reset", { visible: true });
-    await L.sleep(800); // modal fade-in
-    await page.click("#filter1-filter_reset");
+    console.log("find");
+    await page.click("#edit1-find");
+    await page.keyboard.type("hornet");
     await L.sleep(500);
-    await page.click("#filter1-close");
-    await L.settle(page, 1200);
+    let found = await page.$eval("#edit1-find_count", (e) => e.textContent);
+    check(found === "1 of 1", "find under the filter: " + found);
+    await page.keyboard.press("Escape");
+
+    console.log("clear view");
+    await page.click("#edit1-chips button");
+    await L.settle(page, 800);
+    await page.click("#edit1-columns");
+    await page.waitForSelector(".editr-columns-menu");
+    await page.evaluate(() => [...document.querySelectorAll(".editr-columns-head button")].find((b) => b.textContent === "Show all").click());
+    await page.mouse.click(900, 700);
+    await L.settle(page, 800);
+    data = await page.evaluate(() => document.getElementById("edit1-grid").__editr.table.getData("active"));
+    vis = await visibleTitles();
+    check(data.length === 8 && vis.length === 5 && JSON.stringify(data.map((r) => r.__editr_id__)) === JSON.stringify([1, 2, 3, 9, 4, 5, 6, 7]), "full data shown again (" + data.length + " rows, " + vis.length + " cols)");
+    check((await page.$eval("#edit1-chips", (e) => e.textContent.trim())) === "", "no chips left");
+
+    console.log("find across all rows");
+    await page.click("#edit1-find");
+    await page.keyboard.type("hornet");
+    await L.sleep(500);
+    found = await page.$eval("#edit1-find_count", (e) => e.textContent);
+    check(found === "1 of 2", "two matches: " + found);
+    await page.keyboard.press("Enter");
+    await L.sleep(300);
+    found = await page.$eval("#edit1-find_count", (e) => e.textContent);
+    check(found === "2 of 2", "Enter moves to the next match: " + found);
+    await page.keyboard.press("Escape");
+
+    console.log("type guard");
+    const g = await L.cellCentre(page, 5, "c2");
+    await page.mouse.click(g.x, g.y, { clickCount: 2 });
+    await page.waitForSelector(".tabulator-cell.tabulator-editing input");
+    await page.keyboard.down("Control"); await page.keyboard.press("KeyA"); await page.keyboard.up("Control");
+    await page.keyboard.type("abc");
+    await page.keyboard.press("Enter");
+    await page.waitForSelector(".editr-guard", { timeout: 3000 });
+    check(true, "guard asks before turning mpg into text");
+    await page.click('.editr-guard [data-act="cancel"]');
+    await L.settle(page);
     data = await L.gridData(page);
-    cols = await L.columns(page);
-    check(data.length === 8 && cols.length === 5 && JSON.stringify(data.map((r) => r.__editr_id__)) === JSON.stringify([1, 2, 3, 9, 4, 5, 6, 7]), "full data shown again (" + data.length + " rows, " + cols.length + " cols)");
+    check(Number(data.find((r) => r.__editr_id__ === 5).c2) === 12, "cancel restored the value");
+
+    console.log("review panel");
+    await page.click("#edit1-open_changes");
+    await page.waitForSelector("#edit1-changes .editr-change", { timeout: 5000 });
+    const items = await page.$$eval("#edit1-changes .editr-change", (e) => e.map((x) => x.textContent.replace(/\s+/g, " ").trim()));
+    check(items.length >= 4, items.length + " changes listed");
+    check(items.some((t) => /Mazda RX4 Wag/.test(t) && /21 . 21.5/.test(t)), "edit listed with old and new value");
+    const badge = await page.$eval("#edit1-review_count", (e) => e.textContent);
+    check(badge === String(items.length), "toolbar badge matches (" + badge + ")");
+    // revert the Mazda RX4 Wag edit, then undo the revert
+    await page.evaluate(() => {
+      const li = [...document.querySelectorAll("#edit1-changes .editr-change")].find((x) => /Mazda RX4 Wag/.test(x.textContent));
+      li.querySelector(".btn").click();
+    });
+    await L.settle(page, 800);
+    data = await L.gridData(page);
+    check(Number(data.find((r) => r.__editr_id__ === 2).c2) === 21, "revert put mpg back to 21");
+    await page.click("#edit1-undo");
+    await L.settle(page, 800);
+    data = await L.gridData(page);
+    check(Number(data.find((r) => r.__editr_id__ === 2).c2) === 21.5, "undo brought the edit back");
+    await page.click("#edit1-tab_code");
+    await page.waitForFunction(() => /add_row/.test(document.getElementById("edit1-code").textContent), { timeout: 5000 });
+    check(true, "code tab shows generated code");
+    await page.click("#edit1-open_code");
 
     await page.screenshot({ path: process.argv[3] + "/memory.png" });
     console.log("done");

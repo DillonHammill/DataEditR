@@ -12,8 +12,14 @@
 #'   making multiple calls to this shiny module.
 #' @param height height of the grid as a valid CSS unit, set to \code{"65vh"}
 #'   by default.
-#' @param toolbar logical indicating whether undo/redo buttons and a change
-#'   counter should be shown above the grid, set to \code{TRUE} by default.
+#' @param toolbar logical indicating whether the toolbar (undo/redo, columns,
+#'   find, review changes, code), review panel and status bar should be shown
+#'   around the grid, set to \code{TRUE} by default.
+#' @param toolbar_left,toolbar_right optional UI elements to add at the start
+#'   or end of the toolbar (\code{data_edit()} adds its Open and Export menus
+#'   here).
+#' @param code_name name of the data used in the code shown in the review
+#'   panel, set to \code{"data"} by default.
 #' @param data a reactive expression containing an array (e.g. data.frame,
 #'   matrix or data.table), a database table (see \code{\link{db_table}}) or a
 #'   vector indicating the dimensions of the array (e.g. c(10,10)) or column
@@ -110,35 +116,120 @@ NULL
 #' @export
 dataEditUI <- function(id,
                        height = "65vh",
-                       toolbar = TRUE) {
+                       toolbar = TRUE,
+                       toolbar_left = NULL,
+                       toolbar_right = NULL) {
   ns <- NS(id)
-  tagList(
-    if (toolbar) {
-      div(
-        class = "editr-toolbar",
-        style = "margin-bottom: 4px; display: flex; align-items: center; gap: 4px;",
-        actionButton(
-          ns("undo"),
-          label = NULL,
-          icon = icon("rotate-left"),
-          class = "btn-sm",
-          title = "Undo (Ctrl+Z)"
+  prefix <- ns("")
+  js_panel <- function(tab, toggle = TRUE) {
+    sprintf("DataEditR.panel('%s', '%s', %s)", prefix, tab,
+            if (toggle) "true" else "false")
+  }
+  grid <- editr_gridOutput(ns("grid"), height = height)
+  if (!toolbar) {
+    return(tagList(editr_dependency(), grid))
+  }
+  div(
+    class = "editr-editor",
+    id = ns("editor"),
+    editr_dependency(),
+    # TOOLBAR
+    div(
+      role = "toolbar",
+      `aria-label` = "Editor tools",
+      class = "editr-toolbar",
+      if (!is.null(toolbar_left)) tagList(toolbar_left, span(class = "editr-sep", `aria-hidden` = "true")),
+      editr_tool(ns("undo"), icon = "undo", title = "Undo (Ctrl+Z)",
+                 class = "action-button"),
+      editr_tool(ns("redo"), icon = "redo", title = "Redo (Ctrl+Y)",
+                 class = "action-button"),
+      span(class = "editr-sep", `aria-hidden` = "true"),
+      editr_tool(ns("columns"), label = "Columns", icon = "columns",
+                 title = "Show or hide columns", `aria-haspopup` = "dialog",
+                 `aria-expanded` = "false",
+                 span(class = "editr-muted", id = ns("columns_count")),
+                 editr_icon("chevron", 14)),
+      div(class = "editr-chips", id = ns("chips"),
+          `aria-label` = "Active filters"),
+      tags$label(
+        class = "editr-find",
+        editr_icon("search"),
+        span(class = "editr-visually-hidden", "Find in data"),
+        tags$input(type = "search", id = ns("find"),
+                   placeholder = "Find in data", autocomplete = "off"),
+        span(class = "editr-find-count", id = ns("find_count"),
+             `aria-live` = "polite"),
+        tags$kbd("Ctrl F")
+      ),
+      span(class = "editr-spacer"),
+      editr_tool(ns("open_changes"), label = "Review changes", icon = "review",
+                 title = "Review changes", onclick = js_panel("changes"),
+                 `aria-pressed` = "false",
+                 span(class = "editr-count", id = ns("review_count"))),
+      editr_tool(ns("open_code"), label = "Code", icon = "code",
+                 title = "Code to reproduce the edits", onclick = js_panel("code"),
+                 `aria-pressed` = "false"),
+      toolbar_right,
+      editr_tool(ns("help"), icon = "help", title = "Keyboard shortcuts (?)",
+                 `data-bs-toggle` = "modal",
+                 `data-bs-target` = paste0("#", ns("shortcuts")))
+    ),
+    # GRID + REVIEW PANEL
+    div(
+      class = "editr-body",
+      div(class = "editr-main", grid),
+      tags$aside(
+        class = "editr-panel",
+        id = ns("panel"),
+        `aria-label` = "Review changes",
+        div(
+          class = "editr-panel-head",
+          role = "tablist",
+          tags$button(type = "button", class = "editr-tab", role = "tab",
+                      id = ns("tab_changes"), `aria-selected` = "false",
+                      onclick = js_panel("changes", FALSE), "Changes"),
+          tags$button(type = "button", class = "editr-tab", role = "tab",
+                      id = ns("tab_code"), `aria-selected` = "false",
+                      onclick = js_panel("code", FALSE), "Code"),
+          span(class = "editr-spacer"),
+          tags$button(type = "button", class = "btn btn-sm editr-tool-icon",
+                      `aria-label` = "Close panel", title = "Close",
+                      onclick = sprintf("DataEditR.panel('%s', null)", prefix),
+                      editr_icon("close"))
         ),
-        actionButton(
-          ns("redo"),
-          label = NULL,
-          icon = icon("rotate-right"),
-          class = "btn-sm",
-          title = "Redo (Ctrl+Y)"
-        ),
-        tags$span(
-          id = ns("status"),
-          class = "text-muted",
-          style = "margin-left: 8px; font-size: 12px;"
+        div(class = "editr-pane", id = ns("pane_changes"), role = "tabpanel",
+            hidden = NA, shiny::uiOutput(ns("changes"))),
+        div(
+          class = "editr-pane", id = ns("pane_code"), role = "tabpanel",
+          hidden = NA,
+          div(
+            class = "editr-pane-head",
+            tags$h2("Code to reproduce"),
+            span(class = "text-muted small", "updates as you edit"),
+            span(class = "editr-spacer"),
+            tags$button(type = "button", class = "btn btn-sm btn-outline-secondary",
+                        onclick = sprintf("DataEditR.copy('%s', this)", ns("code")),
+                        editr_icon("copy", 14), span("Copy"))
+          ),
+          tags$pre(class = "editr-code shiny-text-output", id = ns("code"))
         )
       )
-    },
-    editr_gridOutput(ns("grid"), height = height)
+    ),
+    # STATUS BAR
+    div(
+      class = "editr-statusbar",
+      `aria-live` = "polite",
+      span(id = ns("rows")),
+      span(class = "editr-sep", `aria-hidden` = "true"),
+      span(id = ns("selection")),
+      span(class = "editr-spacer"),
+      span(class = "editr-changes-status",
+           span(class = "editr-swatch", `aria-hidden` = "true"),
+           span(class = "editr-status-text", id = ns("status")),
+           tags$button(type = "button", class = "editr-link",
+                       onclick = js_panel("changes", FALSE), "Review"))
+    ),
+    editr_shortcuts(ns("shortcuts"))
   )
 }
 
@@ -163,6 +254,7 @@ dataEditServer <- function(id,
                            read_fun = "read.csv",
                            read_args = NULL,
                            track = NULL,
+                           code_name = "data",
                            ...) {
 
   data_r <- if (is.reactive(data)) data else reactive(data)
@@ -178,6 +270,8 @@ dataEditServer <- function(id,
     editor <- reactiveVal(NULL) # list(store, cfg)
     data_tick <- reactiveVal(0) # data changed
     view_tick <- reactiveVal(0) # grid needs a full render
+    client_tick <- reactiveVal(0) # grid filters / visible columns changed
+    ns <- session$ns
 
     bump <- function(rv) rv(isolate(rv()) + 1)
 
@@ -265,9 +359,29 @@ dataEditServer <- function(id,
           next_id = store$state$next_id,
           next_col = store$state$next_cid,
           changed = if (cfg$track) I(view_changed(store)) else NULL,
-          track_color = cfg$track_color
+          track_color = cfg$track_color,
+          ui = list(
+            rows = ns("rows"),
+            selection = ns("selection"),
+            chips = ns("chips"),
+            columns_btn = ns("columns"),
+            columns_count = ns("columns_count"),
+            find = ns("find"),
+            find_count = ns("find_count"),
+            shortcuts = ns("shortcuts")
+          )
         )
       )
+    })
+
+    # WHAT THE GRID SHOWS (header filters, hidden columns)
+    observeEvent(input$grid_view, {
+      ed <- editor()
+      if (is.null(ed)) return()
+      v <- input$grid_view
+      ed$store$client_rows <- if (is.null(v$rows)) NULL else as.integer(unlist(v$rows))
+      ed$store$client_cols <- if (is.null(v$cols)) NULL else as.character(unlist(v$cols))
+      bump(client_tick)
     })
 
     # EDITS FROM THE GRID ------------------------------------------------------
@@ -303,20 +417,69 @@ dataEditServer <- function(id,
 
     # STATUS -------------------------------------------------------------------
 
+    set_text <- function(id, text) {
+      session$sendCustomMessage("editr_status", list(id = ns(id), text = text))
+    }
+    set_html <- function(id, html) {
+      session$sendCustomMessage("editr_status", list(id = ns(id), html = html))
+    }
+
     observeEvent(data_tick(), {
       ed <- editor()
       if (is.null(ed)) return()
       ch <- change_counts(ed$store)
-      msg <- if (ch$edited + ch$added + ch$removed == 0) {
-        ""
-      } else {
-        paste0(ch$edited, " edited, ", ch$added, " added, ",
-               ch$removed, " removed row(s)")
-      }
-      session$sendCustomMessage(
-        "editr_status",
-        list(id = session$ns("status"), text = msg)
+      plural <- function(n, w) paste0(n, " ", w, if (n == 1) "" else "s")
+      parts <- c(
+        if (ch$cells > 0) paste(plural(ch$cells, "cell"), "edited"),
+        if (ch$added > 0) paste(plural(ch$added, "row"), "added"),
+        if (ch$removed > 0) paste(plural(ch$removed, "row"), "removed"),
+        if (ch$columns > 0) paste(plural(ch$columns, "column"), "changed")
       )
+      set_html("status", paste(parts, collapse = " &middot; "))
+      n <- ch$items
+      set_text("review_count", if (n == 0) "" else as.character(n))
+    })
+
+    # REVIEW PANEL -------------------------------------------------------------
+
+    output$changes <- shiny::renderUI({
+      req_panel <- identical(input$panel, "changes")
+      shiny::req(req_panel)
+      data_tick()
+      ed <- editor()
+      shiny::req(ed)
+      review_ui(change_items(ed$store, ed$cfg), ns)
+    })
+
+    output$code <- shiny::renderText({
+      shiny::req(identical(input$panel, "code"))
+      data_tick()
+      ed <- editor()
+      shiny::req(ed)
+      editr_code(ed$store, ed$cfg, code_name)
+    })
+
+    # PANES START HIDDEN - KEEP THEIR OUTPUTS LIVE (they req() the open tab)
+    shiny::outputOptions(output, "changes", suspendWhenHidden = FALSE)
+    shiny::outputOptions(output, "code", suspendWhenHidden = FALSE)
+
+    observeEvent(input$revert, {
+      ed <- editor()
+      if (is.null(ed)) return()
+      ops <- revert_ops(ed$store, input$revert$value)
+      if (length(ops) == 0) return()
+      res <- server_ops(ed$store, ops, ed$cfg)
+      for (p in res$patches) {
+        grid_send(session, "grid", p$method, p$args)
+      }
+      bump(data_tick)
+    })
+
+    observeEvent(input$goto, {
+      id <- suppressWarnings(as.integer(input$goto$value))
+      if (!is.na(id)) {
+        grid_send(session, "grid", "scroll_to", list(id = id))
+      }
     })
 
     # RETURN -------------------------------------------------------------------
@@ -330,6 +493,7 @@ dataEditServer <- function(id,
     attr(result, "view") <- reactive({
       data_tick()
       view_tick()
+      client_tick()
       ed <- editor()
       if (is.null(ed)) return(NULL)
       editr_result(ed$store, ed$cfg, view = TRUE)

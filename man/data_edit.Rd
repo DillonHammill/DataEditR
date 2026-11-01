@@ -24,7 +24,7 @@ data_edit(
   viewer = "dialog",
   viewer_height = 800,
   viewer_width = 1200,
-  theme = "yeti",
+  theme = NULL,
   read_fun = "read.csv",
   read_args = NULL,
   write_fun = "write.csv",
@@ -82,10 +82,11 @@ to TRUE by default.}
 
 \item{save_as}{name of a csv file to which the edited data should be saved.}
 
-\item{title}{optional title to include above the data editor.}
+\item{title}{optional title to show in the header, set to the name of the
+data by default.}
 
-\item{logo}{optional package logo to include in title above the data editor,
-must be supplied as path to logo png.}
+\item{logo}{optional logo to include next to the title, supplied as the path
+or URL of an image. No logo is shown by default.}
 
 \item{logo_size}{width of the logo in pixels, set to 30 pixels by default.}
 
@@ -104,7 +105,9 @@ when \code{viewer} is set to \code{"dialog"}, set 800 by default.}
 \item{viewer_width}{numeric to control the width of the viewer in pixels when
 \code{viewer} is set to \code{"dialog"}, set to 1200 by default.}
 
-\item{theme}{valid shinytheme name, set to "yeti" by default.}
+\item{theme}{a Bootstrap 5 Bootswatch theme name (e.g. \code{"yeti"}) or a
+\code{bslib::bs_theme()} object. Set to \code{NULL} by default to use the
+DataEditR theme.}
 
 \item{read_fun}{name of the function to use to read in the data when \code{x}
 is the name of a file, set to \code{read.csv} by default.}
@@ -123,10 +126,10 @@ accepts the file name supplied to \code{save_as}.}
 \item{quiet}{logical indicating whether messages should be suppressed, set to
 FALSE by default.}
 
-\item{hide}{logical indicating whether the \code{dataInput} and
-\code{dataOutput} modules should be visible to the user within the
-application. If \code{hide = FALSE} and \code{save_as} is specified, the
-edited data will be written to file after the application is closed.}
+\item{hide}{logical indicating whether the \emph{Open} and \emph{Export}
+menus and the \emph{Done} options should be hidden. When \code{save_as}
+is specified the edited data is written to file when \emph{Done} is
+pressed.}
 
 \item{code}{logical indicating whether tidyverse code required to replicate
 the data edits should be printed to the console, set to \code{FALSE} by
@@ -162,10 +165,22 @@ database.
 \section{Editing}{
 
 Double-click a cell to edit it. Click and drag to select a range of cells,
-then copy (Ctrl+C), paste (Ctrl+V) or clear (Delete) the selection. Right
-click a row to insert or delete rows, and right click a column header to
-insert, rename or delete columns. Double-click a column header to rename it.
-Ctrl+Z and Ctrl+Y undo and redo changes.
+then copy (Ctrl+C), paste (Ctrl+V), clear (Delete) or fill down (Ctrl+D).
+Right click a row to insert or delete rows, and right click a column header
+to insert, rename, hide or delete columns. Double-click a column header to
+rename it. Ctrl+Z and Ctrl+Y undo and redo changes; press ? for the full
+list of shortcuts.
+}
+
+\section{Layout}{
+
+The toolbar opens other data (\emph{Open}), shows or hides columns, lists
+active filters, searches the data (Ctrl+F), and opens the review panel,
+which lists every change with a button to revert it and shows the code that
+reproduces the edits. Type in the boxes under the column headers to filter
+rows. The status bar shows how many rows and columns are on screen and
+summarises the selected cells. The menu next to \emph{Done} chooses whether
+all data or only what is on screen is returned.
 }
 
 \section{Databases}{

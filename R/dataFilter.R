@@ -23,7 +23,6 @@
 #'   removeUI insertUI selectInput selectizeInput removeModal updateSelectInput
 #' @importFrom shinyjs inlineCSS useShinyjs hidden show
 #' @importFrom htmltools tagList
-#' @importFrom shinyBS addTooltip
 #'
 #' @author Dillon Hammill, \email{dillon.hammill21@gmail.com}
 #'
@@ -70,10 +69,8 @@ dataFilterUI <- function(id) {
     actionButton(
       NS(id, "filter"),
       label = NULL,
-      icon = icon(
-        "glyphicon glyphicon-filter",
-        lib = "glyphicon"
-      ),
+      icon = icon("filter"),
+      title = "Filter rows",
       style = "margin-left: 0px;"
     )
   )
@@ -98,9 +95,7 @@ dataFilterServer <- function(id,
     if (!hide) {
       show("filter")
       if(!is.null(hover_text)) {
-        addTooltip(session = session,
-                   id = ns("filter"),
-                   title = hover_text)
+        editr_tooltip("filter", hover_text)
       }
     }
     
@@ -158,7 +153,7 @@ dataFilterServer <- function(id,
               actionButton(
                 ns("close"),
                 "Close",
-                icon = icon("eject", lib = "glyphicon")
+                icon = icon("check")
               )
             ),
             tagList(

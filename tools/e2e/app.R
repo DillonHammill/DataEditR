@@ -22,6 +22,11 @@ if (scenario == "memory") {
                                       pw = "password"),
                    col_readonly = "locked", col_hide = "secret")
   saveRDS(res, file.path(out, "result.rds"))
+} else if (scenario == "mockup") {
+  cars <- mtcars
+  res <- data_edit(cars, viewer = noview, quiet = TRUE, track = TRUE,
+                   col_readonly = "disp", save_as = file.path(out, "mtcars_new.csv"))
+  saveRDS(res, file.path(out, "result.rds"))
 } else if (scenario == "big") {
   set.seed(1); n <- as.integer(Sys.getenv("EDITR_N", "100000"))
   big <- data.frame(id = 1:n, a = rnorm(n), b = sample(letters, n, TRUE),

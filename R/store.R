@@ -92,6 +92,7 @@ apply_op <- function(state, op) {
     rename_col = apply_rename_col(state, op),
     insert_col = apply_insert_col(state, op),
     delete_col = apply_delete_col(state, op),
+    set_state = apply_set_state(state, op),
     stop("Unknown op type '", op$type, "'.", call. = FALSE)
   )
 }
@@ -249,6 +250,16 @@ apply_delete_col <- function(state, op) {
   list(state = state, inverse = inverse)
 }
 
+#' Replace the whole state (used by "revert all"); ids keep counting up so
+#' the grid never reuses an id
+#' @noRd
+apply_set_state <- function(state, op) {
+  new <- op$state
+  new$next_id <- max(state$next_id, new$next_id)
+  new$next_cid <- max(state$next_cid, new$next_cid)
+  list(state = new, inverse = list(type = "set_state", state = state))
+}
+
 ## DATA FRAME HELPERS ----------------------------------------------------------
 
 #' Typed NA rows matching the columns of data
@@ -383,7 +394,8 @@ column_as_character <- function(col) {
 #' @noRd
 parse_values <- function(col, values) {
   blank <- vapply(values, function(v) {
-    length(v) == 0 || is.na(v) || (is.character(v) && !nzchar(trimws(v)))
+    length(v) == 0 || is.na(v) ||
+      (is.character(v) && trimws(v) %in% c("", "NA"))
   }, logical(1))
   vals <- values
   vals[blank] <- NA
@@ -556,6 +568,13 @@ store_track_view <- function(store, ops) {
       store$view_cols <- union(store$view_cols, op$cid)
     } else if (op$type == "delete_col" && !is.null(store$view_cols)) {
       store$view_cols <- setdiff(store$view_cols, op$cid)
+    } else if (op$type == "set_state") {
+      if (!is.null(store$view_rows)) {
+        store$view_rows <- intersect(store$view_rows, op$state$ids)
+      }
+      if (!is.null(store$view_cols)) {
+        store$view_cols <- intersect(store$view_cols, op$state$cids)
+      }
     }
   }
   invisible(store)

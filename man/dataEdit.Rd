@@ -6,7 +6,13 @@
 \alias{dataEditServer}
 \title{Shiny module for data editing}
 \usage{
-dataEditUI(id, height = "65vh", toolbar = TRUE)
+dataEditUI(
+  id,
+  height = "65vh",
+  toolbar = TRUE,
+  toolbar_left = NULL,
+  toolbar_right = NULL
+)
 
 dataEditServer(
   id,
@@ -28,6 +34,7 @@ dataEditServer(
   read_fun = "read.csv",
   read_args = NULL,
   track = NULL,
+  code_name = "data",
   ...
 )
 }
@@ -38,8 +45,13 @@ making multiple calls to this shiny module.}
 \item{height}{height of the grid as a valid CSS unit, set to \code{"65vh"}
 by default.}
 
-\item{toolbar}{logical indicating whether undo/redo buttons and a change
-counter should be shown above the grid, set to \code{TRUE} by default.}
+\item{toolbar}{logical indicating whether the toolbar (undo/redo, columns,
+find, review changes, code), review panel and status bar should be shown
+around the grid, set to \code{TRUE} by default.}
+
+\item{toolbar_left, toolbar_right}{optional UI elements to add at the start
+or end of the toolbar (\code{data_edit()} adds its Open and Export menus
+here).}
 
 \item{data}{a reactive expression containing an array (e.g. data.frame,
 matrix or data.table), a database table (see \code{\link{db_table}}) or a
@@ -111,6 +123,9 @@ is selected, set to \code{read.csv} by default.}
 been edited or added to the original data with a default blue border, or a
 valid CSS color (e.g. \code{"#FF0000"} or \code{"red"}) to use a custom
 border color. Set to \code{NULL} by default to disable highlighting.}
+
+\item{code_name}{name of the data used in the code shown in the review
+panel, set to \code{"data"} by default.}
 
 \item{...}{not in use.}
 }

@@ -28,6 +28,40 @@
   no longer converted to numbers. Dates stay dates, and matrices, tibbles and
   data.tables are returned with their original class.
 
+## New editor layout
+
+* One toolbar replaces the old input row, icon buttons and undo/redo line:
+  Open, Undo/Redo, Columns, filter chips, Find in data, Review changes, Code,
+  Export and a keyboard shortcuts sheet (press `?`).
+* Filter rows by typing in the boxes under each column header: min/max for
+  numbers, a multi-select list for columns with few distinct values and
+  "contains" for text. Active filters appear as chips in the toolbar. This
+  replaces the filter dialog inside `data_edit()` (the `dataFilter` module is
+  still exported).
+* Show or hide columns from the Columns menu (or a column's right-click menu),
+  replacing the column selection dialog inside `data_edit()` (the
+  `dataSelect` module is still exported).
+* Review panel: lists every edited, added, removed or renamed cell, row and
+  column with a button to revert it (reverts can be undone), plus "Revert
+  all", and a Code tab that shows the `data_code()` output as you edit.
+* Status bar: rows and columns on screen, Excel-style sum/mean/count of the
+  selected cells, and a summary of changes.
+* Typing text into a number or date column asks whether to store `NA`,
+  convert the column to text or cancel, instead of silently converting the
+  column. `"NA"` is treated as a missing value in typed columns.
+* "+ Add row" under the grid and a "+" header to add a column; headers show
+  type badges and a lock on read-only columns; Ctrl+F finds values.
+* The Done button gains a menu to return all data or only what is on screen
+  (replacing the scissors toggle) and, with `save_as`, whether to save.
+* Open (R object, file upload or new table) and Export (all data or what is
+  on screen) menus replace the `dataInput`/`dataOutput` row; both modules are
+  still exported.
+* Bootstrap 5 theme by default (`theme = NULL`); Bootswatch names such as
+  `"yeti"` now select the Bootstrap 5 version. `shinyBS` and `miniUI` are no
+  longer dependencies.
+* Two more Tabulator 6.7.1 hot spots are patched (row display checks and
+  range re-layout touched every row), keeping edits at ~35 ms on 100,000 rows.
+
 ## Database tables
 
 * `data_edit()` and `dataEditServer()` accept `dbplyr` lazy tables (e.g.

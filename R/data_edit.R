@@ -27,10 +27,20 @@
 #'
 #' @section Editing:
 #' Double-click a cell to edit it. Click and drag to select a range of cells,
-#' then copy (Ctrl+C), paste (Ctrl+V) or clear (Delete) the selection. Right
-#' click a row to insert or delete rows, and right click a column header to
-#' insert, rename or delete columns. Double-click a column header to rename it.
-#' Ctrl+Z and Ctrl+Y undo and redo changes.
+#' then copy (Ctrl+C), paste (Ctrl+V), clear (Delete) or fill down (Ctrl+D).
+#' Right click a row to insert or delete rows, and right click a column header
+#' to insert, rename, hide or delete columns. Double-click a column header to
+#' rename it. Ctrl+Z and Ctrl+Y undo and redo changes; press ? for the full
+#' list of shortcuts.
+#'
+#' @section Layout:
+#' The toolbar opens other data (\emph{Open}), shows or hides columns, lists
+#' active filters, searches the data (Ctrl+F), and opens the review panel,
+#' which lists every change with a button to revert it and shows the code that
+#' reproduces the edits. Type in the boxes under the column headers to filter
+#' rows. The status bar shows how many rows and columns are on screen and
+#' summarises the selected cells. The menu next to \emph{Done} chooses whether
+#' all data or only what is on screen is returned.
 #'
 #' @section Databases:
 #' Supply a \code{dbplyr} lazy table (e.g. \code{dplyr::tbl(con, "artists")})
@@ -73,9 +83,10 @@
 #' @param row_edit logical indicating whether rows can be added or removed, set
 #'   to TRUE by default.
 #' @param save_as name of a csv file to which the edited data should be saved.
-#' @param title optional title to include above the data editor.
-#' @param logo optional package logo to include in title above the data editor,
-#'   must be supplied as path to logo png.
+#' @param title optional title to show in the header, set to the name of the
+#'   data by default.
+#' @param logo optional logo to include next to the title, supplied as the path
+#'   or URL of an image. No logo is shown by default.
 #' @param logo_size width of the logo in pixels, set to 30 pixels by default.
 #' @param logo_side can be either \code{"left"} or \code{"right"} to determine
 #'   the position of the logo relative to the title, set to \code{"left"} by
@@ -88,7 +99,9 @@
 #'   when \code{viewer} is set to \code{"dialog"}, set 800 by default.
 #' @param viewer_width numeric to control the width of the viewer in pixels when
 #'   \code{viewer} is set to \code{"dialog"}, set to 1200 by default.
-#' @param theme valid shinytheme name, set to "yeti" by default.
+#' @param theme a Bootstrap 5 Bootswatch theme name (e.g. \code{"yeti"}) or a
+#'   \code{bslib::bs_theme()} object. Set to \code{NULL} by default to use the
+#'   DataEditR theme.
 #' @param read_fun name of the function to use to read in the data when \code{x}
 #'   is the name of a file, set to \code{read.csv} by default.
 #' @param read_args a named list of additional arguments to pass to
@@ -101,10 +114,10 @@
 #'   \code{write_fun}.
 #' @param quiet logical indicating whether messages should be suppressed, set to
 #'   FALSE by default.
-#' @param hide logical indicating whether the \code{dataInput} and
-#'   \code{dataOutput} modules should be visible to the user within the
-#'   application. If \code{hide = FALSE} and \code{save_as} is specified, the
-#'   edited data will be written to file after the application is closed.
+#' @param hide logical indicating whether the \emph{Open} and \emph{Export}
+#'   menus and the \emph{Done} options should be hidden. When \code{save_as}
+#'   is specified the edited data is written to file when \emph{Done} is
+#'   pressed.
 #' @param code logical indicating whether tidyverse code required to replicate
 #'   the data edits should be printed to the console, set to \code{FALSE} by
 #'   default. Alternatively, users can supply the name of an R script to write
@@ -125,16 +138,14 @@
 #'   committed.
 #'
 #' @importFrom rstudioapi getActiveDocumentContext
-#' @importFrom htmltools img span br div HTML
-#' @importFrom shiny runGadget dialogViewer browserViewer paneViewer splitLayout
-#'   fluidPage fluidRow column stopApp reactiveValues reactiveVal actionButton
-#'   insertUI isolate modalDialog showModal removeModal modalButton observeEvent
-#'   reactive icon
-#' @importFrom htmltools tags tagList
-#' @importFrom shinyjs useShinyjs hidden show
+#' @importFrom htmltools img span br div HTML tags tagList
+#' @importFrom shiny runGadget dialogViewer browserViewer paneViewer stopApp
+#'   reactiveVal isolate modalDialog showModal removeModal modalButton
+#'   observeEvent observe reactive actionButton textInput fileInput
+#'   numericInput radioButtons checkboxInput downloadLink downloadHandler
+#'   showNotification req
+#' @importFrom shinyjs useShinyjs
 #' @importFrom bslib bs_theme
-#' @importFrom miniUI gadgetTitleBar
-#' @importFrom shinyBS bsButton updateButton addTooltip
 #'
 #' @author Dillon Hammill, \email{dillon.hammill21@gmail.com}
 #'
@@ -165,7 +176,7 @@ data_edit <- function(x = NULL,
                       viewer = "dialog",
                       viewer_height = 800,
                       viewer_width = 1200,
-                      theme = "yeti",
+                      theme = NULL,
                       read_fun = "read.csv",
                       read_args = NULL,
                       write_fun = "write.csv",
@@ -188,165 +199,201 @@ data_edit <- function(x = NULL,
     if (length(nm) == 1 && make.names(nm) == nm) nm else "data"
   }, error = function(e) "data")
 
-  # PREPARE DATA ---------------------------------------------------------------
-
-  # RSTUDIO ADDIN/DATA
-  context <- ""
-  if (Sys.getenv("RSTUDIO") == "1" && rstudioapi::isAvailable()) {
-    context <- tryCatch(
-      getActiveDocumentContext()$selection[[1]]$text,
-      error = function(e) ""
-    )
-    if (nzchar(context) && !exists(context, envir = envir)) {
-      context <- ""
-    }
-  }
-
-  # DATABASE TABLES - EVALUATED BY NAME IN A CHILD ENVIRONMENT
-  if (is_db_input(x)) {
-    envir <- new.env(parent = envir)
-    x_db <- db_table(x)
-    db_name <- if (x_name == "data") {
-      make.names(db_table_label(x_db$table))
-    } else {
-      x_name
-    }
-    assign(db_name, x_db, envir = envir)
-    data <- db_name
-  # LOAD DATA THROUGH RSTUDIO ADDIN
-  } else if (is.null(x) && nzchar(context)) {
-    data <- context
-  } else if (!is.null(dim(x))) {
-    data <- x_name
-    if (!exists(data, envir = envir) ||
-        !identical(get(data, envir = envir), x)) {
-      envir <- new.env(parent = envir)
-      data <- ".data_edit_x"
-      assign(data, x, envir = envir)
-    }
-  } else {
-    data <- x
-  }
-
   # CANCEL
   if (missing(cancel)) {
     cancel <- x
   }
 
-  # CODE GENERATION - CAPTURE ORIGINAL DATA
-  x_original <- if (!is.null(x) && !is.null(dim(x))) x else NULL
-
-  # PREPARE SHINY COMPONENTS ---------------------------------------------------
-
-  # DATAEDITR LOGO
-  if (is.null(logo)) {
-    logo <- paste0(
-      "https://raw.githubusercontent.com/DillonHammill/DataEditR/master",
-      "/vignettes/logo.png"
+  # RSTUDIO ADDIN - HIGHLIGHTED OBJECT NAME
+  if (is.null(x) && Sys.getenv("RSTUDIO") == "1" &&
+      rstudioapi::isAvailable()) {
+    context <- tryCatch(
+      getActiveDocumentContext()$selection[[1]]$text,
+      error = function(e) ""
     )
+    if (length(context) == 1 && nzchar(context) &&
+        exists(context, envir = envir)) {
+      x <- get(context, envir = envir)
+      x_name <- context
+    }
   }
-  logo <- img(src = logo, width = logo_size)
 
-  # TITLE
-  if (is.null(title)) {
-    title <- "Data Editor"
-  }
-  if (grepl("^r", logo_side, ignore.case = TRUE)) {
-    title <- gadgetTitleBar(span(title, logo))
+  # CODE GENERATION - CAPTURE ORIGINAL DATA
+  x_original <- if (!is.null(x) && !is.null(dim(x)) && !is_db_input(x)) {
+    x
   } else {
-    title <- gadgetTitleBar(span(logo, title))
+    NULL
+  }
+
+  # DATA TO EDIT & ITS LABEL
+  initial <- editr_load(x, envir = envir, read_fun = read_fun,
+                        read_args = read_args)
+  if (is_db_input(initial)) {
+    initial <- db_table(initial)
+  }
+  label <- if (!is.null(title)) {
+    title
+  } else if (is.character(x) && length(x) == 1 && file.exists(x)) {
+    basename(x)
+  } else if (is_db_input(initial)) {
+    db_table_label(initial$table)
+  } else if (is.null(x) || is.null(dim(x))) {
+    "New table"
+  } else {
+    x_name
   }
 
   # RESULT OF THE SESSION (code generation for databases)
   session_info <- new.env(parent = emptyenv())
   session_info$code <- NULL
 
-  # SHINY APPLICATION ----------------------------------------------------------
+  # USER INTERFACE -------------------------------------------------------------
 
-  # USER INTERFACE
-  ui <- fluidPage(
-    title,
-    theme = if (is.null(theme)) {
-      NULL
-    } else if (inherits(theme, "bs_theme")) {
-      theme
-    } else {
-      bs_theme(
-        version = 3, # version 4 places DONE on left
-        bootswatch = theme
-      )
-    },
-    useShinyjs(),
-    fluidRow(
-      column(
-        7,
-        style = "padding-right: 5px;",
-        dataInputUI("input1", cellWidths = c("50%", "50%"))
-      ),
-      column(
-        5,
-        style = "padding-left: 5px; margin-top: 35px;",
-        dataSelectUI("select1"),
-        dataFilterUI("filter1"),
-        dataOutputUI("output-active"),
-        dataOutputUI("output-update",
-                     icon = "glyphicon glyphicon-save-file"),
-        hidden(
-          bsButton(
-            "cut",
-            label = NULL,
-            icon = icon("glyphicon glyphicon-scissors", lib = "glyphicon"),
-            style = "danger",
-            type = "action"
+  logo_tag <- if (!is.null(logo) && nzchar(logo)) {
+    img(src = logo, width = logo_size, alt = "")
+  }
+
+  header <- tags$header(
+    class = "editr-header",
+    tags$button(id = "cancel", type = "button",
+                class = "btn btn-outline-secondary action-button", "Cancel"),
+    div(
+      class = "editr-header-title",
+      if (!grepl("^r", logo_side, ignore.case = TRUE)) logo_tag,
+      span(class = "editr-name", id = "dataset_name", label),
+      span(class = "editr-pill", id = "dataset_meta"),
+      if (grepl("^r", logo_side, ignore.case = TRUE)) logo_tag
+    ),
+    div(
+      class = "btn-group",
+      tags$button(id = "done", type = "button",
+                  class = "btn btn-primary action-button fw-semibold", "Done"),
+      if (!hide) {
+        tagList(
+          tags$button(
+            type = "button",
+            id = "done_toggle",
+            class = "btn btn-primary dropdown-toggle dropdown-toggle-split",
+            `data-bs-toggle` = "dropdown",
+            `data-bs-auto-close` = "outside",
+            `aria-expanded` = "false",
+            span(class = "editr-visually-hidden", "Done options")
+          ),
+          div(
+            class = "dropdown-menu dropdown-menu-end editr-done-menu",
+            div(class = "editr-menu-label", "When I press Done, return"),
+            radioButtons(
+              "return_what",
+              label = NULL,
+              choiceNames = list(
+                tagList(span(class = "editr-option-title", "All data"),
+                        span(class = "editr-option-sub", id = "return_all_dims")),
+                tagList(span(class = "editr-option-title", "Only what's on screen"),
+                        span(class = "editr-option-sub", id = "return_view_dims"))
+              ),
+              choiceValues = c("all", "view"),
+              width = "100%"
+            ),
+            if (!is.null(save_as)) {
+              tagList(
+                tags$hr(class = "dropdown-divider"),
+                checkboxInput(
+                  "save_file",
+                  tagList("Also save to ", tags$code(basename(save_as))),
+                  value = TRUE
+                )
+              )
+            }
           )
         )
+      }
+    )
+  )
+
+  open_ui <- if (!hide) {
+    div(
+      class = "dropdown",
+      tags$button(
+        type = "button", id = "open_toggle", class = "btn editr-tool",
+        `data-bs-toggle` = "dropdown", `data-bs-auto-close` = "outside",
+        `aria-expanded` = "false",
+        editr_icon("open"), span("Open")
+      ),
+      div(
+        class = "dropdown-menu editr-open-menu",
+        div(
+          class = "editr-open-row",
+          textInput("open_object", "R object",
+                    value = if (!is.null(dim(x))) x_name else ""),
+          actionButton("open_load", "Load", class = "btn-primary")
+        ),
+        div(class = "form-text",
+            "Any data frame, matrix or dbplyr table in your session"),
+        tags$hr(),
+        fileInput("open_file", "File", buttonLabel = "Upload...",
+                  placeholder = paste0("Read with ", read_fun, "()")),
+        tags$hr(),
+        div(class = "fw-semibold mb-1", "New empty table"),
+        div(
+          class = "editr-open-row editr-open-dims",
+          numericInput("open_rows", "Rows", value = 10, min = 1),
+          numericInput("open_cols", "Columns", value = 10, min = 1),
+          actionButton("open_new", "Create")
+        )
       )
-    ),
-    fluidRow(
-      column(
-        12,
-        dataEditUI("edit1"),
-        br()
+    )
+  }
+
+  export_ui <- if (!hide) {
+    div(
+      class = "dropdown",
+      tags$button(
+        type = "button", class = "btn editr-tool",
+        `data-bs-toggle` = "dropdown", `aria-expanded` = "false",
+        editr_icon("download"), span("Export"), editr_icon("chevron", 14)
+      ),
+      tags$ul(
+        class = "dropdown-menu dropdown-menu-end",
+        tags$li(downloadLink("export_all", "All data", class = "dropdown-item")),
+        tags$li(downloadLink("export_view", "Only what's on screen",
+                             class = "dropdown-item"))
+      )
+    )
+  }
+
+  ui <- bslib::page(
+    title = "DataEditR",
+    theme = editr_theme(theme),
+    useShinyjs(),
+    div(
+      class = "editr-app",
+      header,
+      dataEditUI(
+        "edit1",
+        height = "100%",
+        toolbar_left = open_ui,
+        toolbar_right = export_ui
       )
     )
   )
 
-  # SERVER
+  # SERVER ---------------------------------------------------------------------
+
   server <- function(input, output, session) {
 
-    # SHOW BUTTONS
-    if (!hide) {
-      show("cut")
-      addTooltip(session = session, id = "cut", title = "crop to selection")
+    data_source <- reactiveVal(initial)
+
+    set_text <- function(id, text) {
+      session$sendCustomMessage("editr_status", list(id = id, text = text))
+    }
+    set_html <- function(id, html) {
+      session$sendCustomMessage("editr_status", list(id = id, html = html))
     }
 
-    # STORAGE
-    values <- reactiveValues(
-      rows = NULL, # filtered row indices
-      columns = NULL, # selected column names
-      cut = FALSE
-    )
-
-    # DATA INPUT
-    data_input <- dataInputServer(
-      "input1",
-      data = data,
-      read_fun = read_fun,
-      read_args = read_args,
-      hide = hide,
-      envir = envir
-    )
-
-    # RESET VIEWS ON NEW DATA
-    observeEvent(data_input(), {
-      values$rows <- NULL
-      values$columns <- NULL
-    })
-
-    # DATA EDIT - FULL DATA, DISPLAYING THE SELECTED VIEW
+    # DATA EDIT - FULL DATA
     data_update <- dataEditServer(
       "edit1",
-      data = data_input,
+      data = data_source,
       col_bind = col_bind,
       col_edit = col_edit,
       col_options = col_options,
@@ -357,73 +404,108 @@ data_edit <- function(x = NULL,
       col_factor = col_factor,
       row_bind = row_bind,
       row_edit = row_edit,
-      rows = reactive(values$rows),
-      columns = reactive(values$columns),
       read_fun = read_fun,
       read_args = read_args,
       quiet = quiet,
-      track = track
+      track = track,
+      code_name = x_name
     )
     data_active <- attr(data_update, "view")
     editor <- attr(data_update, "editor")
 
-    # DATA SELECT - COLUMNS
-    data_select <- dataSelectServer(
-      "select1",
-      data = data_update,
-      hide = hide,
-      hover_text = "select columns",
-      reset = data_input
-    )
-    observeEvent(data_select$names(), {
-      values$columns <- data_select$names()
-    }, ignoreNULL = FALSE, ignoreInit = TRUE)
-
-    # DATA FILTER - ROWS
-    data_filter <- dataFilterServer(
-      "filter1",
-      data = data_update,
-      hide = hide,
-      hover_text = "filter rows",
-      reset = data_input
-    )
-    observeEvent(data_filter$rows(), {
-      values$rows <- data_filter$rows()
-    }, ignoreNULL = FALSE, ignoreInit = TRUE)
-
-    # DATA OUTPUT - DATA ACTIVE
-    dataOutputServer(
-      "output-active",
-      data = data_active,
-      save_as = save_as,
-      write_fun = write_fun,
-      write_args = write_args,
-      hide = hide,
-      hover_text = "save selection \n to file"
-    )
-
-    # DATA OUTPUT - DATA ENTIRE
-    dataOutputServer(
-      "output-update",
-      data = data_update,
-      save_as = save_as,
-      write_fun = write_fun,
-      write_args = write_args,
-      hide = hide,
-      hover_text = "save to file"
-    )
-
-    # CUT
-    observeEvent(input$cut, {
-      values$cut <- !values$cut
-      updateButton(
-        session,
-        "cut",
-        NULL,
-        block = FALSE,
-        style = if (values$cut) "success" else "danger"
-      )
+    # HEADER DETAILS
+    observe({
+      d <- data_update()
+      req(!is.null(d))
+      ed <- isolate(editor())
+      kind <- if (!is.null(ed$cfg$db)) {
+        "database table"
+      } else if (is.matrix(d)) {
+        "matrix"
+      } else if (inherits(d, "data.table")) {
+        "data.table"
+      } else if (inherits(d, "tbl_df")) {
+        "tibble"
+      } else {
+        "data.frame"
+      }
+      set_html("dataset_meta",
+               paste0(kind, " &middot; ", NROW(d), " &times; ", NCOL(d)))
+      set_html("return_all_dims", editr_dims(d))
     })
+    observe({
+      v <- data_active()
+      req(!is.null(v))
+      set_html("return_view_dims", editr_dims(v))
+    })
+
+    # OPEN
+    load <- function(obj, name) {
+      if (is.null(obj)) return()
+      if (is_db_input(obj)) {
+        obj <- tryCatch(db_table(obj), error = function(e) e)
+      }
+      if (inherits(obj, "error")) {
+        showNotification(conditionMessage(obj), type = "error")
+        return()
+      }
+      if (!is_db_input(obj) && is.null(dim(obj))) {
+        showNotification(
+          paste0("'", name, "' is not a data frame, matrix or database table."),
+          type = "error"
+        )
+        return()
+      }
+      data_source(obj)
+      set_text("dataset_name", name)
+      session$sendCustomMessage("editr_close_dropdown", list(id = "open_toggle"))
+    }
+    observeEvent(input$open_load, {
+      txt <- trimws(input$open_object)
+      req(nzchar(txt))
+      obj <- tryCatch(eval(parse(text = txt), envir = envir),
+                      error = function(e) e)
+      if (inherits(obj, "error")) {
+        showNotification(conditionMessage(obj), type = "error")
+        return()
+      }
+      load(obj, txt)
+    })
+    observeEvent(input$open_file, {
+      f <- input$open_file
+      obj <- tryCatch(do.call(read_fun, c(list(f$datapath), read_args)),
+                      error = function(e) e)
+      if (inherits(obj, "error")) {
+        showNotification(conditionMessage(obj), type = "error")
+        return()
+      }
+      load(obj, f$name)
+    })
+    observeEvent(input$open_new, {
+      dims <- c(input$open_rows, input$open_cols)
+      dims[is.na(dims) | dims < 1] <- 1
+      load(data_template(as.integer(dims)), "New table")
+    })
+
+    # EXPORT
+    export_handler <- function(view) {
+      downloadHandler(
+        filename = function() {
+          base <- if (!is.null(save_as)) {
+            basename(save_as)
+          } else {
+            paste0(format(Sys.Date(), "%Y%m%d"), "-data.csv")
+          }
+          if (view) sub("(\\.[^.]+)?$", "-subset\\1", base) else base
+        },
+        content = function(file) {
+          d <- if (view) data_active() else data_update()
+          do.call(write_fun, c(list(d, file), write_args))
+        }
+      )
+    }
+    output$export_all <- export_handler(FALSE)
+    output$export_view <- export_handler(TRUE)
 
     # CANCEL
     observeEvent(input$cancel, {
@@ -431,8 +513,16 @@ data_edit <- function(x = NULL,
     })
 
     # FINISH - WRITE TO FILE & RETURN
+    result_now <- function() {
+      if (!hide && identical(input$return_what, "view")) {
+        data_active()
+      } else {
+        data_update()
+      }
+    }
     finish <- function(result) {
-      if (!is.null(result) && !is.null(save_as)) {
+      save <- !is.null(save_as) && !isFALSE(input$save_file)
+      if (!is.null(result) && save) {
         do.call(write_fun, c(list(result, save_as), write_args))
       }
       stopApp(result)
@@ -440,7 +530,7 @@ data_edit <- function(x = NULL,
 
     # DONE
     observeEvent(input$done, {
-      result <- if (hide || values$cut) data_active() else data_update()
+      result <- result_now()
       ed <- editor()
       db <- if (!is.null(ed)) ed$cfg$db else NULL
       if (is.null(db)) {
@@ -492,8 +582,7 @@ data_edit <- function(x = NULL,
       }
       removeModal()
       session_info$code <- code_text
-      result <- if (hide || values$cut) data_active() else data_update()
-      finish(result)
+      finish(result_now())
     })
   }
 
@@ -520,7 +609,7 @@ data_edit <- function(x = NULL,
 
   # CODE
   if (!isFALSE(code)) {
-    code_text <- if (is_db_input(x)) {
+    code_text <- if (is_db_input(initial)) {
       session_info$code %||% "# No changes detected\n"
     } else {
       data_code(x_original, x_edit, name = x_name)
@@ -532,4 +621,38 @@ data_edit <- function(x = NULL,
     }
   }
   x_edit
+}
+
+#' Resolve what data_edit() was given into something to edit
+#'
+#' @noRd
+editr_load <- function(x, envir = parent.frame(), read_fun = "read.csv",
+                       read_args = NULL) {
+  if (is.null(x)) {
+    return(data_template(c(10, 10)))
+  }
+  if (is_db_input(x) || !is.null(dim(x))) {
+    return(x)
+  }
+  if (is.character(x) && length(x) == 1 && nzchar(x)) {
+    if (file.exists(x)) {
+      return(do.call(read_fun, c(list(x), read_args)))
+    }
+    if (exists(x, envir = envir)) {
+      obj <- get(x, envir = envir)
+      if (is_db_input(obj) || !is.null(dim(obj))) {
+        return(obj)
+      }
+    }
+  }
+  data_template(x, read_fun = read_fun, read_args = read_args)
+}
+
+#' "32 rows x 11 columns" (as HTML)
+#' @noRd
+editr_dims <- function(d) {
+  n <- NROW(d)
+  k <- NCOL(d)
+  paste0(n, if (n == 1) " row" else " rows", " &times; ", k,
+         if (k == 1) " column" else " columns")
 }

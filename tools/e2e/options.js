@@ -25,8 +25,8 @@ const { check } = L;
     // checkbox
     const c = await L.cellCentre(page, 3, fieldOf("ok"));
     await page.mouse.click(c.x, c.y, { clickCount: 2 });
-    await page.waitForSelector(".tabulator-editing input[type=checkbox]", { timeout: 3000 });
-    await page.click(".tabulator-editing input[type=checkbox]");
+    await page.waitForSelector(".tabulator-cell.tabulator-editing input[type=checkbox]", { timeout: 3000 });
+    await page.click(".tabulator-cell.tabulator-editing input[type=checkbox]");
     await page.keyboard.press("Enter");
     await L.settle(page);
     data = await L.gridData(page);
@@ -49,8 +49,8 @@ const { check } = L;
     // password editor uses a password input
     const w = await L.cellCentre(page, 2, fieldOf("pw"));
     await page.mouse.click(w.x, w.y, { clickCount: 2 });
-    await page.waitForSelector(".tabulator-editing input", { timeout: 3000 });
-    const type = await page.$eval(".tabulator-editing input", (e) => e.type);
+    await page.waitForSelector(".tabulator-cell.tabulator-editing input", { timeout: 3000 });
+    const type = await page.$eval(".tabulator-cell.tabulator-editing input", (e) => e.type);
     check(type === "password", "password editor input type=" + type);
     await page.keyboard.down("Control"); await page.keyboard.press("KeyA"); await page.keyboard.up("Control");
     await page.keyboard.type("newpass");

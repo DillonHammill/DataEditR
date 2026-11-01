@@ -186,7 +186,9 @@ test_that("status counts match net changes", {
   ops(p, op_update("c2", 5, "new"))
   cc <- DataEditR:::change_counts(p$store)
   ch <- DataEditR:::net_changes(p$store$state, p$store$original)
-  expect_identical(cc, list(edited = length(ch$updated),
-                            added = length(ch$inserted),
-                            removed = length(ch$deleted)))
+  expect_identical(cc$edited, length(ch$updated))
+  expect_identical(cc$added, length(ch$inserted))
+  expect_identical(cc$removed, length(ch$deleted))
+  expect_identical(cc$cells, 2L)
+  expect_identical(cc$items, 3L)
 })

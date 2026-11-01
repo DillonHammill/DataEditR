@@ -59,6 +59,10 @@ prefer to interact with it in this way.
 - RStudio add-in
 - flexible display options (either `dialog` box, `browser` or RStudio
   `viewer` pane)
+- one toolbar with open, undo/redo, columns, find, review changes, code
+  and export
+- review panel listing every change with one-click revert, plus live
+  reproducible code
 - fast rendering to quickly view datasets, with virtual scrolling for
   large data (100,000+ rows)
 - edit tables in a database directly (`dplyr::tbl()` or `db_table()`),
@@ -79,8 +83,12 @@ prefer to interact with it in this way.
 
 #### Data editing features:
 
-- column selection using the `dataSelect` module
-- row selection using the `dataFilter` module
+- show or hide columns from the Columns menu
+- filter rows by typing under the column headers (ranges, value lists,
+  text)
+- status bar with row/column counts and a sum/mean/count of the selected
+  cells
+- asks before a typed value would turn a number or date column into text
 - edits to filtered or selected data subsets are applied directly to the
   master dataset
 - undo and redo (Ctrl+Z / Ctrl+Y)

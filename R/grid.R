@@ -162,9 +162,39 @@ grid_columns <- function(store, cfg) {
       option = opt,
       readonly = cid %in% cfg$readonly,
       rename = cfg$col_edit_names && !cid %in% cfg$protected_names,
-      frozen = identical(cid, cfg$rownames_cid)
+      frozen = identical(cid, cfg$rownames_cid),
+      filter = column_filter(col, opt, identical(cid, cfg$rownames_cid))
     )
   })
+}
+
+#' Which header filter suits a column
+#'
+#' Few distinct values get a multi-select list, other numbers a min/max
+#' range, everything else a "contains" text box.
+#'
+#' @noRd
+column_filter <- function(x, option = NULL, rownames = FALSE) {
+  if (rownames) {
+    return(list(type = "text"))
+  }
+  if (!is.null(option) && option$type %in% c("checkbox", "dropdown")) {
+    return(list(type = "values"))
+  }
+  if (is.logical(x)) {
+    return(list(type = "values"))
+  }
+  n <- length(unique(x[!is.na(x)]))
+  if (is.numeric(x) && !inherits(x, c("Date", "POSIXt"))) {
+    # A FEW WHOLE-NUMBER CODES (cyl, gear) OR VALUES REPEATED A LOT
+    whole <- all(x[!is.na(x)] == round(x[!is.na(x)]))
+    few <- n > 0 && ((whole && n <= 6) || (n <= 12 && n <= length(x) / 4))
+    return(list(type = if (few) "values" else "range"))
+  }
+  if (is.character(x) && n > 0 && n <= 20 && n < length(x)) {
+    return(list(type = "values"))
+  }
+  list(type = "text")
 }
 
 #' @noRd

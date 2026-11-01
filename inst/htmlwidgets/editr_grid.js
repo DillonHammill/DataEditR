@@ -14,6 +14,7 @@
   "use strict";
 
   var ID = "__editr_id__";
+  var ADD_FIELD = "__editr_add__";
   var pending = {}; // messages that arrive before a grid is built
 
   function registerHandler() {
@@ -30,9 +31,16 @@
         (pending[msg.id] = pending[msg.id] || []).push(msg);
       }
     });
+    // R sends either plain text or HTML it has escaped itself (entities keep
+    // the R sources ASCII and survive non-UTF-8 locales)
     Shiny.addCustomMessageHandler("editr_status", function (msg) {
       var el = document.getElementById(msg.id);
-      if (el) el.textContent = msg.text;
+      if (!el) return;
+      if (msg.html !== undefined && msg.html !== null) {
+        el.innerHTML = msg.html;
+      } else {
+        el.textContent = msg.text;
+      }
     });
   }
 
@@ -46,6 +54,52 @@
   function jsonValue(v) {
     return v === undefined ? null : v;
   }
+
+  function escapeHTML(x) {
+    return String(x).replace(/[&<>"']/g, function (ch) {
+      return {"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[ch];
+    });
+  }
+
+  function byId(id) {
+    return id ? document.getElementById(id) : null;
+  }
+
+  function isBlank(v) {
+    return v === null || v === undefined ||
+      (typeof v === "string" && (v.trim() === "" || v.trim() === "NA"));
+  }
+
+  function formatNumber(x) {
+    if (!isFinite(x)) return String(x);
+    var a = Math.abs(x);
+    if (a !== 0 && (a >= 1e6 || a < 1e-3)) return x.toExponential(3);
+    return String(Number(x.toPrecision(6)));
+  }
+
+  // why a typed value cannot be stored in a column of this kind (or null)
+  function invalidReason(kind, v) {
+    if (isBlank(v) || typeof v !== "string") return null;
+    var s = v.trim();
+    if (kind === "numeric" && isNaN(Number(s))) {
+      return "is not a number";
+    }
+    if (kind === "date" &&
+        !(/^\d{4}-\d{2}-\d{2}$/.test(s) && !isNaN(Date.parse(s)))) {
+      return "is not a date (YYYY-MM-DD)";
+    }
+    return null;
+  }
+
+  var ICONS = {
+    lock: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Read-only"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>',
+    plus: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>',
+    x: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>',
+    alert: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 21h20z"/><path d="M12 10v5M12 18h.01"/></svg>'
+  };
+
+  var BADGES = {numeric: "123", character: "abc", logical: "T/F",
+                date: "date", datetime: "time"};
 
   function uniqueName(base, existing) {
     var i = 1, name = base + i;
@@ -73,6 +127,36 @@
     };
   }
 
+  // Row.isDisplayed() is also a linear scan, and range selection calls it for
+  // every rendered cell on every layout. Displayed rows carry their 1-based
+  // display position (regenerated whenever the display changes), so check
+  // that slot directly - exact for ungrouped tables like ours.
+  function patchRowDisplayed(table) {
+    var rows = table.rowManager && table.rowManager.rows;
+    if (!rows || !rows.length) return;
+    var proto = Object.getPrototypeOf(rows[0]);
+    if (!proto || proto.__editrPatched || typeof proto.isDisplayed !== "function") return;
+    proto.__editrPatched = true;
+    proto.isDisplayed = function () {
+      var display = this.table.rowManager.getDisplayRows();
+      return !!this.position && display[this.position - 1] === this;
+    };
+  }
+
+  // Range selection re-styles every row in the table after each edit or
+  // keyboard move (layoutElement() with no arguments). Rows outside the
+  // virtual viewport are styled when they render, so only lay out the
+  // rendered rows.
+  function patchRangeLayout(table) {
+    var mod = table.modules && table.modules.selectRange;
+    if (!mod || mod.__editrPatched || typeof mod.layoutElement !== "function") return;
+    mod.__editrPatched = true;
+    var original = mod.layoutElement;
+    mod.layoutElement = function () {
+      return original.call(this, true);
+    };
+  }
+
   HTMLWidgets.widget({
     name: "editr_grid",
     type: "output",
@@ -89,7 +173,12 @@
         nextCol: 1,
         colMap: {},
         changed: {},
-        opts: {}
+        pinned: {}, // new rows stay visible whatever the filters say
+        opts: {},
+        ui: {},
+        find: {query: "", matches: [], index: -1},
+        viewTimer: null,
+        popup: null
       };
       el.__editr = grid;
       registerHandler();
@@ -170,9 +259,113 @@
       /* columns                                                           */
       /* ---------------------------------------------------------------- */
 
+      function titleFormatter(cell) {
+        var c = grid.colMap[cell.getColumn().getField()] || {};
+        var name = c.frozen ? "row names" : c.title;
+        var badge = BADGES[c.kind] || "abc";
+        return '<span class="editr-title"><span class="editr-badge">' +
+          badge + '</span><span class="editr-name">' + escapeHTML(name) +
+          '</span>' + (c.readonly ? '<span class="editr-lock">' + ICONS.lock +
+          '</span>' : '') + '</span>';
+      }
+
+      /* header filters ------------------------------------------------- */
+
+      function pinnedRow(rowData) {
+        return !!grid.pinned[rowData[ID]];
+      }
+
+      function rangeEditor(cell, onRendered, success, cancel) {
+        var value = cell.getValue() || {};
+        var wrap = document.createElement("div");
+        wrap.className = "editr-range";
+        var timer = null;
+        var make = function (key, label) {
+          var input = document.createElement("input");
+          input.type = "text";
+          input.inputMode = "decimal";
+          input.placeholder = key;
+          input.setAttribute("aria-label", c(cell) + " " + label);
+          input.value = value[key] === undefined ? "" : value[key];
+          input.addEventListener("mousedown", function (e) { e.stopPropagation(); });
+          input.addEventListener("keydown", function (e) { e.stopPropagation(); });
+          input.addEventListener("input", function () {
+            clearTimeout(timer);
+            timer = setTimeout(function () {
+              var lo = wrap.children[0].value.trim();
+              var hi = wrap.children[1].value.trim();
+              success(lo === "" && hi === "" ? "" : {min: lo, max: hi});
+            }, 250);
+          });
+          wrap.appendChild(input);
+        };
+        var c = function (cl) {
+          var col = grid.colMap[cl.getField()];
+          return col ? col.title : "";
+        };
+        make("min", "minimum");
+        make("max", "maximum");
+        return wrap;
+      }
+
+      function rangeFilter(value, rowValue, rowData) {
+        if (pinnedRow(rowData)) return true;
+        if (rowValue === null || rowValue === undefined || rowValue === "") {
+          return false;
+        }
+        var x = Number(rowValue);
+        if (isNaN(x)) return false;
+        var lo = value.min === "" ? null : Number(value.min);
+        var hi = value.max === "" ? null : Number(value.max);
+        if (lo !== null && !isNaN(lo) && x < lo) return false;
+        if (hi !== null && !isNaN(hi) && x > hi) return false;
+        return true;
+      }
+
+      function valuesFilter(value, rowValue, rowData) {
+        if (pinnedRow(rowData)) return true;
+        var selected = toArray(value).map(String);
+        var v = rowValue === null || rowValue === undefined ? "NA" : String(rowValue);
+        return selected.indexOf(v) !== -1;
+      }
+
+      function textFilter(value, rowValue, rowData) {
+        if (pinnedRow(rowData)) return true;
+        if (rowValue === null || rowValue === undefined) return false;
+        return String(rowValue).toLowerCase()
+          .indexOf(String(value).toLowerCase()) !== -1;
+      }
+
+      function addHeaderFilter(def, c) {
+        var f = c.filter || {type: "text"};
+        if (f.type === "range") {
+          def.minWidth = 110;
+          def.headerFilter = rangeEditor;
+          def.headerFilterFunc = rangeFilter;
+          def.headerFilterLiveFilter = false;
+          def.headerFilterEmptyCheck = function (v) {
+            return !v || (v.min === "" && v.max === "");
+          };
+        } else if (f.type === "values") {
+          def.headerFilter = "list";
+          def.headerFilterParams = {valuesLookup: "all", multiselect: true,
+                                    clearable: true, sort: "asc"};
+          def.headerFilterFunc = valuesFilter;
+          def.headerFilterPlaceholder = "Any";
+          def.headerFilterEmptyCheck = function (v) {
+            return !v || !toArray(v).length;
+          };
+        } else {
+          def.headerFilter = "input";
+          def.headerFilterFunc = textFilter;
+          def.headerFilterPlaceholder = "Contains\u2026";
+        }
+      }
+
       function buildColumn(c) {
         var def = {
           title: c.title,
+          titleFormatter: titleFormatter,
           field: c.field,
           headerSort: false,
           minWidth: 60,
@@ -182,6 +375,7 @@
           headerContextMenu: headerMenu,
           cssClass: c.readonly ? "editr-readonly" : ""
         };
+        if (grid.opts.filters !== false) addHeaderFilter(def, c);
         if (c.kind === "numeric") def.hozAlign = "right";
         var o = c.option;
         if (o && o.type === "checkbox") {
@@ -204,10 +398,37 @@
         return def;
       }
 
+      // a narrow last column whose header adds a column at the end
+      function addColumnDef() {
+        return {
+          field: ADD_FIELD, title: "", width: 44, minWidth: 44,
+          resizable: false, headerSort: false, editor: false, clipboard: false,
+          cssClass: "editr-addcol",
+          titleFormatter: function () {
+            return '<button type="button" class="editr-addcol-btn" ' +
+              'aria-label="Add column" title="Add column">' + ICONS.plus +
+              '</button>';
+          },
+          headerClick: function () {
+            var cols = realColumns();
+            if (cols.length) insertColumn(cols[cols.length - 1], true);
+          },
+          formatter: function () { return ""; }
+        };
+      }
+
       function setColumns(cols) {
         grid.colMap = {};
         toArray(cols).forEach(function (c) { grid.colMap[c.field] = c; });
-        return toArray(cols).map(buildColumn);
+        var defs = toArray(cols).map(buildColumn);
+        if (grid.opts.col_edit) defs.push(addColumnDef());
+        return defs;
+      }
+
+      function realColumns() {
+        return grid.table.getColumns().filter(function (col) {
+          return !!grid.colMap[col.getField()];
+        });
       }
 
       function currentTitles() {
@@ -240,6 +461,7 @@
         var id = grid.nextId++;
         var data = {};
         data[ID] = id;
+        grid.pinned[id] = true;
         var anchor = anchorRow ? anchorRow.getIndex() : null;
         var p = anchorRow ? grid.table.addRow(data, !below, anchorRow)
                           : grid.table.addRow(data, false);
@@ -304,10 +526,11 @@
       function insertColumn(column, right) {
         var cid = "c" + grid.nextCol++;
         var name = uniqueName("V", currentTitles());
-        var c = {field: cid, title: name, kind: "logical", readonly: false,
-                 rename: true, frozen: false};
+        var c = {field: cid, title: name, kind: "character", readonly: false,
+                 rename: true, frozen: false, filter: {type: "text"}};
         grid.colMap[cid] = c;
         grid.table.addColumn(buildColumn(c), !right, column);
+        updateStatus();
         emit({type: "insert_col", cid: cid, name: name,
               anchor: column.getField(), right: right});
       }
@@ -330,12 +553,21 @@
               delete grid.colMap[cid];
               col.delete();
               emit({type: "delete_col", cid: cid});
+              updateStatus();
+              reportView();
             }});
           }
         }
+        if (!c.frozen) {
+          items.push({label: "Hide column", action: function (e, col) {
+            col.hide();
+            updateStatus();
+            reportView();
+          }});
+        }
         if (grid.opts.row_edit) {
           items.push({label: "Add row at end",
-                      action: function () { insertRow(null, true); }});
+                      action: function () { addRowAtEnd(); }});
         }
         if (items.length) items.push({separator: true});
         return items.concat(historyItems());
@@ -387,6 +619,164 @@
       }
 
       /* ---------------------------------------------------------------- */
+      /* popups (columns menu, type guard)                                 */
+      /* ---------------------------------------------------------------- */
+
+      function closePopup() {
+        if (grid.popup) {
+          var p = grid.popup;
+          grid.popup = null;
+          if (p.onClose) p.onClose();
+          if (p.el.parentNode) p.el.parentNode.removeChild(p.el);
+          document.removeEventListener("mousedown", p.outside, true);
+          document.removeEventListener("keydown", p.escape, true);
+        }
+      }
+
+      function openPopup(anchor, el, onClose) {
+        closePopup();
+        var rect = anchor.getBoundingClientRect();
+        el.style.position = "absolute";
+        el.style.top = (rect.bottom + window.scrollY + 4) + "px";
+        el.style.left = (rect.left + window.scrollX) + "px";
+        document.body.appendChild(el);
+        // keep inside the window
+        var w = el.getBoundingClientRect().width;
+        var maxLeft = window.scrollX + document.documentElement.clientWidth - w - 8;
+        if (rect.left + window.scrollX > maxLeft) el.style.left = Math.max(8, maxLeft) + "px";
+        var popup = {el: el, onClose: onClose};
+        popup.outside = function (e) {
+          if (!el.contains(e.target) && !anchor.contains(e.target)) closePopup();
+        };
+        popup.escape = function (e) {
+          if (e.key === "Escape") {
+            e.stopPropagation();
+            closePopup();
+          }
+        };
+        document.addEventListener("mousedown", popup.outside, true);
+        document.addEventListener("keydown", popup.escape, true);
+        grid.popup = popup;
+        return popup;
+      }
+
+      function openColumnsMenu(anchor) {
+        if (grid.popup && grid.popup.kind === "columns") {
+          closePopup();
+          return;
+        }
+        var menu = document.createElement("div");
+        menu.className = "editr-popup editr-columns-menu";
+        menu.setAttribute("role", "dialog");
+        menu.setAttribute("aria-label", "Show or hide columns");
+        var head = document.createElement("div");
+        head.className = "editr-columns-head";
+        var all = document.createElement("button");
+        all.type = "button";
+        all.textContent = "Show all";
+        var none = document.createElement("button");
+        none.type = "button";
+        none.textContent = "Hide all";
+        head.appendChild(all);
+        head.appendChild(none);
+        menu.appendChild(head);
+        var list = document.createElement("div");
+        list.className = "editr-columns-list";
+        var boxes = [];
+        realColumns().forEach(function (col) {
+          var c = grid.colMap[col.getField()];
+          if (c.frozen) return;
+          var label = document.createElement("label");
+          var box = document.createElement("input");
+          box.type = "checkbox";
+          box.checked = col.isVisible();
+          box.addEventListener("change", function () {
+            if (box.checked) col.show(); else col.hide();
+            updateStatus();
+            reportView();
+          });
+          boxes.push(box);
+          label.appendChild(box);
+          var name = document.createElement("span");
+          name.textContent = c.title;
+          label.appendChild(name);
+          list.appendChild(label);
+        });
+        menu.appendChild(list);
+        var setAll = function (show) {
+          boxes.forEach(function (b) {
+            if (b.checked !== show) {
+              b.checked = show;
+              b.dispatchEvent(new Event("change"));
+            }
+          });
+        };
+        all.addEventListener("click", function () { setAll(true); });
+        none.addEventListener("click", function () { setAll(false); });
+        var popup = openPopup(anchor, menu);
+        popup.kind = "columns";
+        anchor.setAttribute("aria-expanded", "true");
+        popup.onClose = function () { anchor.setAttribute("aria-expanded", "false"); };
+      }
+
+      // ask before a typed value changes a column's type
+      function guardEdit(cell, reason) {
+        var field = cell.getField();
+        var c = grid.colMap[field];
+        var id = cell.getRow().getIndex();
+        var raw = cell.getValue();
+        var old = cell.getOldValue();
+        var box = document.createElement("div");
+        box.className = "editr-popup editr-guard";
+        box.setAttribute("role", "alertdialog");
+        box.setAttribute("aria-label", "Value does not match the column type");
+        box.innerHTML =
+          '<div class="editr-guard-msg"><span class="editr-guard-icon">' + ICONS.alert +
+          '</span><div><div class="editr-guard-title">\u201c' + escapeHTML(raw) +
+          '\u201d ' + reason + '</div><div class="editr-guard-sub">' +
+          escapeHTML(c.title) + ' is a ' + (c.kind === "date" ? "date" : "numeric") +
+          ' column. What should happen?</div></div></div>' +
+          '<div class="editr-guard-actions">' +
+          '<button type="button" class="btn btn-primary btn-sm" data-act="na">Store as missing (NA)</button>' +
+          '<button type="button" class="btn btn-outline-secondary btn-sm" data-act="text">Convert ' +
+          escapeHTML(c.title) + ' to text</button>' +
+          '<button type="button" class="btn btn-link btn-sm" data-act="cancel">Cancel edit</button></div>';
+        var decided = false;
+        var restore = function (v) {
+          grid.suppress += 1;
+          var row = grid.table.getRow(id);
+          if (row) row.getCell(field).setValue(v);
+          grid.suppress -= 1;
+        };
+        var decide = function (act) {
+          decided = true;
+          closePopup();
+          if (act === "na") {
+            restore(null);
+            emit({type: "update", cid: field, ids: [id], values: [null]});
+          } else if (act === "text") {
+            c.kind = "character";
+            c.filter = {type: "text"};
+            emit({type: "update", cid: field, ids: [id], values: [raw]});
+            var col = grid.table.getColumn(field);
+            if (col) col.updateDefinition(buildColumn(c));
+          } else {
+            restore(old);
+          }
+        };
+        box.addEventListener("click", function (e) {
+          var act = e.target.closest && e.target.closest("[data-act]");
+          if (act) decide(act.getAttribute("data-act"));
+        });
+        var popup = openPopup(cell.getElement(), box, function () {
+          if (!decided) restore(old);
+        });
+        popup.kind = "guard";
+        var first = box.querySelector("button");
+        if (first) first.focus();
+      }
+
+      /* ---------------------------------------------------------------- */
       /* clipboard                                                         */
       /* ---------------------------------------------------------------- */
 
@@ -431,6 +821,258 @@
       }
 
       /* ---------------------------------------------------------------- */
+      /* status bar, filter chips, find                                    */
+      /* ---------------------------------------------------------------- */
+
+      function setText(id, text) {
+        var node = byId(id);
+        if (node) node.textContent = text;
+      }
+
+      function activeFilters() {
+        if (!grid.table || !grid.table.getHeaderFilters) return [];
+        return grid.table.getHeaderFilters().filter(function (f) {
+          var v = f.value;
+          if (v === "" || v === null || v === undefined) return false;
+          if (Array.isArray(v)) return v.length > 0;
+          if (typeof v === "object") return v.min !== "" || v.max !== "";
+          return true;
+        });
+      }
+
+      function updateStatus() {
+        var table = grid.table;
+        if (!table || !grid.ready) return;
+        var total = table.getDataCount();
+        var shown = table.getDataCount("active");
+        var cols = realColumns().filter(function (col) {
+          return !grid.colMap[col.getField()].frozen;
+        });
+        var visible = cols.filter(function (col) { return col.isVisible(); });
+        var plural = function (n, w) { return n + " " + w + (n === 1 ? "" : "s"); };
+        var rows = shown === total ? plural(total, "row") :
+          shown + " of " + plural(total, "row");
+        var columns = visible.length === cols.length ? plural(cols.length, "column") :
+          visible.length + " of " + plural(cols.length, "column");
+        setText(grid.ui.rows, rows + " \u00b7 " + columns);
+        setText(grid.ui.columns_count,
+                visible.length === cols.length ? "" :
+                  visible.length + " of " + cols.length);
+      }
+
+      function chipText(f) {
+        var c = grid.colMap[f.field] || {title: f.field};
+        var v = f.value;
+        if (Array.isArray(v)) {
+          var vals = v.map(String);
+          if (vals.length === 1) return c.title + " is " + vals[0];
+          return c.title + " is " + vals.slice(0, -1).join(", ") + " or " +
+            vals[vals.length - 1];
+        }
+        if (typeof v === "object") {
+          if (v.min !== "" && v.max !== "") return c.title + " " + v.min + "\u2013" + v.max;
+          if (v.min !== "") return c.title + " \u2265 " + v.min;
+          return c.title + " \u2264 " + v.max;
+        }
+        return c.title + " contains \u201c" + v + "\u201d";
+      }
+
+      function renderChips() {
+        var box = byId(grid.ui.chips);
+        if (!box) return;
+        box.innerHTML = "";
+        var filters = activeFilters();
+        filters.forEach(function (f) {
+          var chip = document.createElement("span");
+          chip.className = "editr-chip";
+          var text = document.createElement("span");
+          text.textContent = chipText(f);
+          chip.appendChild(text);
+          var x = document.createElement("button");
+          x.type = "button";
+          x.setAttribute("aria-label", "Remove filter " + chipText(f));
+          x.innerHTML = ICONS.x;
+          x.addEventListener("click", function () {
+            grid.table.setHeaderFilterValue(f.field, "");
+          });
+          chip.appendChild(x);
+          box.appendChild(chip);
+        });
+        if (filters.length > 1) {
+          var clear = document.createElement("button");
+          clear.type = "button";
+          clear.className = "editr-chip-clear";
+          clear.textContent = "Clear filters";
+          clear.addEventListener("click", function () {
+            grid.table.clearHeaderFilter();
+          });
+          box.appendChild(clear);
+        }
+      }
+
+      // tell R which rows/columns are on screen (for "return what's on
+      // screen" and exports); null means everything
+      function reportView() {
+        if (!window.Shiny || !Shiny.setInputValue) return;
+        clearTimeout(grid.viewTimer);
+        grid.viewTimer = setTimeout(function () {
+          if (!grid.table) return;
+          var rows = null, cols = null;
+          if (activeFilters().length) {
+            rows = grid.table.getRows("active").map(function (r) { return r.getIndex(); });
+          }
+          var all = realColumns();
+          var vis = all.filter(function (col) { return col.isVisible(); });
+          if (vis.length !== all.length) {
+            cols = vis.map(function (col) { return col.getField(); });
+          }
+          Shiny.setInputValue(el.id + "_view", {rows: rows, cols: cols},
+                              {priority: "event"});
+        }, 200);
+      }
+
+      function selectionSummary() {
+        var table = grid.table;
+        var ranges = table.getRanges ? table.getRanges() : [];
+        var cells = [];
+        ranges.forEach(function (r) {
+          r.getStructuredCells().forEach(function (row) {
+            row.forEach(function (cell) {
+              if (grid.colMap[cell.getField()]) cells.push(cell);
+            });
+          });
+        });
+        if (cells.length < 2) {
+          setText(grid.ui.selection, "");
+          return;
+        }
+        var nums = [];
+        var fields = {};
+        cells.forEach(function (cell) {
+          fields[cell.getField()] = true;
+          var v = cell.getValue();
+          if (v === null || v === undefined || v === "" || typeof v === "boolean") return;
+          var x = Number(v);
+          if (!isNaN(x)) nums.push(x);
+        });
+        var keys = Object.keys(fields);
+        var label = keys.length === 1 ? (grid.colMap[keys[0]].title + " \u00b7 ") :
+          (cells.length + " cells \u00b7 ");
+        if (!nums.length) {
+          setText(grid.ui.selection, "Selection " + cells.length + " cells");
+          return;
+        }
+        var sum = nums.reduce(function (a, b) { return a + b; }, 0);
+        setText(grid.ui.selection, "Selection " + label + "Sum " + formatNumber(sum) +
+                " \u00b7 Mean " + formatNumber(sum / nums.length) +
+                " \u00b7 Count " + nums.length);
+      }
+
+      function selectCell(id, field) {
+        var table = grid.table;
+        var row = table.getRow(id);
+        if (!row) return;
+        return table.scrollToRow(id, "center", false).then(function () {
+          return table.scrollToColumn(field, "middle", false).catch(function () {});
+        }).then(function () {
+          var cell = row.getCell(field);
+          if (!cell) return;
+          if (table.getRanges) {
+            table.getRanges().forEach(function (r) { r.remove(); });
+          }
+          if (table.addRange) table.addRange(cell, cell);
+          var cellEl = cell.getElement();
+          cellEl.classList.add("editr-flash");
+          setTimeout(function () { cellEl.classList.remove("editr-flash"); }, 900);
+        }).catch(function () {});
+      }
+
+      function runFind(query) {
+        var f = grid.find;
+        f.query = query;
+        f.matches = [];
+        f.index = -1;
+        if (query) {
+          var q = query.toLowerCase();
+          var fields = realColumns().filter(function (col) {
+            return col.isVisible();
+          }).map(function (col) { return col.getField(); });
+          grid.table.getRows("active").forEach(function (row) {
+            var d = row.getData();
+            fields.forEach(function (field) {
+              var v = d[field];
+              if (v !== null && v !== undefined &&
+                  String(v).toLowerCase().indexOf(q) !== -1) {
+                f.matches.push({id: d[ID], field: field});
+              }
+            });
+          });
+        }
+        stepFind(1);
+      }
+
+      function stepFind(dir) {
+        var f = grid.find;
+        if (!f.query) {
+          setText(grid.ui.find_count, "");
+          return;
+        }
+        if (!f.matches.length) {
+          setText(grid.ui.find_count, "No matches");
+          return;
+        }
+        f.index = (f.index + dir + f.matches.length) % f.matches.length;
+        setText(grid.ui.find_count, (f.index + 1) + " of " + f.matches.length);
+        var m = f.matches[f.index];
+        selectCell(m.id, m.field);
+      }
+
+      function bindUI() {
+        var find = byId(grid.ui.find);
+        if (find && !find.__editrBound) {
+          find.__editrBound = true;
+          var timer = null;
+          find.addEventListener("input", function () {
+            clearTimeout(timer);
+            timer = setTimeout(function () { runFind(find.value.trim()); }, 150);
+          });
+          find.addEventListener("keydown", function (e) {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              stepFind(e.shiftKey ? -1 : 1);
+            } else if (e.key === "Escape") {
+              find.value = "";
+              runFind("");
+              find.blur();
+            }
+          });
+        }
+        var cols = byId(grid.ui.columns_btn);
+        if (cols && !cols.__editrBound) {
+          cols.__editrBound = true;
+          cols.addEventListener("click", function () {
+            el.__editr.openColumns(cols);
+          });
+        }
+      }
+
+      function addRowAtEnd() {
+        var p = insertRow(null, true);
+        var id = grid.nextId - 1;
+        Promise.resolve(p).then(function () {
+          var first = realColumns().filter(function (col) {
+            var c = grid.colMap[col.getField()];
+            return col.isVisible() && !c.readonly;
+          })[0];
+          if (first) {
+            selectCell(id, first.getField());
+          }
+        });
+      }
+
+      grid.openColumns = function (anchor) { openColumnsMenu(anchor); };
+
+      /* ---------------------------------------------------------------- */
       /* commands from R                                                   */
       /* ---------------------------------------------------------------- */
 
@@ -467,7 +1109,13 @@
             if (upd.length) table.updateData(upd);
           } else if (method === "replace_data") {
             if (args.columns) table.setColumns(setColumns(args.columns));
-            table.replaceData(rowsFromColumns(args.data));
+            table.replaceData(rowsFromColumns(args.data)).then(function () {
+              updateStatus();
+              renderChips();
+              reportView();
+            });
+          } else if (method === "scroll_to") {
+            selectCell(args.id, args.field || (realColumns()[0] || {getField: function () { return null; }}).getField());
           } else if (method === "set_title") {
             setTitle(args.field, args.title);
           } else if (method === "set_changed") {
@@ -492,6 +1140,8 @@
       function build(x) {
         var opts = x.options || {};
         grid.opts = opts;
+        grid.ui = opts.ui || {};
+        grid.pinned = {};
         grid.nextId = opts.next_id || 1;
         grid.nextCol = opts.next_col || 1;
         grid.changed = {};
@@ -533,17 +1183,59 @@
           clipboardCopyConfig: {rowHeaders: false, columnHeaders: false},
           clipboardCopyRowRange: "range",
           clipboardPasteParser: "range",
-          clipboardPasteAction: pasteRange
+          clipboardPasteAction: pasteRange,
+          headerFilterLiveFilterDelay: 250,
+          footerElement: opts.row_edit ?
+            '<button type="button" class="editr-addrow">' + ICONS.plus +
+              '<span>Add row</span></button>' : undefined
         });
         grid.table = table;
         patchRowLookup(table);
+        patchRangeLayout(table);
 
         table.on("tableBuilt", function () {
           grid.ready = true;
           var queued = pending[el.id] || [];
           delete pending[el.id];
           queued.forEach(function (m) { grid.handle(m.method, m.args || {}); });
+          patchRowDisplayed(table);
+          var add = holder.querySelector(".editr-addrow");
+          if (add) add.addEventListener("click", addRowAtEnd);
+          bindUI();
+          updateStatus();
+          renderChips();
+          reportView();
         });
+
+        // rows added while a filter is active stay visible until the user
+        // changes the filters; then every row is judged afresh
+        table.on("dataFiltering", function () {
+          var key = JSON.stringify(activeFilters().map(function (f) {
+            return [f.field, f.value];
+          }));
+          if (key !== grid.filterKey) {
+            grid.filterKey = key;
+            grid.pinned = {};
+          }
+        });
+
+        table.on("dataFiltered", function () {
+          if (!grid.ready) return;
+          setTimeout(function () {
+            updateStatus();
+            renderChips();
+            reportView();
+          }, 0);
+        });
+        table.on("rowAdded", function () {
+          patchRowDisplayed(table);
+          updateStatus();
+          reportView();
+        });
+        table.on("rowDeleted", function () { updateStatus(); reportView(); });
+        table.on("rangeChanged", selectionSummary);
+        table.on("rangeAdded", selectionSummary);
+        table.on("rangeRemoved", selectionSummary);
 
         table.on("cellEdited", function (cell) {
           if (grid.suppress > 0) return;
@@ -556,14 +1248,43 @@
             grid.suppress -= 1;
             return;
           }
+          var reason = c && !c.option ? invalidReason(c.kind, cell.getValue()) : null;
+          if (reason) {
+            guardEdit(cell, reason);
+            return;
+          }
           emit({type: "update", cid: field, ids: [cell.getRow().getIndex()],
                 values: [jsonValue(cell.getValue())]});
+          setTimeout(selectionSummary, 0);
         });
 
         table.on("headerDblClick", function (e, column) {
           startRename(column);
         });
       }
+
+      // "?" opens the shortcuts sheet, Ctrl+F jumps to "Find in data"
+      document.addEventListener("keydown", function (e) {
+        if (!document.body.contains(el)) return;
+        var t = e.target;
+        var typing = t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" ||
+                           t.tagName === "SELECT" || t.isContentEditable);
+        if (e.key === "?" && !typing && !e.ctrlKey && !e.metaKey) {
+          var m = byId(grid.ui.shortcuts);
+          if (m && window.bootstrap && bootstrap.Modal) {
+            bootstrap.Modal.getOrCreateInstance(m).show();
+            e.preventDefault();
+          }
+        } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "f" &&
+                   (!typing || el.contains(t))) {
+          var find = byId(grid.ui.find);
+          if (find) {
+            find.focus();
+            find.select();
+            e.preventDefault();
+          }
+        }
+      });
 
       el.addEventListener("keydown", function (e) {
         if (!(e.ctrlKey || e.metaKey)) return;
@@ -585,6 +1306,7 @@
 
       return {
         renderValue: function (x) {
+          closePopup();
           if (grid.table) {
             grid.ready = false;
             grid.table.destroy();

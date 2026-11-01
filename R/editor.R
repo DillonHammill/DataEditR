@@ -456,6 +456,290 @@ view_patch <- function(store, cfg) {
   )
 }
 
+## SERVER-ORIGINATED OPS -------------------------------------------------------
+
+#' Apply ops that originate in R (reverts from the review panel) and work out
+#' how to update the grid
+#'
+#' @return list with \code{patches} and \code{changed}.
+#'
+#' @noRd
+server_ops <- function(store, ops, cfg) {
+  if (length(ops) == 0) {
+    return(list(patches = list(), changed = FALSE))
+  }
+  done <- store_apply(store, ops, record = TRUE)
+  track_ops(store, ops)
+  structural <- vapply(ops, function(o) {
+    !o$type %in% c("update", "set_col")
+  }, logical(1))
+  patches <- list()
+  if (any(structural)) {
+    patches[[1]] <- list(method = "replace_data", args = view_patch(store, cfg))
+  } else {
+    for (o in ops) {
+      p <- cells_patch(store, o)
+      if (!is.null(p)) {
+        patches[[length(patches) + 1]] <- list(method = "update_cells",
+                                               args = p)
+      }
+    }
+  }
+  if (cfg$track) {
+    patches[[length(patches) + 1]] <- list(
+      method = "set_changed",
+      args = list(keys = I(view_changed(store)))
+    )
+  }
+  list(patches = patches, changed = TRUE)
+}
+
+## REVIEW PANEL ----------------------------------------------------------------
+
+#' Review panel markup
+#' @importFrom htmltools htmlEscape
+#' @noRd
+review_ui <- function(changes, ns) {
+  items <- changes$items
+  if (length(items) == 0) {
+    return(tags$div(class = "editr-empty", "No changes yet."))
+  }
+  send <- function(id, value) {
+    sprintf("DataEditR.send('%s', %s)", ns(id), encodeString(value, quote = "'"))
+  }
+  tagList(
+    tags$div(
+      class = "editr-pane-head",
+      tags$h2("Changes"),
+      tags$span(class = "editr-pill", changes$total),
+      tags$span(class = "editr-spacer"),
+      tags$button(type = "button", class = "editr-link",
+                  onclick = send("revert", "all"), "Revert all")
+    ),
+    tags$ul(
+      class = "editr-changes",
+      lapply(items, function(it) {
+        tags$li(
+          class = "editr-change",
+          tags$span(class = paste0("editr-tag editr-tag-", tolower(it$kind)),
+                    it$kind),
+          tags$div(
+            class = "editr-change-text",
+            if (!is.na(it$row)) {
+              tags$button(type = "button", class = "editr-change-title",
+                          title = "Show in grid",
+                          onclick = send("goto", as.character(it$row)),
+                          it$title)
+            } else {
+              tags$span(class = "editr-change-title", it$title)
+            },
+            tags$div(class = "editr-change-detail", HTML(it$detail))
+          ),
+          tags$button(type = "button", class = "btn btn-sm btn-outline-secondary",
+                      onclick = send("revert", it$key), it$action)
+        )
+      })
+    ),
+    if (changes$total > length(items)) {
+      tags$div(class = "editr-empty",
+               paste("and", changes$total - length(items), "more"))
+    }
+  )
+}
+
+#' Code that reproduces the edits so far
+#' @noRd
+editr_code <- function(store, cfg, name = "data") {
+  if (!is.null(cfg$db)) {
+    return(data_code_db(cfg$db, store, name = name))
+  }
+  original <- editr_store(store$original)
+  original$auto_type <- store$auto_type
+  original$hidden <- store$hidden
+  x <- editr_result(original, cfg)
+  x_edit <- editr_result(store, cfg)
+  data_code(x, x_edit, name = name)
+}
+
+#' List of changes for the review panel
+#'
+#' @param store editor store.
+#' @param cfg editor configuration.
+#' @param limit maximum number of items to return.
+#'
+#' @return list with \code{items} (each a list with \code{key}, \code{kind},
+#'   \code{title}, \code{detail} (HTML-escaped), \code{action}, \code{row})
+#'   and \code{total}.
+#'
+#' @noRd
+change_items <- function(store, cfg, limit = 200) {
+  state <- store$state
+  original <- store$original
+  items <- list()
+  add <- function(...) items[[length(items) + 1]] <<- list(...)
+  name_in <- function(s, cid) names(s$data)[match(cid, s$cids)]
+
+  # COLUMNS
+  for (cid in setdiff(original$cids, state$cids)) {
+    add(key = paste0("dcol:", cid), kind = "Removed",
+        title = paste0("Column ", name_in(original, cid)),
+        detail = "column deleted", action = "Restore", row = NA)
+  }
+  for (cid in setdiff(state$cids, original$cids)) {
+    add(key = paste0("acol:", cid), kind = "Added",
+        title = paste0("Column ", name_in(state, cid)),
+        detail = "new column", action = "Remove", row = NA)
+  }
+  for (cid in intersect(state$cids, original$cids)) {
+    old <- name_in(original, cid)
+    new <- name_in(state, cid)
+    if (!identical(old, new)) {
+      add(key = paste0("rcol:", cid), kind = "Renamed",
+          title = paste0("Column ", new),
+          detail = paste0(htmltools::htmlEscape(old), " &rarr; ", htmltools::htmlEscape(new)),
+          action = "Revert", row = NA)
+    }
+  }
+
+  # ROWS
+  ch <- net_changes(state, original)
+  label <- function(s, id) {
+    if (!is.null(cfg$rownames_cid) && cfg$rownames_cid %in% s$cids) {
+      v <- s$data[[match(cfg$rownames_cid, s$cids)]][match(id, s$ids)]
+      if (!is.na(v) && nzchar(v)) return(as.character(v))
+    }
+    paste("Row", id)
+  }
+  fmt <- function(x) {
+    x <- column_as_character(x)
+    x <- ifelse(is.na(x), "NA", x)
+    long <- nchar(x) > 24
+    x[long] <- paste0(substr(x[long], 1, 23), "...")
+    htmltools::htmlEscape(x)
+  }
+  total <- length(items) + length(ch$updated) + length(ch$inserted) +
+    length(ch$deleted)
+  for (id_chr in names(ch$updated)) {
+    if (length(items) >= limit) break
+    id <- as.integer(id_chr)
+    cids <- ch$updated[[id_chr]]
+    parts <- vapply(cids, function(cid) {
+      old <- original$data[[match(cid, original$cids)]][match(id, original$ids)]
+      new <- state$data[[match(cid, state$cids)]][match(id, state$ids)]
+      paste0(htmltools::htmlEscape(name_in(state, cid)), " ", fmt(old), " &rarr; ", fmt(new))
+    }, character(1))
+    add(key = paste0("urow:", id), kind = "Edited", title = label(state, id),
+        detail = paste0("row ", id, " &middot; ", paste(parts, collapse = ", ")),
+        action = "Revert", row = id)
+  }
+  for (id in ch$inserted) {
+    if (length(items) >= limit) break
+    add(key = paste0("irow:", id), kind = "Added", title = label(state, id),
+        detail = paste0("row ", id), action = "Remove", row = id)
+  }
+  for (id in ch$deleted) {
+    if (length(items) >= limit) break
+    add(key = paste0("drow:", id), kind = "Removed",
+        title = label(original, id), detail = paste0("row ", id),
+        action = "Restore", row = NA)
+  }
+  list(items = items, total = total)
+}
+
+#' Ops that undo one item from the review panel ("all" reverts everything)
+#'
+#' @return a list of ops (possibly empty).
+#'
+#' @noRd
+revert_ops <- function(store, key) {
+  state <- store$state
+  original <- store$original
+  if (identical(key, "all")) {
+    return(list(list(type = "set_state", state = original)))
+  }
+  kind <- sub(":.*$", "", key)
+  ref <- sub("^[^:]*:", "", key)
+  switch(
+    kind,
+    urow = {
+      id <- as.integer(ref)
+      if (!id %in% state$ids || !id %in% original$ids) return(list())
+      ch <- net_changes(state, original)$updated[[as.character(id)]]
+      lapply(ch, function(cid) {
+        old <- original$data[[match(cid, original$cids)]][match(id, original$ids)]
+        cur <- state$data[[match(cid, state$cids)]]
+        if (!identical(class(cur), class(old))) {
+          # COLUMN CHANGED TYPE - RESTORE THE VALUE AS TEXT
+          old <- column_as_character(old)
+        }
+        list(type = "update", cid = cid, ids = id, values = list(old))
+      })
+    },
+    irow = {
+      id <- as.integer(ref)
+      if (!id %in% state$ids) return(list())
+      list(list(type = "delete_rows", ids = id))
+    },
+    drow = {
+      id <- as.integer(ref)
+      if (id %in% state$ids || !id %in% original$ids) return(list())
+      list(restore_row_op(state, original, id))
+    },
+    acol = {
+      if (!ref %in% state$cids) return(list())
+      list(list(type = "delete_col", cid = ref))
+    },
+    dcol = {
+      if (ref %in% state$cids || !ref %in% original$cids) return(list())
+      list(restore_col_op(state, original, ref))
+    },
+    rcol = {
+      if (!ref %in% state$cids || !ref %in% original$cids) return(list())
+      list(list(type = "rename_col", cid = ref,
+                name = names(original$data)[match(ref, original$cids)]))
+    },
+    list()
+  )
+}
+
+#' Re-insert a deleted row after the nearest earlier row that still exists
+#' @noRd
+restore_row_op <- function(state, original, id) {
+  p <- match(id, original$ids)
+  before <- rev(original$ids[seq_len(p - 1)])
+  anchor <- before[before %in% state$ids][1]
+  at <- if (is.na(anchor)) 1L else match(anchor, state$ids) + 1L
+  orig_row <- original$data[p, , drop = FALSE]
+  values <- lapply(seq_along(state$cids), function(j) {
+    cid <- state$cids[j]
+    cur <- state$data[[j]]
+    if (cid %in% original$cids) {
+      v <- orig_row[[match(cid, original$cids)]]
+      if (is.character(cur) && !is.character(v)) v <- column_as_character(v)
+      v
+    } else {
+      cur[NA_integer_]
+    }
+  })
+  names(values) <- names(state$data)
+  values <- as.data.frame(values, stringsAsFactors = FALSE,
+                          check.names = FALSE, optional = TRUE)
+  list(type = "insert_rows", ids = id, at = at, values = values)
+}
+
+#' Re-insert a deleted column after the nearest earlier column that exists
+#' @noRd
+restore_col_op <- function(state, original, cid) {
+  p <- match(cid, original$cids)
+  before <- rev(original$cids[seq_len(p - 1)])
+  anchor <- before[before %in% state$cids][1]
+  at <- if (is.na(anchor)) 1L else match(anchor, state$cids) + 1L
+  orig_col <- original$data[[p]]
+  values <- orig_col[match(state$ids, original$ids)]
+  list(type = "insert_col", cid = cid, name = names(original$data)[p],
+       at = at, values = values)
+}
+
 ## CHANGE TRACKING -------------------------------------------------------------
 
 #' Incrementally maintain the set of changed cells after ops
@@ -493,26 +777,41 @@ track_ops <- function(store, ops) {
       delete_rows = drop_keys(ids = op$ids),
       insert_col = recompute(state$ids, op$cid),
       delete_col = drop_keys(cid = op$cid),
+      set_state = {
+        store$changed <- changed_cells(store$state, original)
+      },
       NULL
     )
   }
   invisible(store)
 }
 
-#' Row-level change counts for the status line (cheap, from tracked keys)
+#' Change counts for the status line and review badge (cheap)
 #' @noRd
 change_counts <- function(store) {
-  ids <- store$state$ids
-  orig <- store$original$ids
-  added <- ids[!ids %in% orig]
-  removed <- orig[!orig %in% ids]
+  state <- store$state
+  original <- store$original
+  ids <- state$ids
+  orig <- original$ids
+  added <- sum(!ids %in% orig)
+  removed <- sum(!orig %in% ids)
   keys <- store$changed
+  cells <- 0L
   edited <- 0L
   if (length(keys) > 0) {
     rid <- as.integer(sub("\\|.*$", "", keys))
-    edited <- length(unique(rid[rid %in% orig]))
+    cid <- sub("^[^|]*\\|", "", keys)
+    old <- rid %in% orig & cid %in% original$cids
+    cells <- sum(old)
+    edited <- length(unique(rid[old]))
   }
-  list(edited = edited, added = length(added), removed = length(removed))
+  shared <- intersect(state$cids, original$cids)
+  renamed <- sum(names(state$data)[match(shared, state$cids)] !=
+                   names(original$data)[match(shared, original$cids)])
+  columns <- length(setdiff(state$cids, original$cids)) +
+    length(setdiff(original$cids, state$cids)) + renamed
+  list(edited = edited, added = added, removed = removed, cells = cells,
+       columns = columns, items = edited + added + removed + columns)
 }
 
 #' Changed cell keys restricted to the current view
@@ -541,12 +840,22 @@ editr_result <- function(store, cfg, view = FALSE) {
   rows <- seq_along(state$ids)
   cols <- seq_along(state$cids)
   if (view) {
-    if (!is.null(store$view_rows)) {
-      rows <- which(state$ids %in% store$view_rows)
+    # SERVER VIEW (rows/columns arguments) AND WHAT THE GRID REPORTS AS VISIBLE
+    keep <- rep(TRUE, length(state$ids))
+    if (!is.null(store$view_rows)) keep <- keep & state$ids %in% store$view_rows
+    if (!is.null(store$client_rows)) {
+      keep <- keep & state$ids %in% store$client_rows
     }
+    rows <- which(keep)
+    keep <- rep(TRUE, length(state$cids))
+    always <- c(store$hidden, cfg$rownames_cid)
     if (!is.null(store$view_cols)) {
-      cols <- which(state$cids %in% c(store$view_cols, cfg$rownames_cid))
+      keep <- keep & state$cids %in% c(store$view_cols, always)
     }
+    if (!is.null(store$client_cols)) {
+      keep <- keep & state$cids %in% c(store$client_cols, always)
+    }
+    cols <- which(keep)
   }
   data <- state$data[rows, cols, drop = FALSE]
   cids <- state$cids[cols]

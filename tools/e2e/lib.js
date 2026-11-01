@@ -57,7 +57,7 @@ async function gridData(page) {
 
 async function columns(page) {
   return page.evaluate((g) => document.getElementById(g).__editr.table.getColumns()
-    .filter((c) => c.getField() !== undefined)
+    .filter((c) => c.getField() !== undefined && c.getField() !== "__editr_add__")
     .map((c) => ({ field: c.getField(), title: c.getDefinition().title })), GRID);
 }
 

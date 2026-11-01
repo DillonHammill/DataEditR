@@ -21,7 +21,6 @@
 #'   compatibility.
 #'
 #' @importFrom shinyjs hidden show
-#' @importFrom shinyBS addTooltip
 #' @importFrom shiny actionButton icon moduleServer eventReactive is.reactive
 #'   reactive observe
 #'
@@ -79,10 +78,7 @@ dataSyncUI <- function(id) {
     actionButton(
       NS(id, "sync"), 
       label = NULL, 
-      icon = icon(
-        "glyphicon glyphicon-refresh",
-        lib = "glyphicon"
-      )
+      icon = icon("rotate")
     )
   )
   
@@ -108,11 +104,7 @@ dataSyncServer <- function(id,
     if (!hide && !auto) {
       show("sync")
       if(!is.null(hover_text)) {
-        addTooltip(
-          session = session,
-          id = ns("sync"),
-          title = hover_text
-        )
+        editr_tooltip("sync", hover_text)
       }
     }
     

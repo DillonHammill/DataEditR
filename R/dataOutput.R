@@ -22,7 +22,6 @@
 #' @importFrom shiny downloadButton downloadHandler reactive moduleServer
 #'   is.reactive
 #' @importFrom shinyjs disable enable hidden show
-#' @importFrom shinyBS addTooltip
 #'
 #' @author Dillon Hammill, \email{dillon.hammill21@gmail.com}
 #'
@@ -93,9 +92,7 @@ dataOutputServer <- function(id,
     if (!hide) {
       show("save")
       if(!is.null(hover_text)) {
-        addTooltip(session = session,
-                   id = ns("save"),
-                   title = hover_text)
+        editr_tooltip("save", hover_text)
       }
     }
     

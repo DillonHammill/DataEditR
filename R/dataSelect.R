@@ -21,10 +21,8 @@
 #' @importFrom shiny icon is.reactive actionButton NS reactive moduleServer
 #'   reactiveValues observe observeEvent showModal modalDialog tagList insertUI
 #'   removeUI removeModal
-#' @importFrom shinyBS bsButton updateButton
 #' @importFrom htmltools tags
 #' @importFrom shinyjs hidden show
-#' @importFrom shinyBS addTooltip
 #'
 #' @author Dillon Hammill, \email{dillon.hammill21@gmail.com}
 #'
@@ -69,10 +67,8 @@ dataSelectUI <- function(id) {
     actionButton(
       NS(id, "select"),
       label = NULL,
-      icon = icon(
-        "glyphicon glyphicon-screenshot",
-        lib = "glyphicon"
-      ),
+      icon = icon("crosshairs"),
+      title = "Select columns",
       style = "margin-left: 0px;"
     )
   )
@@ -97,9 +93,7 @@ dataSelectServer <- function(id,
     if (!hide) {
       show("select")
       if(!is.null(hover_text)) {
-        addTooltip(session = session,
-                   id = ns("select"),
-                   title = hover_text)
+        editr_tooltip("select", hover_text)
       }
     }
     
@@ -157,7 +151,7 @@ dataSelectServer <- function(id,
             actionButton(
               ns("close"),
               "Close",
-              icon = icon("eject", lib = "glyphicon")
+              icon = icon("check")
             )
           ),
           # BUTTON ARRAY
@@ -188,37 +182,24 @@ dataSelectServer <- function(id,
               # BUTTON TURNED ON
               if(values$select[[column_name]] == FALSE) {
                 values$select[[column_name]] <<- TRUE
-                updateButton(
-                  session,
-                  ns(button_name),
-                  column_name,
-                  block = FALSE,
-                  style = "success"
-                )
+                editr_button_style(button_name, "success")
               # BUTTON TURNED OFF
               } else if(values$select[[column_name]] == TRUE) {
                 values$select[[column_name]] <<- FALSE
-                updateButton(
-                  session,
-                  ns(button_name),
-                  column_name,
-                  block = FALSE,
-                  style = "danger"
-                )
+                editr_button_style(button_name, "danger")
               }
             })
           }
           # CREATE RED BUTTON
           insertUI(
             selector = paste0("#", ns("placeholder")),
-            ui = bsButton(
+            ui = actionButton(
               ns(button_name),
               column_name,
-              block = FALSE,
-              style = ifelse(values$select[[column_name]],
-                             "success",
-                             "danger"),
-              outline = "2px black;"
+              class = ifelse(values$select[[column_name]],
+                             "btn-success",
+                             "btn-danger"),
+              style = "margin: 2px;"
             )
           )
         })
@@ -233,13 +214,7 @@ dataSelectServer <- function(id,
       # UPDATE BUTTONS
       lapply(1:ncol(values$data), function(z) {
         values$select[[colnames(values$data)[z]]] <- TRUE
-        updateButton(
-          session,
-          ns(paste0("button-", z)),
-          label = colnames(values$data)[z],
-          style = "success",
-          block = FALSE
-        )
+        editr_button_style(paste0("button-", z), "success")
       })
       
     })
@@ -250,13 +225,7 @@ dataSelectServer <- function(id,
       # UPDATE BUTTONS
       lapply(1:ncol(values$data), function(z) {
         values$select[[colnames(values$data)[z]]] <- FALSE
-        updateButton(
-          session,
-          ns(paste0("button-", z)),
-          label = colnames(values$data)[z],
-          style = "danger",
-          block = FALSE
-        )
+        editr_button_style(paste0("button-", z), "danger")
       })
       
     })
