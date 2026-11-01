@@ -117,3 +117,18 @@ test_that("generated rows_* code reproduces the commit", {
   DataEditR:::db_commit(p$cfg$db, p$store)
   expect_identical(read_cars(con2), read_cars(con))
 })
+
+test_that("generated code works for schema-qualified tables", {
+  con <- make_db()
+  on.exit(DBI::dbDisconnect(con))
+  db <- db_table(con, table = DBI::Id(schema = "main", table = "cars"),
+                 key = "id")
+  p <- prep(db)
+  ops(p, op_update("c3", 1, "9"))
+  code <- DataEditR:::data_code_db(p$cfg$db, p$store, name = "cars")
+  expect_match(code, 'dbplyr::in_schema("main", "cars")', fixed = TRUE)
+  env <- new.env()
+  env$con <- con
+  suppressMessages(eval(parse(text = code), envir = env))
+  expect_identical(read_cars(con)$mpg[1], 9)
+})

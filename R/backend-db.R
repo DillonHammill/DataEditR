@@ -389,6 +389,25 @@ db_commit <- function(db, store) {
   )
 }
 
+#' How to refer to a table in generated dbplyr code
+#' @noRd
+db_table_code <- function(table) {
+  q <- function(x) encodeString(x, quote = '"')
+  if (inherits(table, "Id")) {
+    nm <- table@name
+    tb <- q(nm[["table"]])
+    if ("schema" %in% names(nm)) {
+      if ("catalog" %in% names(nm)) {
+        return(paste0("dbplyr::in_catalog(", q(nm[["catalog"]]), ", ",
+                      q(nm[["schema"]]), ", ", tb, ")"))
+      }
+      return(paste0("dbplyr::in_schema(", q(nm[["schema"]]), ", ", tb, ")"))
+    }
+    return(tb)
+  }
+  q(as.character(table))
+}
+
 #' @noRd
 db_params <- function(df) {
   lapply(unname(as.list(df)), function(x) {
@@ -434,7 +453,6 @@ data_code_db <- function(db, store, name = "data") {
   if (length(ch$updated) + length(ch$inserted) + length(ch$deleted) == 0) {
     return("# No changes detected\n")
   }
-  tbl_name <- db_table_label(db$table)
   tibble_code <- function(df) {
     cols <- vapply(names(df), function(col) {
       vals <- paste(vapply(df[[col]], data_code_value, character(1)),
@@ -451,7 +469,7 @@ data_code_db <- function(db, store, name = "data") {
   lines <- c(
     "library(dplyr)",
     "",
-    paste0(name, " <- tbl(con, \"", tbl_name, "\")"),
+    paste0(name, " <- tbl(con, ", db_table_code(db$table), ")"),
     ""
   )
   if (length(ch$deleted) > 0) {
