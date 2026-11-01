@@ -321,10 +321,26 @@ the selection (<code>Ctrl+D</code>). A paste, fill or clear is a single
 step that can be undone. Click a column header to select the whole
 column.</p>
 <p><img src="images/ranges.gif" width="100%" style="display: block; margin: auto;"></p>
-<p><code>Ctrl+D</code> replaces the “drag to fill” handle of earlier
-versions of <strong>DataEditR</strong>: select the cell to copy together
-with the cells below it and press <code>Ctrl+D</code> (or choose
-<code>Fill down</code> from the right-click menu).</p>
+<p>To fill cells like in a spreadsheet, drag the small square at the
+bottom-right corner of the selection down, up or across. The cells it
+passes over are outlined and filled when you let go:</p>
+<ul>
+<li>One selected value is copied into every cell.</li>
+<li>Two or more numbers, dates or texts ending in a number that go up
+(or down) by the same step carry on as a series: <code>1, 2</code> gives
+<code>3, 4, 5</code>, a week of dates gives the following weeks, month
+ends give the following month ends and <code>Week 1, Week 2</code> gives
+<code>Week 3, Week 4</code>.</li>
+<li>Anything else is repeated,
+e.g. <code>TRUE, FALSE, TRUE, FALSE</code>.</li>
+<li>Hold <code>Ctrl</code> when you let go to copy the selection without
+carrying on a series.</li>
+</ul>
+<p>Like a paste, a fill is one step that can be undone and values that
+do not fit a column are asked about first. <code>Ctrl+D</code> (or
+<code>Fill down</code> in the right-click menu) copies the first row of
+the selection into the rows below it.</p>
+<p><img src="images/fill.gif" width="100%" style="display: block; margin: auto;"></p>
 </div>
 <div class="section level3">
 <h3 id="copy-and-paste-with-spreadsheets">3.3 Copy and paste with spreadsheets<a class="anchor" aria-label="anchor" href="#copy-and-paste-with-spreadsheets"></a>
@@ -338,8 +354,10 @@ that is a multiple of the block (e.g. ten cells for a single value)
 fills the range by repeating the block.</li>
 <li>If the block has more rows than there are below the selected cell,
 rows are added at the end of the data (unless
-<code>row_edit = FALSE</code>). Values beyond the last column are
-ignored.</li>
+<code>row_edit = FALSE</code>). If it has more columns than there are to
+the right, columns named <code>V1</code>, <code>V2</code>, … are added
+at the end (unless <code>col_edit = FALSE</code>), in the same
+step.</li>
 <li>Line endings from Windows, Mac or Linux, the line break that
 spreadsheets add after the last row, and cells containing line breaks,
 tabs or quotes are all handled.</li>
@@ -594,6 +612,37 @@ first field.</li>
 <p>Changes made in the form are ordinary edits: they can be undone, are
 listed in the review panel and appear in the code.</p>
 </div>
+<div class="section level3">
+<h3 id="comments-on-cells">3.14 Comments on cells<a class="anchor" aria-label="anchor" href="#comments-on-cells"></a>
+</h3>
+<p>Right-click a cell and choose <code>Add comment</code> (or select it
+and press <code>Shift+F2</code>) to leave a comment on it: why a value
+was changed, what still needs checking or where it came from. Press
+<code>Ctrl+Enter</code> or <code>Save</code> to keep the comment and
+<code>Escape</code> to close it without saving. Commented cells have an
+amber corner; rest the pointer on the cell (or open the record form) to
+read the comment, and right-click it to edit or delete it.</p>
+<p><img src="images/comments.png" width="100%" style="display: block; margin: auto;"></p>
+<p>Comments are returned with the data as the <code>comments</code>
+attribute, a data frame with the <code>row</code> (its number in the
+returned data), the <code>column</code>, the <code>comment</code>, the
+<code>user</code> who wrote it and the <code>time</code>. Data that has
+this attribute opens with its comments, so they can be kept from one
+session to the next. Rows can also be given by their row names:</p>
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">cars</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="va">mtcars</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">cars</span>, <span class="st">"comments"</span><span class="op">)</span></span>
+<span><span class="co">#&gt;   row column                       comment user                time</span></span>
+<span><span class="co">#&gt; 1   3    mpg Checked against the 1974 table  ana 2026-11-02 09:27:27</span></span>
+<span></span>
+<span><span class="co"># Comments of your own</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">mtcars</span>, <span class="st">"comments"</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>row <span class="op">=</span> <span class="st">"Datsun 710"</span>, column <span class="op">=</span> <span class="st">"mpg"</span>,</span>
+<span>                                       comment <span class="op">=</span> <span class="st">"Checked against the 1974 table"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="va">mtcars</span><span class="op">)</span></span></code></pre></div>
+<p>Comments are kept in <a href="#unsaved-changes-are-kept">drafts</a>
+with the changes, but they are not changes to the data: they are not
+undone and not listed in the review panel.</p>
+</div>
 </div>
 <div class="section level2">
 <h2 id="data-creation">4. Data Creation<a class="anchor" aria-label="anchor" href="#data-creation"></a>
@@ -607,13 +656,13 @@ data.frames from scratch without any coding.</p>
 data.frame will be constructed with 10 rows and columns. You can then
 build your data.frame from scratch by adding new rows and columns and
 annotating the cells.</p>
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 <p><img src="images/template-empty.png" width="100%" style="display: block; margin: auto;"></p>
 <p>The dimensions of the template can be controlled by supplying a
 vector of the form <code>c(nrow, ncol)</code> to indicate the number of
 rows and columns to use.</p>
-<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">20</span>, <span class="fl">15</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p><img src="images/template-size.png" width="100%" style="display: block; margin: auto;"></p>
 </div>
@@ -623,7 +672,7 @@ rows and columns to use.</p>
 <p>Alternatively, you can pass a vector of column names to create a
 data.frame template with pre-defined column names. Use
 <code>+ Add row</code> to add as many rows as you need.</p>
-<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Date"</span>, <span class="st">"Country"</span>, <span class="st">"Temperature"</span>, <span class="st">"Rainfall"</span>, <span class="st">"Visibility"</span>, <span class="st">"Humidity"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p><img src="images/template.gif" width="100%" style="display: block; margin: auto;"></p>
 <p>The columns of a template are typed automatically when the data is
@@ -697,7 +746,7 @@ the rows and columns that are on screen, open the menu next to the
 before pressing <code>Done</code>. The menu shows the size of the data
 that each option returns.</p>
 <p><img src="images/done-export.gif" width="100%" style="display: block; margin: auto;"></p>
-<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">mtcars_subset</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="va">mtcars</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/str.html" class="external-link">str</a></span><span class="op">(</span><span class="va">mtcars_subset</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">#&gt; 'data.frame':    14 obs. of  7 variables:</span></span>
@@ -721,7 +770,7 @@ stay dates and text that looks like a number (e.g. <code>"001"</code>)
 stays text. Factor columns are returned as factors with their levels,
 while character columns are not converted to factors unless
 <code>col_factor = TRUE</code> is set (see <a href="#factor-columns">Factor columns</a>).</p>
-<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Add character column</span></span>
 <span><span class="va">mtcars_new</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">cbind</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">rownames</a></span><span class="op">(</span><span class="va">mtcars</span><span class="op">)</span>, <span class="va">mtcars</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">mtcars_new</span><span class="op">)</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="st">"car"</span></span>
@@ -752,7 +801,7 @@ arguments to your write function in a named list to
 <code>write_args</code>. The data will be written to file when the
 <code>Done</code> button is selected; untick <code>Also save to</code>
 in the <code>Done</code> menu to close the editor without saving.</p>
-<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">mtcars_new</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="va">mtcars</span>,</span>
 <span>                        save_as <span class="op">=</span> <span class="st">"mtcars.csv"</span>,</span>
 <span>                        write_fun <span class="op">=</span> <span class="st">"write.table"</span>,</span>
@@ -866,7 +915,7 @@ value that is not one of the options of a dropdown menu) are kept but
 marked with a red line, and hovering over them says why.</p>
 <p>The limits of sliders and numbers and the number of stars of ratings
 can be customised by giving the type together with its settings:</p>
-<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="va">samples</span>,</span>
 <span>          col_options <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>            <span class="co"># proportions from 0 to 1 in steps of 0.05</span></span>
@@ -881,7 +930,7 @@ works too. A slider without settings runs from 0 to 100 in steps of 1,
 and a rating has 5 stars.</p>
 <p>The animations in this section use the following data, with all four
 kinds of input and a read-only <code>mpg</code> column:</p>
-<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">cars</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
 <span>  car <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">rownames</a></span><span class="op">(</span><span class="va">mtcars</span><span class="op">)</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">10</span><span class="op">]</span>,</span>
 <span>  mpg <span class="op">=</span> <span class="va">mtcars</span><span class="op">$</span><span class="va">mpg</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">10</span><span class="op">]</span>,</span>
@@ -907,7 +956,7 @@ kinds of input and a read-only <code>mpg</code> column:</p>
 and click the box (or press <code>Space</code>) to change its value;
 ticked cells are returned as <code>TRUE</code>. A new checkbox column
 can be added to existing data with <code>col_bind</code>:</p>
-<div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb29"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="va">mtcars</span>,</span>
 <span>          col_bind <span class="op">=</span> <span class="st">"fast"</span>,</span>
 <span>          col_options <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>fast <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="cn">TRUE</span>, <span class="cn">FALSE</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
@@ -922,7 +971,7 @@ factor with levels <code>Treatment-A</code>, <code>Treatment-B</code> or
 <code>Treatment-C</code> it would be easier to select these options from
 a dropdown menu instead of having to manually type them. Dropdown menus
 can be added in the same way as checkboxes.</p>
-<div class="sourceCode" id="cb29"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb30"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Add column for car colour</span></span>
 <span><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="va">mtcars</span>,</span>
 <span>          col_bind <span class="op">=</span> <span class="st">"colour"</span>,</span>
@@ -943,7 +992,7 @@ a calendar. To convert a column to accept interactive date inputs,
 supply a list with the name of the column and <code>"date"</code> as the
 option to <code>col_options</code>. The column is returned as a
 <code>Date</code> column.</p>
-<div class="sourceCode" id="cb30"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb31"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"date"</span>, <span class="st">"time"</span>, <span class="st">"region"</span>, <span class="st">"temperature"</span><span class="op">)</span>,</span>
 <span>          col_options <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>date <span class="op">=</span> <span class="st">"date"</span>, time <span class="op">=</span> <span class="st">"time"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p><img src="images/col-date.gif" width="100%" style="display: block; margin: auto;"></p>
@@ -957,7 +1006,7 @@ per usual, but the values are displayed as dots to conceal the entered
 data. To convert a column to accept password inputs, supply a list with
 the name of the column and <code>"password"</code> as the option to
 <code>col_options</code>.</p>
-<div class="sourceCode" id="cb31"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb32"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"date"</span>, <span class="st">"time"</span>, <span class="st">"user"</span>, <span class="st">"password"</span><span class="op">)</span>,</span>
 <span>          col_options <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>password <span class="op">=</span> <span class="st">"password"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p><img src="images/col-password.gif" width="100%" style="display: block; margin: auto;"></p>
@@ -969,7 +1018,7 @@ with <code>save_as</code>) as plain text.</p>
 </h3>
 <p>The animation below uses sample records with the other column
 types:</p>
-<div class="sourceCode" id="cb32"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb33"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">samples</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
 <span>  sample <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"S-01"</span>, <span class="st">"S-02"</span>, <span class="st">"S-03"</span>, <span class="st">"S-04"</span>, <span class="st">"S-05"</span><span class="op">)</span>,</span>
 <span>  notes <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Clear.\nStored at 4\u00b0C"</span>, <span class="st">"Slightly cloudy"</span>, <span class="cn">NA</span>,</span>
@@ -1027,11 +1076,16 @@ starting with <code>http://</code>, <code>https://</code> or
 double-click the cell to edit the address.</li>
 <li>
 <strong>Colours</strong> (<code>"colour"</code>): a swatch is shown
-for colours the browser understands, i.e. hex codes such as
-<code>"#1D4ED8"</code> and CSS colour names such as
-<code>"orange"</code> (some R colour names, such as
-<code>"grey50"</code>, are shown without a swatch).</li>
+next to each colour, for R colour names such as <code>"grey50"</code> or
+<code>"steelblue"</code> and hex codes such as <code>"#1D4ED8"</code>;
+values that are not colours get a dashed swatch. Double-click a cell to
+type a colour or pick one: the swatches offer the colours already in the
+column, R’s palette and the colour-blind-safe Okabe-Ito palette, and
+<code>Other colour...</code> opens the browser’s colour picker. Set the
+swatches with
+e.g. <code>list(type = "colour", palette = c("steelblue", "darkorange", "#009E73"))</code>.</li>
 </ul>
+<p><img src="images/colour-picker.png" width="100%" style="display: block; margin: auto;"></p>
 </div>
 <div class="section level3">
 <h3 id="validation-rules">7.6 Validation rules<a class="anchor" aria-label="anchor" href="#validation-rules"></a>
@@ -1041,7 +1095,7 @@ the data as a whole: that values are filled in, unique or within limits,
 or that columns agree with each other. Supply them to <code>rules</code>
 as one-sided formulas that are <code>TRUE</code> for valid rows, named
 with the message to show:</p>
-<div class="sourceCode" id="cb33"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb34"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="va">samples</span>,</span>
 <span>          rules <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>            <span class="st">"pH is between 0 and 14"</span> <span class="op">=</span> <span class="op">~</span> <span class="va">ph</span> <span class="op">&gt;=</span> <span class="fl">0</span> <span class="op">&amp;</span> <span class="va">ph</span> <span class="op">&lt;=</span> <span class="fl">14</span>,</span>
@@ -1081,7 +1135,7 @@ the menus.</p>
 <p>If you would like to make full use of the space available to you, you
 can set <code>col_stretch = TRUE</code> to stretch the columns to fill
 the full width of the display.</p>
-<div class="sourceCode" id="cb34"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb35"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="va">iris</span>,</span>
 <span>          col_stretch <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
 <p><img src="images/stretch.png" width="100%" style="display: block; margin: auto;"></p>
@@ -1097,7 +1151,7 @@ instructions to the user through <code>title</code>. Use
 <code>logo_size</code> to set the width of the logo in pixels and
 <code>logo_side</code> to place it on the <code>"left"</code> or
 <code>"right"</code> of the title.</p>
-<div class="sourceCode" id="cb35"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb36"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">logo</span> <span class="op">&lt;-</span> <span class="st">"https://raw.githubusercontent.com/DillonHammill/DataEditR/master/man/figures/logo.png"</span></span>
 <span><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="va">mtcars</span>,</span>
 <span>          logo <span class="op">=</span> <span class="va">logo</span>,</span>
@@ -1113,7 +1167,7 @@ supplying the name of a <a href="https://bootswatch.com/" class="external-link">
 theme to the <code>theme</code> argument. Alternatively, you can create
 your own custom <code>bs_theme</code> and supply that object to
 <code>theme</code> instead.</p>
-<div class="sourceCode" id="cb36"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb37"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Preset theme</span></span>
 <span><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span></span>
 <span>  <span class="va">mtcars</span>,</span>
@@ -1141,7 +1195,7 @@ your own custom <code>bs_theme</code> and supply that object to
 button, for example when <code><a href="../reference/data_edit.html">data_edit()</a></code> is used to collect
 data from users. When <code>save_as</code> is supplied the data is still
 written to file when <code>Done</code> is pressed.</p>
-<div class="sourceCode" id="cb37"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb38"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Name"</span>, <span class="st">"Email"</span>, <span class="st">"Attending"</span><span class="op">)</span>,</span>
 <span>          col_options <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>Attending <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="cn">TRUE</span>, <span class="cn">FALSE</span><span class="op">)</span><span class="op">)</span>,</span>
 <span>          save_as <span class="op">=</span> <span class="st">"rsvp.csv"</span>,</span>
@@ -1177,13 +1231,13 @@ whose value differs from the original, as well as all cells in newly
 added rows or columns, will be highlighted. Highlights follow undo, redo
 and reverts, and inserting rows or columns does not cause other cells to
 appear changed.</p>
-<div class="sourceCode" id="cb38"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb39"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="va">mtcars</span>,</span>
 <span>          track <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
 <p><img src="images/track.png" width="100%" style="display: block; margin: auto;"></p>
 <p>You can pass any valid CSS color to <code>track</code> to customise
 the highlight colour. For example, to use red:</p>
-<div class="sourceCode" id="cb39"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb40"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="va">mtcars</span>,</span>
 <span>          track <span class="op">=</span> <span class="st">"red"</span><span class="op">)</span></span></code></pre></div>
 </div>
@@ -1218,7 +1272,7 @@ the <code>column</code>, the <code>old</code> and <code>new</code>
 values and the <code>note</code>. New changes are added to the end of
 the file, so one file can keep the history of every editing session of a
 dataset or a project:</p>
-<div class="sourceCode" id="cb40"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb41"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">lab</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="st">"lab_results.csv"</span>,</span>
 <span>                 save_as <span class="op">=</span> <span class="st">"lab_results.csv"</span>,</span>
 <span>                 log <span class="op">=</span> <span class="st">"lab_results_log.csv"</span><span class="op">)</span></span>
@@ -1228,6 +1282,11 @@ dataset or a project:</p>
 <span><span class="co">#&gt;                       time user   how row column old  new                            note</span></span>
 <span><span class="co">#&gt; 1 2026-11-01 14:02:11+1100  ana  edit   3     pH 7.9  7.4 Re-measured, meter recalibrated</span></span>
 <span><span class="co">#&gt; 2 2026-11-01 14:03:40+1100  ana paste  12   mass 1.2 1.25                            &lt;NA&gt;</span></span></code></pre></div>
+<p>Each editing session gets its own <code>session</code> value (when it
+started), and the <code>History</code> tab lists the earlier sessions of
+the same data kept in the file below the changes of this session, newest
+first. Click a session to see its steps and notes:</p>
+<p><img src="images/history-sessions.png" width="100%" style="display: block; margin: auto;"></p>
 <p><code>log</code> can also be a function, which is called with the log
 as a data frame, for example to write it to a database. Nothing is
 written when <code>Cancel</code> is pressed. The user name is the name
@@ -1266,7 +1325,7 @@ log and <code><a href="../reference/dataEditCommit.html">dataEditCommit()</a></c
 log of what it saved), after which the highlights are cleared. Set
 <code>autosave = TRUE</code> in <code><a href="../reference/dataEdit.html">dataEditServer()</a></code> to keep
 drafts for each user of the app:</p>
-<div class="sourceCode" id="cb41"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb42"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://shiny.posit.co/" class="external-link">shiny</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dillonhammill.github.io/DataEditR/">DataEditR</a></span><span class="op">)</span></span>
 <span></span>
@@ -1389,7 +1448,7 @@ Connect with <code>DBI</code>, pass a <code>dbplyr</code> lazy table
 loaded into the editor. Changes are staged while you edit and written to
 the database in a single transaction when you press <code>Done</code>
 and confirm the summary of changes.</p>
-<div class="sourceCode" id="cb42"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb43"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dplyr.tidyverse.org" class="external-link">dplyr</a></span><span class="op">)</span></span>
 <span><span class="va">con</span> <span class="op">&lt;-</span> <span class="fu">DBI</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/DBI/man/dbConnect.html" class="external-link">dbConnect</a></span><span class="op">(</span><span class="fu">RSQLite</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/RSQLite/man/SQLite.html" class="external-link">SQLite</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"cars.sqlite"</span><span class="op">)</span></span>
 <span></span>
@@ -1412,7 +1471,7 @@ googlesheets using <code>googlesheets4</code>. Simply authorise
 <code>googlesheets4</code>, create a new sheet, edit the data using
 <code><a href="../reference/data_edit.html">data_edit()</a></code> and write the edited data to the created
 sheet.</p>
-<div class="sourceCode" id="cb43"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb44"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://googlesheets4.tidyverse.org" class="external-link">googlesheets4</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Authorise</span></span>
@@ -1461,12 +1520,12 @@ code uses <code>dplyr</code> verbs such as <code><a href="https://rdrr.io/pkg/dp
 <code><a href="https://rdrr.io/pkg/tibble/man/add_row.html" class="external-link">tibble::add_row()</a></code> to replicate your edits. Copying and
 pasting this code into the console will recreate the edited version of
 your data.</p>
-<div class="sourceCode" id="cb44"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb45"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="va">mtcars</span>,</span>
 <span>          code <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
 <p>For example, renaming a column, modifying a cell value, removing a
 row and adding a new row might produce code like:</p>
-<div class="sourceCode" id="cb45"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb46"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dplyr.tidyverse.org" class="external-link">dplyr</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">mtcars</span> <span class="op">&lt;-</span> <span class="va">mtcars</span> <span class="op"><a href="https://rdrr.io/pkg/magrittr/man/pipe.html" class="external-link">%&gt;%</a></span></span>
@@ -1496,7 +1555,7 @@ create a new R script to store this code by providing a name for the R
 script to <code>code</code>. For example, the below code creates a new R
 script called <code>mtcars_edit.R</code> and inserts the code required
 to programmatically generate the final edited version of your data.</p>
-<div class="sourceCode" id="cb46"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb47"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="va">mtcars</span>,</span>
 <span>          code <span class="op">=</span> <span class="st">"mtcars_edit.R"</span><span class="op">)</span></span></code></pre></div>
 </div>
@@ -1506,7 +1565,7 @@ to programmatically generate the final edited version of your data.</p>
 <p>The <code><a href="../reference/data_code.html">data_code()</a></code> function can also be used outside of
 <code><a href="../reference/data_edit.html">data_edit()</a></code> to generate code from any pair of original and
 edited data frames:</p>
-<div class="sourceCode" id="cb47"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb48"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dillonhammill.github.io/DataEditR/">DataEditR</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Original data</span></span>
@@ -1538,7 +1597,7 @@ edited data frames:</p>
 <p>The data editor is also available as a shiny module, so you can add
 an editable table to your own shiny applications with
 <code><a href="../reference/dataEdit.html">dataEditUI()</a></code> and <code><a href="../reference/dataEdit.html">dataEditServer()</a></code>:</p>
-<div class="sourceCode" id="cb48"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb49"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://shiny.posit.co/" class="external-link">shiny</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dillonhammill.github.io/DataEditR/">DataEditR</a></span><span class="op">)</span></span>
 <span></span>

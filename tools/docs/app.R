@@ -162,6 +162,34 @@ res <- switch(
     DataEditR:::draft_save(s, label = "mtcars")
     data_edit(mtcars, viewer = noview, quiet = TRUE)
   },
+  polish = {
+    # visits with a comment, an earlier session in the log and a colour column
+    visits <- data.frame(
+      visit = c("Week 1", "Week 2", NA, NA, NA, NA, NA, NA),
+      date = as.Date(c("2026-01-05", "2026-01-12", NA, NA, NA, NA, NA, NA)),
+      dose = c(10, 20, NA, NA, NA, NA, NA, NA),
+      weight = c(71.2, 70.8, 70.1, 69.9, 70.4, 69.5, 69.2, 68.8),
+      group = c("steelblue", "darkorange", "steelblue", "darkorange",
+                "steelblue", "darkorange", NA, NA),
+      stringsAsFactors = FALSE
+    )
+    attr(visits, "comments") <- data.frame(
+      row = 3, column = "weight", comment = "Weighed after breakfast",
+      user = "ana"
+    )
+    log <- file.path(out, "visits_log.csv")
+    unlink(log)
+    DataEditR:::editr_write_log(data.frame(
+      session = "2026-10-28 09:12:03.000",
+      time = as.POSIXct(c("2026-10-28 09:12:03", "2026-10-28 09:14:40")),
+      user = "ana", step = 1:2, how = c("edit", "paste"), code = NA,
+      action = "edit", row = c("2", "4"), column = c("weight", "dose"),
+      old = c("71.8", NA), new = c("70.8", "40"),
+      note = c("Scale was not zeroed", NA)
+    ), log, "visits")
+    data_edit(visits, viewer = noview, quiet = TRUE, log = log,
+              col_options = list(group = "colour"))
+  },
   stretch = data_edit(iris[1:20, ], viewer = noview, quiet = TRUE,
                       col_stretch = TRUE),
   db = {

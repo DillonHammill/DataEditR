@@ -593,6 +593,52 @@ const scenarios = {
   },
 
   // the column types from col_options
+  // visits: drag to fill, the colour picker and comments
+  async polish(page) {
+    await record(page, "fill", async () => {
+      await caption(page, "Drag the corner of a selection to fill");
+      let p = await cell(page, 1, "c1");
+      await moveTo(page, p);
+      await page.mouse.down();
+      const q = await cell(page, 2, "c3");
+      await page.mouse.move(q.x, q.y, { steps: 12 });
+      await page.mouse.up();
+      await settle(page, 700);
+      const h = await el(page, ".tabulator-range-fill-handle");
+      await moveTo(page, h);
+      await page.mouse.down();
+      const t = await cell(page, 7, "c3");
+      await page.mouse.move(t.x, t.y, { steps: 30 });
+      await sleep(600);
+      await page.mouse.up();
+      await settle(page, 600);
+      await caption(page, "Two or more values carry on as a series");
+      await sleep(1800);
+      await caption(page, "Colour columns get a colour picker");
+      p = await cell(page, 7, "c5");
+      await clickAt(page, p, { clickCount: 2 });
+      await page.waitForSelector(".editr-colour-box");
+      await sleep(900);
+      await clickAt(page, await page.evaluate(() => {
+        const b = document.querySelectorAll(".editr-colour-pick")[12].getBoundingClientRect();
+        return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
+      }));
+      await settle(page, 700);
+      await caption(page, "Right-click a cell to add a comment");
+      p = await cell(page, 2, "c4");
+      await clickAt(page, p, { button: "right" });
+      await menu(page, "Add comment");
+      await page.waitForSelector(".editr-comment-box textarea");
+      await type(page, "Re-weighed: first reading 71.8", 55);
+      await sleep(500);
+      await chord(page, "Control", "Enter");
+      await settle(page, 700);
+      await moveTo(page, p);
+      await sleep(1600);
+      await caption(page, "");
+    });
+  },
+
   async types(page) {
     await record(page, "col-types", async () => {
       await caption(page, "textarea: Shift+Enter starts a new line");

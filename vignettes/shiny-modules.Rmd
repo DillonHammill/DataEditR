@@ -150,6 +150,20 @@ Column actions (formulas, find and replace, recoding, type changes and sorting) 
 
 `dataEditCommit()` returns the same counts and the `log` of the changes it saved: one row per changed cell (or added, removed or renamed row and column) with the `time`, the `user`, `how` the change was made, the `row`, `column`, `old` and `new` values and the `note` the user added in the `History` tab. Write it next to the data to keep a record of who changed what. `dataEditLog()` returns the log of the whole session. The user is taken from `session$user` when the app runs on a server that signs users in (such as Posit Connect), and can be set with the `user` argument of `dataEditServer()`.
 
+The log has a `session` column that names the editing session. To list earlier sessions in the `History` tab, pass the log you kept to the `history` argument of `dataEditServer()` (a data frame or a reactive returning one); entries of the current session are left out:
+
+```{r, eval = FALSE}
+history <- reactiveVal(DBI::dbReadTable(con, "cars_log"))
+cars <- dataEditServer("cars", data = tbl(con, "cars"), history = history)
+observeEvent(input$save, {
+  res <- dataEditCommit(cars)
+  DBI::dbWriteTable(con, "cars_log", res$log, append = TRUE)
+  history(DBI::dbReadTable(con, "cars_log"))
+})
+```
+
+Comments that users leave on cells (right-click a cell, or `Shift+F2`) are returned with the data as `attr(x, "comments")`: a data frame with the `row`, `column`, `comment`, `user` and `time`. Pass data with that attribute to show its comments.
+
 ```{r}
 library(shiny)
 library(DataEditR)

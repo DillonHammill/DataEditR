@@ -573,6 +573,51 @@ const scenarios = {
     await page.click("#done");
     await sleep(1000);
   },
+  async polish(page) {
+    await sleep(1000);
+    // a comment on a cell (the marked cell came with the data)
+    let p = await cell(page, 2, "c4");
+    await page.mouse.click(p.x, p.y, { button: "right" });
+    await menuItem(page, "Add comment");
+    await page.waitForSelector(".editr-comment-box textarea");
+    await page.keyboard.type("Re-weighed: the first reading was 71.8");
+    await shot(page, "comments", { x: 0, y: 0, width: W, height: 560 });
+    await page.keyboard.down("Control"); await page.keyboard.press("Enter"); await page.keyboard.up("Control");
+    await settle(page, 800);
+    // fill a series: drag the corner of the selection
+    await click(page, 1, "c1");
+    await click(page, 2, "c3", { shift: true });
+    const h = await page.evaluate(() => {
+      const b = document.querySelector(".tabulator-range-fill-handle").getBoundingClientRect();
+      return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
+    });
+    const t = await cell(page, 6, "c3");
+    await page.mouse.move(h.x, h.y);
+    await page.mouse.down();
+    await page.mouse.move(t.x, t.y, { steps: 10 });
+    await sleep(300);
+    await page.mouse.up();
+    await settle(page, 1000);
+    await shot(page, "fill", { x: 0, y: 0, width: W, height: 560 });
+    // the colour picker
+    p = await cell(page, 7, "c5");
+    await page.mouse.click(p.x, p.y, { clickCount: 2 });
+    await page.waitForSelector(".editr-colour-box");
+    await sleep(500);
+    await shot(page, "colour-picker", { x: 0, y: 0, width: W, height: 620 });
+    await page.keyboard.press("Escape");
+    await settle(page, 500);
+    // earlier sessions in the History tab
+    await page.click("#edit1-open_changes");
+    await settle(page, 800);
+    await page.click("#edit1-tab_history");
+    await settle(page, 1000);
+    await page.evaluate(() => { document.querySelector(".editr-session").open = true; });
+    await sleep(400);
+    await shot(page, "history-sessions");
+    await page.click("#done");
+    await sleep(1000);
+  },
   async db_rows(page) {
     await sleep(1500);
     await page.click("#edit1-load_rows");

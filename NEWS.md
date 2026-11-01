@@ -53,6 +53,42 @@
   no longer converted to numbers. Dates stay dates, and matrices, tibbles and
   data.tables are returned with their original class.
 
+## Comments, drag to fill and a colour picker
+
+* Cells can carry comments: right-click a cell (or press `Shift+F2`) to add,
+  edit or delete one. Commented cells get an amber corner, and the comment
+  shows when the pointer rests on the cell and in the record form. Comments
+  are kept in drafts and returned with the data as `attr(x, "comments")`, a
+  data frame of the `row`, `column`, `comment`, `user` and `time`; data
+  opened with that attribute shows its comments. Comments on database rows
+  follow the rows when changes are committed or other rows are loaded.
+* Selections have a fill handle: drag the corner of a selection down, up or
+  across to fill the cells it passes over. One value is copied; two or more
+  numbers, dates (days or months apart, month ends stay month ends) or text
+  ending in a number (`Week 1`, `Week 2`) carry on as a series, and anything
+  else is repeated. Hold `Ctrl` to copy without a series. A fill is one undo
+  step, and values that do not fit a column are asked about first, as for a
+  paste.
+* A paste wider than the columns to the right of the selected cell adds
+  columns (`V1`, `V2`, ...) unless `col_edit = FALSE`; extra values were
+  ignored.
+* Colour columns (`col_options = list(x = "colour")`) are edited with a
+  colour picker: type a colour, pick a swatch (the colours already in the
+  column, then R's palette and the Okabe-Ito palette) or any colour with the
+  browser's picker. `list(type = "colour", palette = c(...))` sets the
+  swatches offered. R colour names such as `"grey50"` now show the right
+  swatch (R's `"green"` and `"gray"` are not the CSS ones), and values that
+  are not colours get a dashed one.
+* The `History` tab lists earlier editing sessions of the same data, newest
+  first and folded away: `data_edit(log = "file.csv")` reads them from its
+  file, and `dataEditServer(history = )` takes a data frame (or a reactive)
+  of earlier log entries, for example read from a database table. The change
+  log has a new `session` column (when the editing session started) to tell
+  sessions apart; log files written before keep their columns.
+* The `Code` tab is much faster on big data: on 100,000 rows it takes about
+  0.6 s after column actions (was about 5 s) and 0.3 s after edits (was
+  1.5 s), with the same code.
+
 ## Tables too big to load
 
 * Database tables no longer have to fit in memory: at most 100,000 rows are

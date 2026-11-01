@@ -637,6 +637,112 @@ const scenarios = {
     await done(page);
   },
 
+  async fill(page) {
+    const col = async (f) => (await L.gridData(page)).map((r) => r[f]);
+    const handle = () => page.evaluate(() => {
+      const b = document.querySelector(".tabulator-range-fill-handle").getBoundingClientRect();
+      return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
+    });
+    // drag the handle of a selection to a cell (Ctrl: copy)
+    const drag = async (id, field, ctrl = false) => {
+      const h = await handle();
+      const t = await L.cellCentre(page, id, field);
+      await page.mouse.move(h.x, h.y);
+      await page.mouse.down();
+      await page.mouse.move(t.x, t.y, { steps: 8 });
+      await sleep(200);
+      if (ctrl) await page.keyboard.down("Control");
+      await page.mouse.up();
+      if (ctrl) await page.keyboard.up("Control");
+      await L.settle(page, 900);
+    };
+    const select = async (a, fa, b, fb) => {
+      await L.selectCell(page, a, fa);
+      await L.selectCell(page, b, fb, true);
+    };
+    // series of text, numbers and month ends; colours repeat
+    await select(1, "c1", 2, "c4");
+    await drag(5, "c4");
+    check(JSON.stringify(await col("c1")) === JSON.stringify(["Week 1", "Week 2", "Week 3", "Week 4", "Week 5", null]),
+          "text series: " + JSON.stringify(await col("c1")));
+    check(JSON.stringify(await col("c2")) === JSON.stringify([10, 20, 30, 40, 50, null]), "number series");
+    check(JSON.stringify(await col("c3")) === JSON.stringify(["2026-01-31", "2026-02-28", "2026-03-31", "2026-04-30", "2026-05-31", null]),
+          "month ends: " + JSON.stringify(await col("c3")));
+    check(JSON.stringify(await col("c4")) === JSON.stringify(["grey50", "steelblue", "grey50", "steelblue", "grey50", null]),
+          "colours repeated");
+    await page.screenshot({ path: path.join(out, "fill.png") });
+    // Ctrl copies instead
+    await select(1, "c2", 2, "c2");
+    await drag(6, "c2", true);
+    check(JSON.stringify(await col("c2")) === JSON.stringify([10, 20, 10, 20, 10, 20]), "Ctrl copies: " + JSON.stringify(await col("c2")));
+    // the colour picker: a swatch, and an R colour typed
+    let p = await L.cellCentre(page, 6, "c4");
+    await page.mouse.click(p.x, p.y, { clickCount: 2 });
+    await page.waitForSelector(".editr-colour-box");
+    await sleep(300);
+    const picks = await page.$$eval(".editr-colour-pick", (bs) => bs.map((b) => b.title));
+    check(picks.slice(0, 3).join() === "grey50,steelblue,black", "column colours first: " + picks.slice(0, 4).join());
+    await page.screenshot({ path: path.join(out, "colour.png") });
+    const b = await page.evaluate(() => { const r = document.querySelectorAll(".editr-colour-pick")[2].getBoundingClientRect(); return { x: r.x + 6, y: r.y + 6 }; });
+    await page.mouse.click(b.x, b.y);
+    await L.settle(page, 800);
+    p = await L.cellCentre(page, 3, "c4");
+    await page.mouse.click(p.x, p.y, { clickCount: 2 });
+    await page.waitForSelector(".editr-colour-edit input");
+    await page.keyboard.down("Control"); await page.keyboard.press("KeyA"); await page.keyboard.up("Control");
+    await page.keyboard.type("darkolivegreen3");
+    await page.keyboard.press("Enter");
+    await L.settle(page, 800);
+    const sw = await page.evaluate(() => document.querySelector(".editr_grid").__editr.table.getRow(3).getCell("c4")
+      .getElement().querySelector(".editr-swatch").style.background);
+    check(sw === "rgb(162, 205, 90)", "R colour swatch: " + sw);
+    // a paste wider than the table adds a column; undo takes it away again
+    await L.selectCell(page, 1, "c4");
+    await L.paste(page, "red\tnote\n");
+    await L.settle(page, 900);
+    const titles = (await L.columns(page)).map((c) => c.title);
+    check(titles.join() === "week,n,day,colour,V1", "paste added V1: " + titles.join());
+    await page.click("#edit1-undo");
+    await L.settle(page, 1200);
+    check((await L.columns(page)).length === 4 && (await col("c4"))[0] === "grey50", "undo removed the column");
+    await done(page);
+  },
+
+  async comments(page) {
+    const commented = () => page.evaluate(() => [...document.querySelectorAll(".tabulator-cell.editr-commented")]
+      .map((c) => c.closest(".tabulator-row").querySelector(".editr-rowheader").textContent + "|" + c.getAttribute("tabulator-field")).sort());
+    check(JSON.stringify(await commented()) === JSON.stringify(["3|c2"]), "comment of the data shown: " + JSON.stringify(await commented()));
+    // add one from the menu
+    await L.rowMenu(page, 5, "c3", "Add comment");
+    await page.waitForSelector(".editr-comment-box textarea");
+    await page.keyboard.type("Re-measured");
+    await page.keyboard.down("Control"); await page.keyboard.press("Enter"); await page.keyboard.up("Control");
+    await L.settle(page, 800);
+    // and one with Shift+F2
+    await L.selectCell(page, 2, "c4");
+    await page.keyboard.down("Shift"); await page.keyboard.press("F2"); await page.keyboard.up("Shift");
+    await page.waitForSelector(".editr-comment-box textarea");
+    await page.keyboard.type("Check the units");
+    await page.screenshot({ path: path.join(out, "comment.png") });
+    await page.evaluate(() => [...document.querySelectorAll(".editr-comment-box button")].find((b) => b.textContent.trim() === "Save").click());
+    await L.settle(page, 800);
+    // delete the one the data came with
+    await L.rowMenu(page, 3, "c2", "Delete comment");
+    await L.settle(page, 800);
+    check(JSON.stringify(await commented()) === JSON.stringify(["2|c4", "5|c3"]), "comments in the grid: " + JSON.stringify(await commented()));
+    // earlier sessions in the History tab
+    await L.editCell(page, 1, "c2", "22");
+    await openHistory(page);
+    const hist = await page.$eval("#edit1-history", (e) => e.textContent.replace(/\s+/g, " "));
+    check(/This session 1/.test(hist) && /Earlier sessions 1/.test(hist) && /ana/.test(hist) &&
+          /Edited hp in row Valiant/.test(hist) && /From the manual/.test(hist),
+          "earlier session listed: " + hist.slice(0, 200));
+    await page.evaluate(() => { document.querySelector(".editr-session").open = true; });
+    await sleep(300);
+    await page.screenshot({ path: path.join(out, "history.png") });
+    await done(page);
+  },
+
   async cancel(page) {
     await L.editCell(page, 1, "c2", "99");
     await L.rowMenu(page, 2, "c2", "Delete row");

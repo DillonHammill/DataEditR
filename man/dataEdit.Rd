@@ -40,6 +40,7 @@ dataEditServer(
   col_actions = TRUE,
   rules = NULL,
   col_summary = TRUE,
+  history = NULL,
   ...
 )
 }
@@ -83,7 +84,11 @@ use for each column:
 \item \code{"textarea"}: text over several lines;
 \item \code{"password"}: hidden text;
 \item \code{"url"}: web addresses with a button to open them;
-\item \code{"colour"} (or \code{"color"}): colours shown with a swatch;
+\item \code{"colour"} (or \code{"color"}): colours (R colour names such
+as \code{"grey50"} or hex codes such as \code{"#1D4ED8"}) shown with a
+swatch and edited with a colour picker. Set the colours the picker
+offers with \code{list(type = "colour", palette = c("red", "#1D4ED8"))};
+any colour can still be typed or picked;
 \item \code{c(min = 0, max = 10, step = 1)} (any of the three): numbers
 within limits;
 \item \code{"slider"}: a slider and bar for numbers from 0 to 100;
@@ -184,6 +189,16 @@ column from its menu (\emph{Rules...}).}
 the number of distinct values) is shown under its header, set to
 \code{TRUE} by default. Clicking a bar shows only those rows; the
 summaries can be hidden with the toolbar button.}
+
+\item{history}{the change log of earlier editing sessions to list in the
+\emph{History} tab under the changes of this session: a data frame with
+the columns of \code{\link{dataEditLog}()} (at least \code{step} and
+\code{action}), or a reactive expression returning one. For example the
+entries returned by \code{\link{dataEditCommit}()} and written to a
+database table, read back with \code{DBI::dbReadTable()}. The
+\code{session} column tells the sessions apart (entries of the current
+session are left out). \code{data_edit(log = "file.csv")} reads the
+earlier sessions of the data from its file.}
 
 \item{...}{not in use.}
 }

@@ -148,6 +148,31 @@ if (scenario == "df") {
   )
   keep(x, quietly(x, code = code_file, save_as = file.path(out, "survey.sav")))
 
+} else if (scenario == "fill") {
+  x <- data.frame(
+    week = c("Week 1", "Week 2", NA, NA, NA, NA),
+    n = c(10, 20, NA, NA, NA, NA),
+    day = as.Date(c("2026-01-31", "2026-02-28", NA, NA, NA, NA)),
+    colour = c("grey50", "steelblue", NA, NA, NA, NA),
+    stringsAsFactors = FALSE
+  )
+  keep(x, quietly(x, code = code_file, col_options = list(colour = "colour")))
+
+} else if (scenario == "comments") {
+  x <- mtcars[1:6, 1:4]
+  attr(x, "comments") <- data.frame(row = "Datsun 710", column = "mpg",
+                                    comment = "Checked against the 1974 table",
+                                    user = "ana")
+  # an earlier session of the same data in the log file
+  log <- file.path(out, "log.csv")
+  DataEditR:::editr_write_log(data.frame(
+    session = "2026-10-28 09:12:03.000", time = as.POSIXct("2026-10-28 09:12:03"),
+    user = "ana", step = 1L, how = "edit", code = NA, action = "edit",
+    row = "Valiant", column = "hp", old = "105", new = "110",
+    note = "From the manual"
+  ), log, "x")
+  keep(x, data_edit(x, viewer = noview, quiet = TRUE, log = log, code = code_file))
+
 } else if (scenario == "cancel") {
   x <- mtcars[1:3, 1:3]
   keep(x, quietly(x))

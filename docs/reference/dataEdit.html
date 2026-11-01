@@ -107,6 +107,7 @@ possible.</p>
 <span>  col_actions <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  rules <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  col_summary <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  history <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -165,7 +166,11 @@ use for each column:</p><ul><li><p><code>c(TRUE, FALSE)</code>: checkboxes;</p><
 <li><p><code>"textarea"</code>: text over several lines;</p></li>
 <li><p><code>"password"</code>: hidden text;</p></li>
 <li><p><code>"url"</code>: web addresses with a button to open them;</p></li>
-<li><p><code>"colour"</code> (or <code>"color"</code>): colours shown with a swatch;</p></li>
+<li><p><code>"colour"</code> (or <code>"color"</code>): colours (R colour names such
+as <code>"grey50"</code> or hex codes such as <code>"#1D4ED8"</code>) shown with a
+swatch and edited with a colour picker. Set the colours the picker
+offers with <code>list(type = "colour", palette = c("red", "#1D4ED8"))</code>;
+any colour can still be typed or picked;</p></li>
 <li><p><code>c(min = 0, max = 10, step = 1)</code> (any of the three): numbers
 within limits;</p></li>
 <li><p><code>"slider"</code>: a slider and bar for numbers from 0 to 100;</p></li>
@@ -305,6 +310,18 @@ column from its menu (<em>Rules...</em>).</p></dd>
 the number of distinct values) is shown under its header, set to
 <code>TRUE</code> by default. Clicking a bar shows only those rows; the
 summaries can be hidden with the toolbar button.</p></dd>
+
+
+<dt>history</dt>
+<dd><p>the change log of earlier editing sessions to list in the
+<em>History</em> tab under the changes of this session: a data frame with
+the columns of <code><a href="dataEditCommit.html">dataEditLog</a>()</code> (at least <code>step</code> and
+<code>action</code>), or a reactive expression returning one. For example the
+entries returned by <code><a href="dataEditCommit.html">dataEditCommit</a>()</code> and written to a
+database table, read back with <code><a href="https://rdrr.io/pkg/DBI/man/dbReadTable.html" class="external-link">DBI::dbReadTable()</a></code>. The
+<code>session</code> column tells the sessions apart (entries of the current
+session are left out). <code>data_edit(log = "file.csv")</code> reads the
+earlier sessions of the data from its file.</p></dd>
 
 
 <dt>...</dt>

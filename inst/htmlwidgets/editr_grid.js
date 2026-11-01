@@ -1686,7 +1686,12 @@
         });
         var popup = openPopup(cell.getElement(), box);
         if (popup) popup.kind = "comment";
-        setTimeout(function () { ta.focus(); }, 0);
+        // at once, so typing straight away goes into the box (and again
+        // after a menu click has finished)
+        ta.focus();
+        setTimeout(function () {
+          if (document.activeElement !== ta && document.body.contains(ta)) ta.focus();
+        }, 0);
       }
 
       // R keeps the comments (with who wrote them and when) and sends them
