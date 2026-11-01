@@ -96,5 +96,24 @@ test_that("the module stores comments sent by the grid", {
     session$setInputs(grid_comment = "nope")
     session$setInputs(grid_comment = list(id = "x", field = "c2", text = "a"))
     expect_identical(nrow(attr(out(), "comments")), 1L)
+    # delete all comments
+    session$setInputs(grid_comment = list(id = 3, field = "c3", text = "and this",
+                                          nonce = 2))
+    expect_identical(nrow(attr(out(), "comments")), 2L)
+    session$setInputs(grid_comment = list(all = TRUE, nonce = 3))
+    expect_null(attr(out(), "comments"))
+    msg <- sent$msgs[[length(sent$msgs)]]
+    expect_identical(msg$method, "set_comments")
+    expect_length(msg$args$keys, 0)
+  })
+  # comments the data came with that are deleted are changes (kept in drafts)
+  x <- head(mtcars, 3)
+  attr(x, "comments") <- data.frame(row = 1:2, column = "mpg", comment = c("a", "b"))
+  p <- prep(x)
+  DataEditR:::store_comments_clear(p$store)
+  expect_length(p$store$comments, 0)
+  expect_identical(DataEditR:::comments_changed(p$store), 2L)
+  shiny::testServer(dataEditServer, args = list(data = mtcars[1:2, 1:2]), {
+    session$flushReact()
   })
 })

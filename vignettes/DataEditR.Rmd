@@ -375,7 +375,7 @@ Changes made in the form are ordinary edits: they can be undone, are listed in t
 
 ### 3.14 Comments on cells
 
-Right-click a cell and choose `Add comment` (or select it and press `Shift+F2`) to leave a comment on it: why a value was changed, what still needs checking or where it came from. Press `Ctrl+Enter` or `Save` to keep the comment and `Escape` to close it without saving. Commented cells have an amber corner; rest the pointer on the cell (or open the record form) to read the comment, and right-click it to edit or delete it.
+Right-click a cell and choose `Add comment` (or select it and press `Shift+F2`) to leave a comment on it: why a value was changed, what still needs checking or where it came from. Press `Ctrl+Enter` or `Save` to keep the comment and `Escape` to close it without saving. Commented cells have an amber corner; rest the pointer on the cell (or open the record form) to read the comment, and right-click it to edit or delete it. To start afresh, right-click any cell and choose `Delete all comments`; the editor asks first, as deleted comments cannot be brought back with undo.
 
 ```{r, echo = FALSE, fig.align = "center", out.width = "100%"}
 screenshot("comments.png")

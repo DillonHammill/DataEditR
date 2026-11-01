@@ -1,6 +1,7 @@
 ## COMMENTS ON CELLS -----------------------------------------------------------
 
-# Cells can carry a comment (right-click > Add comment, or Shift+F2): why a
+# Cells can carry a comment (right-click > Add comment, or Shift+F2; the same
+# menu deletes one comment or, once confirmed, all of them): why a
 # value was changed, what still needs checking. Comments are kept in the store
 # by cell (store$comments, "row id|column id" -> list(text, user, time)), kept
 # in drafts, and returned with the data as attr(x, "comments"): a data frame
@@ -125,6 +126,13 @@ store_comment <- function(store, id, cid, text, user = store$user %||% "") {
   } else {
     store$comments[[key]] <- NULL
   }
+  invisible(TRUE)
+}
+
+#' Delete all comments
+#' @noRd
+store_comments_clear <- function(store) {
+  store$comments <- list()
   invisible(TRUE)
 }
 

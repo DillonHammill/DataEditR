@@ -56,7 +56,7 @@
 ## Comments, drag to fill and a colour picker
 
 * Cells can carry comments: right-click a cell (or press `Shift+F2`) to add,
-  edit or delete one. Commented cells get an amber corner, and the comment
+  edit or delete one, or delete them all at once (after confirming). Commented cells get an amber corner, and the comment
   shows when the pointer rests on the cell and in the record form. Comments
   are kept in drafts and returned with the data as `attr(x, "comments")`, a
   data frame of the `row`, `column`, `comment`, `user` and `time`; data

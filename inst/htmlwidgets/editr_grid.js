@@ -1607,6 +1607,13 @@
             }});
           }
         }
+        var nComments = Object.keys(grid.comments).length;
+        if (nComments && grid.opts.comments !== false) {
+          items.push({label: "Delete all comments (" + nComments + ")\u2026",
+                      action: function () {
+                        confirmDeleteComments(cellEl || row.getElement());
+                      }});
+        }
         items.push({label: "Fill down  (Ctrl+D)", action: fillDown});
         items.push({separator: true});
         if (grid.opts.row_edit) {
@@ -1710,6 +1717,46 @@
         if (shinyOpen()) {
           Shiny.setInputValue(el.id + "_comment",
                               {id: id, field: field, text: text, nonce: Math.random()},
+                              {priority: "event"});
+        }
+      }
+
+      // comments cannot be undone, so deleting them all is confirmed first
+      function confirmDeleteComments(anchor) {
+        var n = Object.keys(grid.comments).length;
+        if (!n) return;
+        var box = document.createElement("div");
+        box.className = "editr-popup editr-guard editr-comments-clear";
+        box.setAttribute("role", "alertdialog");
+        box.setAttribute("aria-label", "Delete all comments");
+        box.innerHTML =
+          '<div class="editr-guard-msg"><span class="editr-guard-icon">' + ICONS.alert +
+          '</span><div><div class="editr-guard-title">Delete all ' + n + ' comment' +
+          (n === 1 ? "" : "s") + '?</div>' +
+          '<div class="editr-guard-sub">Deleted comments cannot be brought back with undo.</div>' +
+          '</div></div><div class="editr-guard-actions">' +
+          '<button type="button" class="btn btn-danger btn-sm" data-act="delete">Delete all comments</button>' +
+          '<button type="button" class="btn btn-link btn-sm" data-act="cancel">Cancel</button></div>';
+        box.addEventListener("click", function (e) {
+          var a = e.target.closest && e.target.closest("[data-act]");
+          if (!a) return;
+          closePopup();
+          if (a.getAttribute("data-act") === "delete") deleteAllComments();
+        });
+        var popup = openPopup(anchor, box);
+        if (popup) popup.kind = "guard";
+        var cancel = box.querySelector('[data-act="cancel"]');
+        if (cancel) cancel.focus();
+      }
+
+      function deleteAllComments() {
+        var ids = {};
+        Object.keys(grid.comments).forEach(function (k) { ids[k.split("|")[0]] = true; });
+        grid.comments = {};
+        reformatRows(Object.keys(ids).map(Number));
+        if (formVisible()) refreshForm();
+        if (shinyOpen()) {
+          Shiny.setInputValue(el.id + "_comment", {all: true, nonce: Math.random()},
                               {priority: "event"});
         }
       }

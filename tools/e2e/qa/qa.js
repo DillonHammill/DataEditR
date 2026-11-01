@@ -696,6 +696,18 @@ const scenarios = {
     const sw = await page.evaluate(() => document.querySelector(".editr_grid").__editr.table.getRow(3).getCell("c4")
       .getElement().querySelector(".editr-swatch").style.background);
     check(sw === "rgb(162, 205, 90)", "R colour swatch: " + sw);
+    // comments can all be deleted at once (after a question)
+    await L.selectCell(page, 1, "c2");
+    await page.keyboard.down("Shift"); await page.keyboard.press("F2"); await page.keyboard.up("Shift");
+    await page.waitForSelector(".editr-comment-box textarea");
+    await page.keyboard.type("first dose");
+    await page.keyboard.down("Control"); await page.keyboard.press("Enter"); await page.keyboard.up("Control");
+    await L.settle(page, 600);
+    await L.rowMenu(page, 2, "c1", "Delete all comments (1)");
+    await page.waitForSelector(".editr-comments-clear");
+    await page.click('.editr-comments-clear [data-act="delete"]');
+    await L.settle(page, 800);
+    check(await page.$$eval(".tabulator-cell.editr-commented", (c) => c.length) === 0, "all comments deleted");
     // a paste wider than the table adds a column; undo takes it away again
     await L.selectCell(page, 1, "c4");
     await L.paste(page, "red\tnote\n");
@@ -726,6 +738,15 @@ const scenarios = {
     await page.screenshot({ path: path.join(out, "comment.png") });
     await page.evaluate(() => [...document.querySelectorAll(".editr-comment-box button")].find((b) => b.textContent.trim() === "Save").click());
     await L.settle(page, 800);
+    // "Delete all comments" asks first; Cancel keeps them
+    await L.rowMenu(page, 1, "c3", "Delete all comments (3)");
+    await page.waitForSelector(".editr-comments-clear");
+    check(/Delete all 3 comments\?/.test(await page.$eval(".editr-comments-clear", (e) => e.textContent)),
+          "delete all asks first");
+    await page.screenshot({ path: path.join(out, "comments-clear.png") });
+    await page.click('.editr-comments-clear [data-act="cancel"]');
+    await L.settle(page, 600);
+    check((await commented()).length === 3, "Cancel keeps the comments");
     // delete the one the data came with
     await L.rowMenu(page, 3, "c2", "Delete comment");
     await L.settle(page, 800);

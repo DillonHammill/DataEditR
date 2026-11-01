@@ -957,10 +957,15 @@ dataEditServer <- function(id,
       ed <- editor()
       cm <- input$grid_comment
       if (is.null(ed) || !is.list(cm)) return()
-      id <- suppressWarnings(as.integer(as_scalar(cm$id)))
-      cid <- as.character(as_scalar(cm$field) %||% "")
-      if (length(id) != 1 || is.na(id)) return()
-      store_comment(ed$store, id, cid, as_scalar(cm$text) %||% "")
+      if (isTRUE(as_scalar(cm$all))) {
+        # DELETE ALL COMMENTS
+        store_comments_clear(ed$store)
+      } else {
+        id <- suppressWarnings(as.integer(as_scalar(cm$id)))
+        cid <- as.character(as_scalar(cm$field) %||% "")
+        if (length(id) != 1 || is.na(id)) return()
+        store_comment(ed$store, id, cid, as_scalar(cm$text) %||% "")
+      }
       grid_send(session, "grid", "set_comments", comments_grid(ed$store))
       bump(notes_tick)
     })
