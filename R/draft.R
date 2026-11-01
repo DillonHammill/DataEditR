@@ -73,7 +73,8 @@ draft_save <- function(store, label = NULL,
     notes = store$notes,
     comments = store$comments,
     rule_specs = store$rule_specs,
-    step = store$step
+    step = store$step,
+    session = store$session
   )
   tmp <- tempfile(tmpdir = dir, fileext = ".tmp")
   saveRDS(draft, tmp)
@@ -146,7 +147,13 @@ draft_restore <- function(store, draft) {
     return(FALSE)
   }
   store$auto_type <- union(store$auto_type, draft$auto_type)
-  store$log <- if (NROW(draft$log) > 0) list(draft$log) else list()
+  # A RESTORED DRAFT CARRIES ON ITS EDITING SESSION
+  store$session <- draft$session %||% store$session
+  log <- draft$log
+  if (NROW(log) > 0 && !"session" %in% names(log)) {
+    log <- cbind(session = store$session, log, stringsAsFactors = FALSE)
+  }
+  store$log <- if (NROW(log) > 0) list(log) else list()
   store$notes <- draft$notes %||% character(0)
   if (!is.null(draft$comments)) store$comments <- draft$comments
   store$rule_specs <- draft$rule_specs %||% list()

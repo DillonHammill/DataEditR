@@ -545,6 +545,7 @@ editr_store <- function(state) {
   store$col_attrs <- list() # cid -> attributes of plain columns (R/labelled.R)
   # CHANGE LOG (see R/log.R)
   store$log <- list() # data frames of entries
+  store$session <- log_session_id() # names this editing session in the log
   store$notes <- character(0) # step -> note
   store$step <- 0L
   store$step_how <- "edit"

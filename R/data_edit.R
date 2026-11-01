@@ -215,9 +215,11 @@
 #'   and when, see \code{\link{dataEditLog}()}) is added when \emph{Done} is
 #'   pressed, with a first column \code{data} naming the data that was
 #'   edited. The file is created if it does not exist, so the same file can
-#'   keep the history of many editing sessions. A function can be supplied
-#'   instead; it is called with the log as a data frame (for example to write
-#'   it to a database). Set to \code{NULL} by default to not keep the log.
+#'   keep the history of many editing sessions, and the \emph{History} tab
+#'   lists the earlier sessions of the same data kept in it. A function can be
+#'   supplied instead; it is called with the log as a data frame (for example
+#'   to write it to a database). Set to \code{NULL} by default to not keep the
+#'   log.
 #' @param autosave logical indicating whether changes should be saved as a
 #'   draft while editing, set to \code{TRUE} by default. If the editor is
 #'   closed without pressing \emph{Done} or \emph{Cancel} (the window was
@@ -541,6 +543,9 @@ data_edit <- function(x = NULL,
     # DATA EDIT - FULL DATA
     # NAME OF THE DATA IN THE GENERATED CODE
     code_name <- reactiveVal(x_name)
+    # EARLIER SESSIONS OF THE DATA KEPT IN THE CHANGE LOG FILE
+    log_label <- reactiveVal(session_info$label)
+    history <- if (is.character(log)) reactive(log_read(log, log_label()))
     data_update <- dataEditServer(
       "edit1",
       data = data_source,
@@ -562,7 +567,8 @@ data_edit <- function(x = NULL,
       autosave = autosave,
       col_actions = col_actions,
       rules = rules,
-      col_summary = col_summary
+      col_summary = col_summary,
+      history = history
     )
     data_active <- attr(data_update, "view")
     editor <- attr(data_update, "editor")
@@ -621,6 +627,7 @@ data_edit <- function(x = NULL,
       data_source(obj)
       set_text("dataset_name", name)
       session_info$label <- name
+      log_label(name)
       # THE CODE NOW STARTS FROM THE OPENED DATA (A NEW TABLE IS CREATED)
       session_info$original <- if (!is_db_input(obj) && !identical(code, "")) obj
       session_info$name <- if (identical(code, "")) "data" else code
@@ -868,6 +875,20 @@ editr_write_log <- function(entries, log, data_name = "data") {
   }
   entries$time <- format(entries$time, "%Y-%m-%d %H:%M:%S%z")
   append <- file.exists(log) && isTRUE(file.size(log) > 0)
+  if (append) {
+    # KEEP THE COLUMNS OF THE FILE (LOGS WRITTEN BEFORE A COLUMN WAS ADDED)
+    cols <- names(utils::read.csv(log, nrows = 1, check.names = FALSE,
+                                  colClasses = "character",
+                                  fileEncoding = "UTF-8"))
+    if (!identical(cols, names(entries))) {
+      entries <- as.data.frame(
+        stats::setNames(lapply(cols, function(nm) {
+          if (nm %in% names(entries)) entries[[nm]] else rep(NA, nrow(entries))
+        }), cols),
+        stringsAsFactors = FALSE, check.names = FALSE
+      )
+    }
+  }
   utils::write.table(entries, log, sep = ",", row.names = FALSE,
                      col.names = !append, append = append, qmethod = "double",
                      fileEncoding = "UTF-8")

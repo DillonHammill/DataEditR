@@ -10,8 +10,9 @@ test_that("each batch of ops is one step of the log", {
     op_update("c2", 5, "1"), op_update("c3", 5, "4")
   ), p$cfg, label = "paste")
   l <- log_of(p)
-  expect_named(l, c("time", "user", "step", "how", "code", "action", "row",
-                    "column", "old", "new", "note"))
+  expect_named(l, c("session", "time", "user", "step", "how", "code", "action",
+                    "row", "column", "old", "new", "note"))
+  expect_identical(unique(l$session), p$store$session)
   expect_s3_class(l$time, "POSIXct")
   expect_identical(unique(l$user), "ana")
   expect_identical(l$step, c(1L, 2L, 2L, 3L, 3L, 3L))

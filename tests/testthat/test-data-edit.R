@@ -44,8 +44,9 @@ test_that("the change log is added to a file or passed to a function", {
   data_edit(mtcars, log = file)
   data_edit(mtcars[1:3, ], log = file)
   log <- read.csv(file, stringsAsFactors = FALSE)
-  expect_named(log, c("data", "time", "user", "step", "how", "code", "action", "row",
-                      "column", "old", "new", "note"))
+  expect_named(log, c("data", "session", "time", "user", "step", "how", "code",
+                      "action", "row", "column", "old", "new", "note"))
+  expect_identical(length(unique(log$session)), 2L)
   expect_identical(log$data, c("mtcars", "mtcars[1:3, ]"))
   expect_identical(log$user, c("ana", "ana"))
   expect_identical(log$row, c("Mazda RX4", "Mazda RX4"))

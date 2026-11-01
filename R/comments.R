@@ -137,6 +137,40 @@ comments_changed <- function(store) {
   sum(vapply(keys, function(k) !identical(a[[k]], b[[k]]), logical(1)))
 }
 
+#' Comments of a store for the rows of another (database rows loaded again),
+#' found by their key
+#'
+#' @param from store (or list with state and comments) the comments are on.
+#' @param to store with the rows loaded again.
+#' @param key names of the key columns.
+#'
+#' @noRd
+comments_move <- function(from, to, key) {
+  cm <- from$comments
+  fs <- from$state
+  ts <- to$state
+  if (length(cm) == 0 || length(key) == 0 ||
+      !all(key %in% names(fs$data)) || !all(key %in% names(ts$data))) {
+    return(list())
+  }
+  parts <- strsplit(names(cm), "|", fixed = TRUE)
+  pos <- match(as.integer(vapply(parts, `[`, "", 1)), fs$ids)
+  cid <- vapply(parts, `[`, "", 2)
+  keys_of <- function(data, rows) {
+    vals <- lapply(key, function(k) as.character(data[[k]][rows]))
+    out <- do.call(paste, c(vals, sep = "\r"))
+    out[Reduce(`|`, lapply(vals, is.na))] <- NA
+    out
+  }
+  to_pos <- match(keys_of(fs$data, pos), keys_of(ts$data, seq_along(ts$ids)),
+                  incomparables = NA)
+  to_cid <- ts$cids[match(names(fs$data)[match(cid, fs$cids)], names(ts$data))]
+  ok <- !is.na(to_pos) & !is.na(to_cid)
+  out <- cm[ok]
+  names(out) <- paste0(ts$ids[to_pos[ok]], "|", to_cid[ok])
+  out
+}
+
 #' Add the comments of the returned rows to the data (attr "comments")
 #' @noRd
 with_comments <- function(x, store, cfg, view = FALSE) {

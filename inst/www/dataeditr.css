@@ -658,6 +658,88 @@ button.editr-change-title:hover {
   text-align: center;
 }
 
+/* HISTORY - EARLIER SESSIONS (data_edit(log = ) or dataEditServer(history = )) */
+.editr-empty.editr-session-none {
+  padding: 4px 0 8px;
+  text-align: left;
+}
+
+.editr-sessions-head {
+  margin-top: 18px;
+}
+
+.editr-sessions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.editr-session > summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  padding: 7px 10px 7px 28px;
+  position: relative;
+  border-radius: 8px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.editr-session > summary::-webkit-details-marker {
+  display: none;
+}
+
+.editr-session > summary::before {
+  content: "";
+  position: absolute;
+  left: 11px;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  margin-top: -4px;
+  border-right: 1.5px solid #52606D;
+  border-bottom: 1.5px solid #52606D;
+  transform: rotate(-45deg);
+  transition: transform 0.15s;
+}
+
+.editr-session[open] > summary::before {
+  transform: rotate(45deg);
+}
+
+.editr-session > summary:hover {
+  background: #F1F3F5;
+}
+
+.editr-session > summary:focus-visible {
+  outline: 2px solid #2563EB;
+  outline-offset: -2px;
+}
+
+.editr-session-when {
+  color: #1F2933;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.editr-session-who {
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: #E9ECF0;
+  color: #3E4C59;
+  font-size: 12px;
+}
+
+.editr-session > summary .editr-muted {
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.editr-session > .editr-history {
+  margin: 4px 0 10px;
+}
+
 .editr-code {
   margin: 0;
   padding: 14px;

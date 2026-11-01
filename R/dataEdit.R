@@ -48,6 +48,15 @@
 #'   \code{\link{dataEditLog}()}). By default the user signed in to the app
 #'   (\code{session$user}), the \code{DataEditR.user} option or the system
 #'   user name.
+#' @param history the change log of earlier editing sessions to list in the
+#'   \emph{History} tab under the changes of this session: a data frame with
+#'   the columns of \code{\link{dataEditLog}()} (at least \code{step} and
+#'   \code{action}), or a reactive expression returning one. For example the
+#'   entries returned by \code{\link{dataEditCommit}()} and written to a
+#'   database table, read back with \code{DBI::dbReadTable()}. The
+#'   \code{session} column tells the sessions apart (entries of the current
+#'   session are left out). \code{data_edit(log = "file.csv")} reads the
+#'   earlier sessions of the data from its file.
 #' @param data a reactive expression containing an array (e.g. data.frame,
 #'   matrix or data.table), a database table (see \code{\link{db_table}}) or a
 #'   vector indicating the dimensions of the array (e.g. c(10,10)) or column
@@ -340,9 +349,11 @@ dataEditServer <- function(id,
                            col_actions = TRUE,
                            rules = NULL,
                            col_summary = TRUE,
+                           history = NULL,
                            ...) {
 
   data_r <- if (is.reactive(data)) data else reactive(data)
+  history_r <- if (is.function(history)) history else function() history
   rows_r <- if (is.null(rows) || is.reactive(rows)) rows else reactive(rows)
   columns_r <- if (is.null(columns) || is.reactive(columns)) {
     columns
@@ -603,13 +614,29 @@ dataEditServer <- function(id,
       editr_code(ed$store, ed$cfg, name)
     })
 
+    # EARLIER SESSIONS FOR THE HISTORY TAB (TIDIED ONCE)
+    earlier_log <- reactive({
+      tryCatch({
+        h <- history_r()
+        if (inherits(h, "error") || ".session" %in% names(h)) h else log_tidy(h)
+      }, error = function(e) e)
+    })
+    earlier_sessions <- function(current) {
+      e <- earlier_log()
+      if (is.data.frame(e)) {
+        e <- e[is.na(e$session) | e$session != current, , drop = FALSE]
+      }
+      e
+    }
+
     output$history <- shiny::renderUI({
       shiny::req(identical(input$panel, "history"))
       data_tick()
       notes_tick()
       ed <- editor()
       shiny::req(ed)
-      history_ui(store_log_df(ed$store), ns)
+      history_ui(store_log_df(ed$store), ns,
+                 earlier = earlier_sessions(ed$store$session))
     })
 
     # PANES START HIDDEN - KEEP THEIR OUTPUTS LIVE (they req() the open tab)
@@ -975,6 +1002,13 @@ dataEditServer <- function(id,
       log <- store_log_df(store)
       log <- log[log$step <= done, setdiff(names(log), "note"), drop = FALSE]
       new$log <- if (nrow(log) > 0) list(log) else list()
+      new$session <- store$session
+      # COMMENTS ON ROWS THAT ARE LOADED AGAIN
+      new$comments <- comments_move(store, new, ed$cfg$db$key)
+      new$comments_opened <- comments_move(
+        list(state = store$original, comments = store$comments_opened), new,
+        ed$cfg$db$key
+      )
       new$notes <- store$notes[as.integer(names(store$notes)) <= done]
       new$step <- done
       new$committed_step <- done
@@ -1068,6 +1102,9 @@ dataEditServer <- function(id,
         # THE CHANGE LOG CARRIES ON
         new <- reloaded$store
         new$log <- store$log
+        new$session <- store$session
+        new$comments <- comments_move(store, new, ed$cfg$db$key)
+        new$comments_opened <- new$comments
         new$notes <- store$notes
         new$step <- store$step
         new$committed_step <- store$step
@@ -1075,6 +1112,7 @@ dataEditServer <- function(id,
       } else {
         store$original <- store$state
         store$changed <- character(0)
+        store$comments_opened <- store$comments
         store$committed_step <- store$step
         # THE CODE AND DRAFTS NOW START FROM THE COMMITTED DATA
         store$base_txn <- length(store$undo)
@@ -1169,6 +1207,10 @@ dataEditServer <- function(id,
 #' per row or column that was added, removed or renamed), in a data frame
 #' with the columns:
 #' \describe{
+#' \item{session}{when the editing session started (e.g.
+#' \code{"2026-11-02 09:27:27.123"}), which names the session when logs of
+#' many sessions are kept together. Restoring a draft carries on its
+#' session.}
 #' \item{time}{when the change was made.}
 #' \item{user}{who made it (see the \code{user} argument of
 #' \code{\link{dataEditServer}()}).}
