@@ -4,7 +4,14 @@
 \alias{db_table}
 \title{Edit a table in a database}
 \usage{
-db_table(x, table = NULL, key = NULL, limit = Inf, check = TRUE)
+db_table(
+  x,
+  table = NULL,
+  key = NULL,
+  limit = NULL,
+  check = TRUE,
+  readonly = NULL
+)
 }
 \arguments{
 \item{x}{a \code{dbplyr} lazy table (e.g. \code{dplyr::tbl(con, "artists")},
@@ -19,13 +26,19 @@ detected from the lazy table.}
 \code{NULL} the primary key is detected for SQLite, DuckDB and PostgreSQL
 databases.}
 
-\item{limit}{maximum number of rows to load into the editor, set to
-\code{Inf} by default. Use \code{dplyr::filter()} on the lazy table to
-choose which rows to edit.}
+\item{limit}{maximum number of rows to load into the editor at a time, set
+to \code{getOption("DataEditR.db_rows", 100000)} by default. Use
+\code{dplyr::filter()} on the lazy table, or \emph{Rows} in the editor,
+to choose which rows to load.}
 
 \item{check}{logical indicating whether updates and deletes should verify
 that rows have not changed in the database since they were loaded
 (optimistic concurrency), set to \code{TRUE} by default.}
+
+\item{readonly}{\code{TRUE} to open the table read-only, \code{FALSE} to
+stop with an error when it cannot be written to. Set to \code{NULL} by
+default to open queries that cannot be written to (SQL, joins, tables
+without a primary key) read-only.}
 }
 \value{
 an object of class \code{editr_db_table} to pass to
@@ -45,6 +58,13 @@ commit. All changes are written in a single transaction: if any row has
 been changed by someone else since it was loaded (or no longer exists), the
 whole commit is rolled back and nothing is written. Adding, removing and
 renaming columns is disabled for database tables.
+
+Tables do not have to fit in memory: at most \code{limit} rows are loaded
+at a time, and \emph{Rows} in the toolbar loads other rows (those matching
+a filter, in a chosen order), with the filter and sorting done by the
+database. Queries that cannot be written back (SQL, joins, or tables
+without a primary key, e.g. \code{read_parquet()} with DuckDB) are opened
+read-only, so large files can still be explored.
 }
 \examples{
 if (interactive() && requireNamespace("RSQLite", quietly = TRUE)) {

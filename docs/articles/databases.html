@@ -197,19 +197,17 @@ identify each row:</p>
 with <code><a href="https://rdrr.io/pkg/dplyr/man/select.html" class="external-link">select()</a></code>), and their values must be unique in the
 loaded rows.</p>
 <p><code><a href="../reference/db_table.html">db_table()</a></code> also accepts a connection and a table name,
-which is useful for tables in another schema or when you only want to
-load the first rows of a large table:</p>
+which is useful for tables in another schema:</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># a table in another schema</span></span>
 <span><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="fu"><a href="../reference/db_table.html">db_table</a></span><span class="op">(</span><span class="va">con</span>, table <span class="op">=</span> <span class="fu">DBI</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/DBI/man/Id.html" class="external-link">Id</a></span><span class="op">(</span>schema <span class="op">=</span> <span class="st">"sales"</span>, table <span class="op">=</span> <span class="st">"orders"</span><span class="op">)</span>,</span>
-<span>                   key <span class="op">=</span> <span class="st">"order_id"</span><span class="op">)</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># only load the first 1,000 rows</span></span>
-<span><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="fu"><a href="../reference/db_table.html">db_table</a></span><span class="op">(</span><span class="va">con</span>, table <span class="op">=</span> <span class="st">"cars"</span>, key <span class="op">=</span> <span class="st">"id"</span>, limit <span class="op">=</span> <span class="fl">1000</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<p>Queries that combine tables, such as joins or unions, or raw SQL
-queries cannot be written back automatically. Use
-<code><a href="../reference/db_table.html">db_table()</a></code> to say which table the edits belong to; columns
-from other tables are then read-only:</p>
+<span>                   key <span class="op">=</span> <span class="st">"order_id"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p>Queries that combine tables, such as joins or unions, raw SQL queries
+and tables without a primary key cannot be written back automatically,
+so they are opened <strong>read-only</strong> (you can still filter,
+sort and look through them). Use <code><a href="../reference/db_table.html">db_table()</a></code> to say which
+table the edits belong to; columns from other tables are then
+read-only:</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">owners</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/dplyr/man/tbl.html" class="external-link">tbl</a></span><span class="op">(</span><span class="va">con</span>, <span class="st">"owners"</span><span class="op">)</span></span>
 <span><span class="va">cars_and_owners</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/dplyr/man/mutate-joins.html" class="external-link">left_join</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/pkg/dplyr/man/tbl.html" class="external-link">tbl</a></span><span class="op">(</span><span class="va">con</span>, <span class="st">"cars"</span><span class="op">)</span>, <span class="va">owners</span>, by <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"id"</span> <span class="op">=</span> <span class="st">"car_id"</span><span class="op">)</span><span class="op">)</span></span>
@@ -217,7 +215,41 @@ from other tables are then read-only:</p>
 <span><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="fu"><a href="../reference/db_table.html">db_table</a></span><span class="op">(</span><span class="va">cars_and_owners</span>, table <span class="op">=</span> <span class="st">"cars"</span>, key <span class="op">=</span> <span class="st">"id"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
-<h2 id="committing-changes">4. Committing changes<a class="anchor" aria-label="anchor" href="#committing-changes"></a>
+<h2 id="tables-too-big-to-load">4. Tables too big to load<a class="anchor" aria-label="anchor" href="#tables-too-big-to-load"></a>
+</h2>
+<p>The table does not have to fit in memory. <code><a href="../reference/data_edit.html">data_edit()</a></code>
+loads at most 100,000 rows at a time (set <code>limit</code> in
+<code><a href="../reference/db_table.html">db_table()</a></code>, or <code>options(DataEditR.db_rows = )</code>),
+and the header and the <code>Rows</code> button in the toolbar show how
+many rows are loaded out of how many there are:</p>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">flights</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/dplyr/man/tbl.html" class="external-link">tbl</a></span><span class="op">(</span><span class="va">con</span>, <span class="st">"flights"</span><span class="op">)</span>    <span class="co"># 30 million rows</span></span>
+<span><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="va">flights</span><span class="op">)</span>                <span class="co"># loads 100,000 of them</span></span>
+<span></span>
+<span><span class="co"># or choose the rows before opening the editor</span></span>
+<span><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/pkg/dplyr/man/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">flights</span>, <span class="va">carrier</span> <span class="op">==</span> <span class="st">"UA"</span>, <span class="va">dep_delay</span> <span class="op">&gt;</span> <span class="fl">60</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p>Click <code>Rows</code> to load other rows: the rows matching a
+filter, written like <code><a href="https://rdrr.io/pkg/dplyr/man/filter.html" class="external-link">dplyr::filter()</a></code>
+(e.g. <code>carrier == "UA" &amp; dep_delay &gt; 60</code>), sorted by a
+column, at most a number of rows. The database does the filtering and
+sorting (the filter is translated to SQL by <code>dbplyr</code>), and
+the dialog shows how many rows match before you load them. If you have
+changed rows that are not saved yet, you can save them to the database
+first or discard them.</p>
+<p><img src="images/db-rows.png" width="100%" style="display: block; margin: auto;"></p>
+<p>Filters can use column names, values and the functions that formulas
+may use (see the user guide), so users of a shiny app cannot run other
+code or SQL. Column summaries, the filters under the column headers and
+<em>Find</em> work on the loaded rows.</p>
+<p>Files that are too big for memory can be explored the same way
+through DuckDB, which reads Parquet and CSV files without loading them;
+such queries are read-only:</p>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">con</span> <span class="op">&lt;-</span> <span class="fu">DBI</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/DBI/man/dbConnect.html" class="external-link">dbConnect</a></span><span class="op">(</span><span class="fu">duckdb</span><span class="fu">::</span><span class="fu">duckdb</span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/pkg/dplyr/man/tbl.html" class="external-link">tbl</a></span><span class="op">(</span><span class="va">con</span>, <span class="fu"><a href="https://rdrr.io/pkg/dplyr/man/sql.html" class="external-link">sql</a></span><span class="op">(</span><span class="st">"SELECT * FROM read_parquet('trips/*.parquet')"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level2">
+<h2 id="committing-changes">5. Committing changes<a class="anchor" aria-label="anchor" href="#committing-changes"></a>
 </h2>
 <p>Nothing is written to the database while you edit. When you press
 <code>Done</code>, the editor shows a summary of the rows that will be
@@ -241,19 +273,19 @@ database generates it (e.g. an auto-incrementing <code>id</code>).</li>
 <p>After a successful commit <code><a href="../reference/data_edit.html">data_edit()</a></code> returns the edited
 rows as a data frame. Press <code>Cancel</code> to close the editor
 without writing anything.</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">cars_edited</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/pkg/dplyr/man/tbl.html" class="external-link">tbl</a></span><span class="op">(</span><span class="va">con</span>, <span class="st">"cars"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p>To keep a record of who changed which rows, and why, pass a function
 to <code>log</code> that writes the change log to a table in the same
 database. Rows are named by their key in the log, and the notes added in
 the <code>History</code> tab are included:</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/pkg/dplyr/man/tbl.html" class="external-link">tbl</a></span><span class="op">(</span><span class="va">con</span>, <span class="st">"cars"</span><span class="op">)</span>,</span>
 <span>          log <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">log</span><span class="op">)</span> <span class="fu">DBI</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/DBI/man/dbWriteTable.html" class="external-link">dbWriteTable</a></span><span class="op">(</span><span class="va">con</span>, <span class="st">"cars_log"</span>, <span class="va">log</span>,</span>
 <span>                                                append <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
-<h2 id="when-someone-else-changes-the-data">5. When someone else changes the data<a class="anchor" aria-label="anchor" href="#when-someone-else-changes-the-data"></a>
+<h2 id="when-someone-else-changes-the-data">6. When someone else changes the data<a class="anchor" aria-label="anchor" href="#when-someone-else-changes-the-data"></a>
 </h2>
 <p>Databases are often shared, so the rows you are editing may be
 changed by someone else before you press <code>Done</code>. To make sure
@@ -266,21 +298,21 @@ many rows conflicted. Close the editor, load the data again to see the
 latest values and redo your edits.</p>
 <p>If you would rather overwrite rows regardless of changes made by
 others, turn the check off with <code>check = FALSE</code>:</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="fu"><a href="../reference/db_table.html">db_table</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/pkg/dplyr/man/tbl.html" class="external-link">tbl</a></span><span class="op">(</span><span class="va">con</span>, <span class="st">"cars"</span><span class="op">)</span>, check <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
-<h2 id="code-to-reproduce-the-changes">6. Code to reproduce the changes<a class="anchor" aria-label="anchor" href="#code-to-reproduce-the-changes"></a>
+<h2 id="code-to-reproduce-the-changes">7. Code to reproduce the changes<a class="anchor" aria-label="anchor" href="#code-to-reproduce-the-changes"></a>
 </h2>
 <p>Set <code>code = TRUE</code> (or supply the name of an R script) to
 get the <code>dplyr</code> code that makes the same changes to the
 database with <code><a href="https://rdrr.io/pkg/dplyr/man/rows.html" class="external-link">rows_delete()</a></code>, <code><a href="https://rdrr.io/pkg/dplyr/man/rows.html" class="external-link">rows_update()</a></code> and
 <code><a href="https://rdrr.io/pkg/dplyr/man/rows.html" class="external-link">rows_append()</a></code>. The <code>Code</code> tab in the editor
 shows the same code as you edit.</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">cars</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/dplyr/man/tbl.html" class="external-link">tbl</a></span><span class="op">(</span><span class="va">con</span>, <span class="st">"cars"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="va">cars</span>, code <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dplyr.tidyverse.org" class="external-link">dplyr</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">cars</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/dplyr/man/tbl.html" class="external-link">tbl</a></span><span class="op">(</span><span class="va">con</span>, <span class="st">"cars"</span><span class="op">)</span></span>
@@ -293,7 +325,7 @@ shows the same code as you edit.</p>
 <code><a href="https://rdrr.io/pkg/dbplyr/man/in_schema.html" class="external-link">dbplyr::in_schema()</a></code> in the generated code.</p>
 </div>
 <div class="section level2">
-<h2 id="databases-in-shiny-apps">7. Databases in shiny apps<a class="anchor" aria-label="anchor" href="#databases-in-shiny-apps"></a>
+<h2 id="databases-in-shiny-apps">8. Databases in shiny apps<a class="anchor" aria-label="anchor" href="#databases-in-shiny-apps"></a>
 </h2>
 <p>The <code>dataEdit</code> module edits database tables in your own
 shiny applications too. Pass the lazy table (or a
@@ -304,7 +336,7 @@ changes in a single transaction, raises an error of class
 reads the rows back from the database afterwards.
 <code><a href="../reference/dataEditCommit.html">dataEditChanges()</a></code> summarises what will be written, e.g. to
 enable a <em>Save</em> button or ask for confirmation.</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">server</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">input</span>, <span class="va">output</span>, <span class="va">session</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="va">cars</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dataEdit.html">dataEditServer</a></span><span class="op">(</span><span class="st">"cars"</span>, data <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/dplyr/man/tbl.html" class="external-link">tbl</a></span><span class="op">(</span><span class="va">con</span>, <span class="st">"cars"</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>

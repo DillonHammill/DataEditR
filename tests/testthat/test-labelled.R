@@ -421,3 +421,10 @@ test_that("code for added rows puts back the labels add_row() drops", {
   expect_identical(DataEditR:::haven_fun("a.dta", write = TRUE), "write_dta")
   expect_null(DataEditR:::haven_fun("a.por", write = TRUE))
 })
+
+test_that("attributes a column still has are not replaced", {
+  x <- DataEditR:::restore_attrs(structure(1, label = "now"), list(label = "before"))
+  expect_identical(attr(x, "label"), "now")
+  expect_identical(DataEditR:::haven_fun("a.xpt"), "read_xpt")
+  expect_identical(DataEditR:::haven_fun("a.dta"), "read_dta")
+})

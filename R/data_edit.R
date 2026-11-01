@@ -572,8 +572,9 @@ data_edit <- function(x = NULL,
       d <- data_update()
       req(!is.null(d))
       ed <- isolate(editor())
-      kind <- if (!is.null(ed$cfg$db)) {
-        "database table"
+      db <- ed$cfg$db
+      kind <- if (!is.null(db)) {
+        if (isTRUE(db$readonly)) "database query (read-only)" else "database table"
       } else if (is.matrix(d)) {
         "matrix"
       } else if (inherits(d, "data.table")) {
@@ -583,8 +584,14 @@ data_edit <- function(x = NULL,
       } else {
         "data.frame"
       }
+      rows <- format(NROW(d), big.mark = ",")
+      # TABLES BIGGER THAN WHAT IS LOADED (SEE db_table())
+      if (!is.null(db) && isTRUE(db$total > NROW(d))) {
+        rows <- paste0(rows, " of ", format(db$total, big.mark = ",",
+                                            scientific = FALSE))
+      }
       set_html("dataset_meta",
-               paste0(kind, " &middot; ", NROW(d), " &times; ", NCOL(d)))
+               paste0(kind, " &middot; ", rows, " &times; ", NCOL(d)))
       set_html("return_all_dims", editr_dims(d))
     })
     observe({

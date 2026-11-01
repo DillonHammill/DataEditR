@@ -190,6 +190,23 @@ if (scenario == "df") {
   keep(x, quietly(x, hide = TRUE, col_options = list(attending = c(TRUE, FALSE)),
                   save_as = file.path(out, "rsvp.csv")))
 
+} else if (scenario == "db_rows") {
+  # a table bigger than what is loaded at a time
+  options(DataEditR.db_rows = 500)
+  path <- file.path(out, "flights.sqlite")
+  con <- DBI::dbConnect(RSQLite::SQLite(), path)
+  DBI::dbExecute(con, "CREATE TABLE flights (id INTEGER PRIMARY KEY,
+                       carrier TEXT, delay REAL)")
+  DBI::dbAppendTable(con, "flights", data.frame(
+    carrier = rep(c("UA", "AA", "DL", "B6", "WN"), length.out = 5000),
+    delay = (seq_len(5000) * 37) %% 211
+  ))
+  res <- quietly(dplyr::tbl(con, "flights"))
+  saveRDS(list(result = res,
+               db = DBI::dbGetQuery(con, "SELECT * FROM flights ORDER BY id")),
+          file.path(out, "result.rds"))
+  DBI::dbDisconnect(con)
+
 } else if (scenario == "db" || scenario == "db_conflict") {
   path <- file.path(out, "cars.sqlite")
   con <- DBI::dbConnect(RSQLite::SQLite(), path)

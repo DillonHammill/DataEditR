@@ -27,7 +27,12 @@ test_that("db_table detects keys and base tables", {
   expect_identical(db_table(q)$table, "cars")
   expect_error(db_table(con), "must be supplied")
   DBI::dbExecute(con, "CREATE TABLE nokey (a INTEGER, b TEXT)")
-  expect_error(db_table(dplyr::tbl(con, "nokey")), "primary key")
+  expect_error(db_table(dplyr::tbl(con, "nokey"), readonly = FALSE), "primary key")
+  # without a key the table is opened read-only
+  ro <- db_table(dplyr::tbl(con, "nokey"))
+  expect_true(ro$readonly)
+  expect_null(ro$key)
+  expect_match(ro$why, "primary key")
   expect_identical(db_table(con, table = "nokey", key = "a")$key, "a")
 })
 
@@ -143,9 +148,12 @@ test_that("db_table explains what cannot be edited", {
   joined <- dplyr::left_join(dplyr::tbl(con, "cars"),
                              dplyr::tbl(con, "owners"),
                              by = c("id" = "car"))
-  expect_error(db_table(joined), "combines tables")
-  expect_error(db_table(dplyr::tbl(con, dplyr::sql("SELECT * FROM cars"))),
+  expect_error(db_table(joined, readonly = FALSE), "combines tables")
+  expect_error(db_table(dplyr::tbl(con, dplyr::sql("SELECT * FROM cars")),
+                        readonly = FALSE),
                "result of an SQL query")
+  expect_true(db_table(joined)$readonly)
+  expect_identical(db_table(joined)$fields, colnames(joined))
   # the table to write to can still be named explicitly
   db <- db_table(joined, table = "cars", key = "id")
   expect_identical(db$table, "cars")

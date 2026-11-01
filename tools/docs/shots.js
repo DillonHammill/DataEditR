@@ -573,6 +573,24 @@ const scenarios = {
     await page.click("#done");
     await sleep(1000);
   },
+  async db_rows(page) {
+    await sleep(1500);
+    await page.click("#edit1-load_rows");
+    await page.waitForSelector("#edit1-ld_filter");
+    await sleep(800);
+    await page.type("#edit1-ld_filter", 'carrier == "UA" & dep_delay > 60');
+    await page.select("#edit1-ld_sort", "dep_delay");
+    await page.click("#edit1-ld_desc");
+    await page.click("#edit1-ld_limit", { clickCount: 3 });
+    await page.keyboard.type("1000");
+    await sleep(1800);
+    await shot(page, "db-rows");
+    await page.click("#edit1-load_apply");
+    await settle(page, 2500);
+    await shot(page, "db-rows-loaded");
+    await page.click("#done");
+    await sleep(1000);
+  },
   async restore(page) {
     await page.waitForSelector("#shiny-modal .modal-dialog");
     await sleep(900);

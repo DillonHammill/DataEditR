@@ -73,7 +73,14 @@ reference.</p>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">db_table</span><span class="op">(</span><span class="va">x</span>, table <span class="op">=</span> <span class="cn">NULL</span>, key <span class="op">=</span> <span class="cn">NULL</span>, limit <span class="op">=</span> <span class="cn">Inf</span>, check <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">db_table</span><span class="op">(</span></span>
+<span>  <span class="va">x</span>,</span>
+<span>  table <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  key <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  limit <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  check <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  readonly <span class="op">=</span> <span class="cn">NULL</span></span>
+<span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -97,15 +104,23 @@ databases.</p></dd>
 
 
 <dt>limit</dt>
-<dd><p>maximum number of rows to load into the editor, set to
-<code>Inf</code> by default. Use <code><a href="https://rdrr.io/pkg/dplyr/man/filter.html" class="external-link">dplyr::filter()</a></code> on the lazy table to
-choose which rows to edit.</p></dd>
+<dd><p>maximum number of rows to load into the editor at a time, set
+to <code>getOption("DataEditR.db_rows", 100000)</code> by default. Use
+<code><a href="https://rdrr.io/pkg/dplyr/man/filter.html" class="external-link">dplyr::filter()</a></code> on the lazy table, or <em>Rows</em> in the editor,
+to choose which rows to load.</p></dd>
 
 
 <dt>check</dt>
 <dd><p>logical indicating whether updates and deletes should verify
 that rows have not changed in the database since they were loaded
 (optimistic concurrency), set to <code>TRUE</code> by default.</p></dd>
+
+
+<dt>readonly</dt>
+<dd><p><code>TRUE</code> to open the table read-only, <code>FALSE</code> to
+stop with an error when it cannot be written to. Set to <code>NULL</code> by
+default to open queries that cannot be written to (SQL, joins, tables
+without a primary key) read-only.</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -123,6 +138,12 @@ commit. All changes are written in a single transaction: if any row has
 been changed by someone else since it was loaded (or no longer exists), the
 whole commit is rolled back and nothing is written. Adding, removing and
 renaming columns is disabled for database tables.</p>
+<p>Tables do not have to fit in memory: at most <code>limit</code> rows are loaded
+at a time, and <em>Rows</em> in the toolbar loads other rows (those matching
+a filter, in a chosen order), with the filter and sorting done by the
+database. Queries that cannot be written back (SQL, joins, or tables
+without a primary key, e.g. <code>read_parquet()</code> with DuckDB) are opened
+read-only, so large files can still be explored.</p>
     </div>
     <div class="section level2">
     <h2 id="author">Author<a class="anchor" aria-label="anchor" href="#author"></a></h2>

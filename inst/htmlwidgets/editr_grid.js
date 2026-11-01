@@ -2239,6 +2239,29 @@
             });
           }
         }
+        // database tables: how many rows are loaded, and a button to load
+        // others (see R/db_ui.R)
+        var rowsBtn = byId(grid.ui.rows_btn);
+        if (rowsBtn) {
+          var dbRows = grid.opts.db_rows;
+          rowsBtn.hidden = !dbRows;
+          if (dbRows) {
+            var num = function (n) { return Number(n).toLocaleString("en-US"); };
+            setText(grid.ui.rows_info, dbRows.total > dbRows.loaded ?
+              num(dbRows.loaded) + " of " + num(dbRows.total) : num(dbRows.total));
+            rowsBtn.classList.toggle("editr-tool-on", !!dbRows.filtered);
+            rowsBtn.title = (dbRows.readonly ? "Read-only. " : "") +
+              "Load other rows from the database";
+          }
+          if (!rowsBtn.__editrBound) {
+            rowsBtn.__editrBound = true;
+            rowsBtn.addEventListener("click", function () {
+              if (shinyOpen()) {
+                Shiny.setInputValue(el.id + "_load_rows", Math.random(), {priority: "event"});
+              }
+            });
+          }
+        }
         var cols = byId(grid.ui.columns_btn);
         if (cols && !cols.__editrBound) {
           cols.__editrBound = true;
