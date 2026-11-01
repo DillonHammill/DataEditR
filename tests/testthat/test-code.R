@@ -184,3 +184,23 @@ test_that("a single added column is one mutate()", {
   expect_match(data_code(x, y), 'mutate(b = c("u", "v"))', fixed = TRUE)
   expect_identical(replay(x, y), y)
 })
+
+test_that("changed values are found quickly but compared as written", {
+  changed <- DataEditR:::code_changed
+  expect_identical(changed(c(1, 2, NA, 4), c(1, 3, NA, NA)), c(2L, 4L))
+  # differences too small to show in the code are not changes
+  expect_identical(changed(0.1 + 0.2, 0.3), integer(0))
+  # TRUE and 1 are written differently
+  expect_identical(changed(c(TRUE, FALSE), c(1, 0)), 1:2)
+  expect_identical(changed(factor(c("a", "b")), c("a", "c")), 2L)
+  expect_identical(changed(as.Date("2024-01-01") + 0:1, as.Date("2024-01-01") + c(0, 2)), 2L)
+  expect_identical(changed(c("a", NA), c("a", NA)), integer(0))
+  # row names as stored
+  has <- DataEditR:::data_code_has_rownames
+  expect_false(has(data.frame(a = 1:3)))
+  expect_false(has(structure(data.frame(a = 1:3), row.names = 1:3)))
+  expect_true(has(structure(data.frame(a = 1:3), row.names = c(3L, 1L, 2L))))
+  expect_true(has(mtcars))
+  expect_false(has(structure(data.frame(a = 1:2), row.names = c("1", "2"))))
+  expect_false(has(matrix(1:4, 2)))
+})
