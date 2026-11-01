@@ -94,6 +94,9 @@ reproduces your edits.
 - a summary under each column name (histogram or most common values,
   missing values, distinct values) whose bars filter the rows
 - a form to enter or check data one record at a time
+- SPSS, Stata and SAS files and labelled data: values are shown and
+  entered by their labels, and variable labels, value labels and missing
+  values are kept
 - formulas, find and replace, recoding, type changes and sorting for
   whole columns, each shown in the generated code as one `dplyr` verb
 - validation rules (required, unique, limits, patterns or any formula),

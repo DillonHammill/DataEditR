@@ -144,6 +144,9 @@ action_preview_ui <- function(plan, store, cfg, limit = 5) {
     return(tags$div(class = "editr-preview",
                     paste(plan$changed, "rows move.")))
   }
+  if (plan$action$kind == "labels") {
+    return(labels_preview_ui(plan$after, plan$action$verb))
+  }
   before <- column_as_character(if (is.factor(plan$before)) as.character(plan$before) else plan$before)
   after <- column_as_character(if (is.factor(plan$after)) as.character(plan$after) else plan$after)
   differ <- which(values_differ(before, after))
@@ -218,4 +221,87 @@ unique_name <- function(base, existing) {
   i <- 1
   while (paste0(base, i) %in% existing) i <- i + 1
   paste0(base, i)
+}
+
+#' Dialog for the Labels action: the variable label and value labels
+#'
+#' @param name name of the column.
+#' @param col the column (as returned).
+#' @param ns namespace function.
+#'
+#' @noRd
+labels_modal <- function(name, col, ns) {
+  can_values <- (is.numeric(col) || is.character(col)) && !is.factor(col) &&
+    (inherits(col, "haven_labelled") || requireNamespace("haven", quietly = TRUE))
+  labs <- value_labels(col)
+  shiny::modalDialog(
+    title = tagList("Labels of ", tags$code(name)),
+    tags$div(
+      class = "editr-action",
+      shiny::textInput(ns("lb_label"), "Variable label",
+                       value = var_label(col) %||% "", width = "100%",
+                       placeholder = "What the column holds, e.g. Sex of respondent"),
+      if (can_values) {
+        tagList(
+          shiny::textAreaInput(
+            ns("lb_values"), "Value labels", value = value_labels_text(labs),
+            rows = max(4, min(12, length(labs) + 2)), width = "100%",
+            placeholder = if (is.character(plain_values(col))) "AU = Australia\nNZ = New Zealand" else "1 = Male\n2 = Female"
+          ),
+          tags$div(class = "form-text",
+                   "One label per line, as ", tags$code("value = label"),
+                   ". Leave empty to remove the value labels.")
+        )
+      } else {
+        tags$div(class = "form-text",
+                 "Value labels can be given to numbers and text",
+                 if (!requireNamespace("haven", quietly = TRUE)) {
+                   " (with the haven package installed)"
+                 }, ".")
+      },
+      shiny::uiOutput(ns("action_preview"))
+    ),
+    footer = tagList(
+      shiny::modalButton("Cancel"),
+      shiny::actionButton(ns("action_apply"), "Apply", class = "btn-primary")
+    ),
+    easyClose = TRUE,
+    size = "m"
+  )
+}
+
+#' Preview of the Labels action: each value label with its number of rows
+#'
+#' @param col the column with its new labels.
+#' @param verb the code of the action (NULL when nothing changes yet).
+#'
+#' @noRd
+labels_preview_ui <- function(col, verb = NULL, limit = 12) {
+  labs <- value_labels(col)
+  v <- plain_values(col)
+  rows <- if (!is.null(labs)) {
+    codes <- format_label_codes(labs)
+    n <- vapply(seq_along(labs), function(i) sum(v %in% labs[[i]]), integer(1))
+    utils::head(lapply(seq_along(labs), function(i) {
+      tags$tr(tags$td(tags$code(codes[i])), tags$td(names(labs)[i]),
+              tags$td(class = "editr-muted", paste(n[i], if (n[i] == 1) "row" else "rows")))
+    }), limit)
+  }
+  unlabelled <- sum(!is.na(v) & !v %in% labs)
+  lab <- var_label(col)
+  tags$div(
+    class = "editr-preview",
+    tags$div(class = "editr-preview-summary",
+             if (!is.null(lab)) tagList(tags$strong(lab, .noWS = "after"), ". "),
+             if (is.null(labs)) "No value labels." else
+               paste0(length(labs), " value label", if (length(labs) != 1) "s",
+                      if (unlabelled > 0) paste0("; ", unlabelled, " row",
+                                                 if (unlabelled != 1) "s",
+                                                 " have values without a label"),
+                      ".")),
+    if (length(rows) > 0) {
+      tags$table(class = "table table-sm editr-preview-table", tags$tbody(rows))
+    },
+    if (!is.null(verb)) tags$div(class = "editr-preview-code", tags$code(verb))
+  )
 }

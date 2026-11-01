@@ -182,6 +182,23 @@ if (scenario == "df") {
   same(result, e, "edits from the record form")
   reproduces(code_text(), input, result)
 
+} else if (scenario == "labelled") {
+  loadNamespace("haven") # combines labelled vectors (as when the data is read)
+  e <- input
+  e$sex[c(1, 3, 4, 6)] <- c(2, 9, 1, 3)
+  attr(e$sex, "labels") <- c(Male = 1, Female = 2, Refused = 9, Other = 3)
+  e$country[5] <- "NZ"
+  attr(e$age, "label") <- "Age (years)"
+  e <- tibble::add_row(e, id = "R09", sex = 2, q1 = -99, country = "AU", age = 57)
+  attr(e$age, "label") <- "Age (years)"
+  same(result, e, "labels, values and user-defined missing values")
+  reproduces(code_text(), input, result)
+  sav <- haven::read_sav(file.path(out, "survey.sav"), user_na = TRUE)
+  check(identical(attr(sav$sex, "labels"), attr(e$sex, "labels")) &&
+          identical(attr(sav$age, "label"), "Age (years)") &&
+          identical(as.vector(sav$q1[9]), -99),
+        "saved as SPSS with the labels")
+
 } else if (scenario == "cancel") {
   same(result, input, "Cancel returns the original data")
   check(length(list.files(file.path(out, "drafts"), "rds$")) == 0,

@@ -120,6 +120,40 @@ The `Open` menu in the toolbar switches to other data without having to close th
 screenshot("open-data.gif")
 ```
 
+### 2.2 SPSS, Stata and SAS files
+
+`data_edit()` reads SPSS (`.sav`, `.por`), Stata (`.dta`) and SAS (`.sas7bdat`, `.xpt`) files with the **haven** package, from a file name or from the `Open` menu, and edits data that was read with `haven` (or labelled with the **labelled** or **sjlabelled** packages) without losing its labels:
+
+```{r, eval = FALSE}
+# Read and edit an SPSS file, and save it again with its labels
+data_edit("survey.sav", save_as = "survey.sav")
+
+# Or edit data read with haven
+survey <- haven::read_sav("survey.sav", user_na = TRUE)
+survey <- data_edit(survey)
+```
+
+* **Variable labels** (what a column holds) are shown when you hover over a column name, in the column summary and in the `Record` tab.
+* **Value labels** are shown next to the values (`1 Male`), and columns with value labels have an `lbl` badge. The cell editor lists the labels, and you can type or paste a label (`Female`) instead of its value (`2`). Other values can still be typed.
+* **User-defined missing values** of SPSS files (e.g. `-99 No answer`) are shown in grey italics, count as missing in the column summaries and are kept as values.
+
+```{r, echo = FALSE, fig.align = "center", out.width = "100%"}
+screenshot("labelled.png")
+```
+
+Choose `Labels...` from a column's menu to change its variable label or its value labels, written one per line as `value = label`. The dialog shows how many rows have each value, and the change is recorded as one step in the code:
+
+```{r, echo = FALSE, fig.align = "center", out.width = "100%"}
+screenshot("labels-dialog.png")
+```
+
+```r
+survey <- survey %>%
+  mutate(sex = structure(sex, labels = c("Male" = 1, "Female" = 2, "Refused" = 9, "Other" = 3)))
+```
+
+`Change type` turns a labelled column into a factor or text using its labels (`haven::as_factor()`), or into plain numbers (`haven::zap_labels()`). The returned data keeps the variable labels, value labels and missing values, and so does the generated code. When `save_as` ends in `.sav`, `.dta` or `.xpt` the data is written with `haven`, and the `Export` menu can download the data as an SPSS or Stata file.
+
 ## 3. Data Manipulation
 
 `data_edit()` provides a variety of spreadsheet-style tools to edit your data. We will explore the use of each of these tools below, using `mtcars` as an example:

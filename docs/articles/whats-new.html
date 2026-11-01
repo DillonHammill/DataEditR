@@ -143,6 +143,12 @@ share to show the rows with missing values.</li>
 selected row as a form, to enter or check data one record at a
 time.</li>
 <li>
+<strong>Labelled data</strong>: SPSS, Stata and SAS files are read
+and written with <code>haven</code>, and their variable labels, value
+labels and missing values are shown, edited (<code>Labels...</code> in a
+column’s menu) and kept in the returned data and the code. Typing or
+pasting a label stores its value.</li>
+<li>
 <strong>Validation rules</strong>:
 <code>rules = list("End is after the start" = ~ end &gt;= start)</code>,
 or required, unique, limits and patterns from a column’s menu. Cells

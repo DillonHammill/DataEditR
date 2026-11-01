@@ -45,6 +45,16 @@
 #' to \emph{Done} chooses whether all data or only what is on screen is
 #' returned.
 #'
+#' @section Labelled data:
+#' Data read from SPSS, Stata or SAS files with haven keeps its variable
+#' labels (shown when hovering over a column name), value labels and SPSS
+#' user-defined missing values. Cells show each value with its label
+#' (\code{1 Male}), the cell editor offers the labels, and a label typed or
+#' pasted into a cell is stored as its value. \emph{Labels...} in the column
+#' menu changes the variable label and value labels, and \emph{Change type}
+#' turns labelled values into factors or text with their labels. The
+#' returned data and the generated code keep the labels.
+#'
 #' @section Databases:
 #' Supply a \code{dbplyr} lazy table (e.g. \code{dplyr::tbl(con, "artists")})
 #' or a \code{\link{db_table}()} to edit a database table. Rows are matched by
@@ -167,13 +177,19 @@
 #'   \code{bslib::bs_theme()} object. Set to \code{NULL} by default to use the
 #'   DataEditR theme.
 #' @param read_fun name of the function to use to read in the data when \code{x}
-#'   is the name of a file, set to \code{read.csv} by default.
+#'   is the name of a file, set to \code{read.csv} by default. SPSS
+#'   (\code{.sav}, \code{.por}), Stata (\code{.dta}) and SAS
+#'   (\code{.sas7bdat}, \code{.xpt}) files are read with the haven package
+#'   unless another function is given (see the \emph{Labelled data}
+#'   section).
 #' @param read_args a named list of additional arguments to pass to
 #'   \code{read_fun}.
 #' @param write_fun name of the function to use to write the edited version of
 #'   \code{x} to a file, set to \code{write.csv} by default. Only requirement is
 #'   that the first argument accepts the edited data and the second argument
-#'   accepts the file name supplied to \code{save_as}.
+#'   accepts the file name supplied to \code{save_as}. When \code{save_as}
+#'   ends in \code{.sav}, \code{.dta} or \code{.xpt} the data is written with
+#'   haven, keeping variable and value labels.
 #' @param write_args a named list of additional arguments to pass to
 #'   \code{write_fun}.
 #' @param quiet logical indicating whether messages should be suppressed, set to
@@ -448,7 +464,12 @@ data_edit <- function(x = NULL,
             "Any data frame, matrix or dbplyr table in your session"),
         tags$hr(),
         fileInput("open_file", "File", buttonLabel = "Upload...",
-                  placeholder = paste0("Read with ", read_fun, "()")),
+                  placeholder = if (identical(read_fun, "read.csv") &&
+                                    requireNamespace("haven", quietly = TRUE)) {
+                    "CSV, SPSS, Stata or SAS"
+                  } else {
+                    paste0("Read with ", if (is.character(read_fun)) read_fun else "read_fun", "()")
+                  }),
         tags$hr(),
         div(class = "fw-semibold mb-1", "New empty table"),
         div(
@@ -473,7 +494,17 @@ data_edit <- function(x = NULL,
         class = "dropdown-menu dropdown-menu-end",
         tags$li(downloadLink("export_all", "All data", class = "dropdown-item")),
         tags$li(downloadLink("export_view", "Only what's on screen",
-                             class = "dropdown-item"))
+                             class = "dropdown-item")),
+        # SPSS AND STATA FILES KEEP VARIABLE AND VALUE LABELS
+        if (requireNamespace("haven", quietly = TRUE)) {
+          tagList(
+            tags$li(tags$hr(class = "dropdown-divider")),
+            tags$li(downloadLink("export_sav", "All data as SPSS (.sav)",
+                                 class = "dropdown-item")),
+            tags$li(downloadLink("export_dta", "All data as Stata (.dta)",
+                                 class = "dropdown-item"))
+          )
+        }
       )
     )
   }
@@ -602,7 +633,7 @@ data_edit <- function(x = NULL,
     })
     observeEvent(input$open_file, {
       f <- input$open_file
-      obj <- tryCatch(do.call(read_fun, c(list(f$datapath), read_args)),
+      obj <- tryCatch(editr_read(f$datapath, read_fun, read_args, name = f$name),
                       error = function(e) e)
       if (inherits(obj, "error")) {
         showNotification(conditionMessage(obj), type = "error")
@@ -630,12 +661,30 @@ data_edit <- function(x = NULL,
         },
         content = function(file) {
           d <- if (view) data_active() else data_update()
-          do.call(write_fun, c(list(d, file), write_args))
+          editr_write(d, file, write_fun, write_args,
+                      name = if (!is.null(save_as)) save_as else file)
         }
       )
     }
     output$export_all <- export_handler(FALSE)
     output$export_view <- export_handler(TRUE)
+    haven_handler <- function(ext) {
+      downloadHandler(
+        filename = function() {
+          base <- if (!is.null(save_as)) {
+            sub("\\.[^.]+$", "", basename(save_as))
+          } else {
+            paste0(format(Sys.Date(), "%Y%m%d"), "-data")
+          }
+          paste0(base, ".", ext)
+        },
+        content = function(file) {
+          editr_write(data_update(), file, name = paste0("data.", ext))
+        }
+      )
+    }
+    output$export_sav <- haven_handler("sav")
+    output$export_dta <- haven_handler("dta")
 
     # CANCEL - ASK BEFORE CHANGES ARE THROWN AWAY
     observeEvent(input$cancel, {
@@ -686,7 +735,7 @@ data_edit <- function(x = NULL,
       }
       save <- !is.null(save_as) && !isFALSE(input$save_file)
       if (!is.null(result) && save) {
-        do.call(write_fun, c(list(result, save_as), write_args))
+        editr_write(result, save_as, write_fun, write_args)
       }
       if (!is.null(log)) {
         editr_write_log(isolate(dataEditLog(data_update)), log,
@@ -831,7 +880,7 @@ editr_load <- function(x, envir = parent.frame(), read_fun = "read.csv",
   }
   if (is.character(x) && length(x) == 1 && nzchar(x)) {
     if (file.exists(x)) {
-      return(do.call(read_fun, c(list(x), read_args)))
+      return(editr_read(x, read_fun, read_args))
     }
     if (exists(x, envir = envir)) {
       obj <- get(x, envir = envir)

@@ -14,13 +14,18 @@
 #'   with a few distinct values (codes such as \code{cyl}) get them too.
 #' @param bins number of histogram bins to aim for.
 #' @param top number of most common values to show.
+#' @param labelled whether the column has value labels: a few distinct codes
+#'   are listed (the grid adds their labels).
 #'
 #' @return a list ready to be sent to the grid.
 #'
 #' @noRd
-column_summary <- function(x, values = FALSE, bins = 12, top = 5) {
+column_summary <- function(x, values = FALSE, bins = 12, top = 5,
+                           labelled = !is.null(value_labels(x))) {
   n <- length(x)
+  # SPSS USER-DEFINED MISSING VALUES COUNT AS MISSING
   miss <- is.na(x)
+  x <- plain_values(x)
   if (is.character(x)) miss <- miss | !nzchar(x)
   v <- x[!miss]
   out <- list(n = n, missing = sum(miss), unique = length(unique(v)))
@@ -28,6 +33,7 @@ column_summary <- function(x, values = FALSE, bins = 12, top = 5) {
     out$type <- "empty"
     return(out)
   }
+  if (labelled && out$unique <= 30) values <- TRUE
   if (inherits(x, c("Date", "POSIXct"))) {
     out <- c(out, summary_dates(v, bins))
   } else if (is.numeric(x) && !values && !few_numbers(v, out$unique, n)) {
@@ -134,6 +140,7 @@ summary_values <- function(v, top = 5) {
 #' @noRd
 grid_summaries <- function(store, cfg, cache = new.env()) {
   state <- store$state
+  attrs <- store_meta(store)$attrs
   cols <- state$cids
   if (!is.null(store$view_cols)) cols <- cols[cols %in% store$view_cols]
   cols <- setdiff(cols, c(store$hidden, cfg$rownames_cid))
@@ -145,13 +152,16 @@ grid_summaries <- function(store, cfg, cache = new.env()) {
     if (!is.null(keep)) x <- x[keep]
     opt <- cfg$col_options[[cid]]
     values <- !is.null(opt) && opt$type %in% c("checkbox", "dropdown", "rating")
+    labelled <- !is.null(value_labels(x, attrs[[cid]]))
     hit <- cache[[cid]]
-    if (!is.null(hit) && identical(hit$values, values) && identical(hit$x, x)) {
+    if (!is.null(hit) && identical(hit$values, values) &&
+        identical(hit$labelled, labelled) && identical(hit$x, x)) {
       out[[cid]] <- hit$summary
       next
     }
-    s <- column_summary(x, values = values)
-    assign(cid, list(x = x, values = values, summary = s), envir = cache)
+    s <- column_summary(x, values = values, labelled = labelled)
+    assign(cid, list(x = x, values = values, labelled = labelled, summary = s),
+           envir = cache)
     out[[cid]] <- s
   }
   out

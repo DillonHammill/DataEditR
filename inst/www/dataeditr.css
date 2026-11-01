@@ -1016,3 +1016,10 @@ button.editr-change-title:hover {
   padding: 0 8px;
   font-size: 13px;
 }
+
+/* record form: the variable label next to the column name */
+.editr-form-varlabel {
+  margin-left: 6px;
+  color: #7B8794;
+  font-weight: 400;
+}

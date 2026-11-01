@@ -110,6 +110,8 @@ grid_data <- function(data, columns) {
 #' Format a column for display in the grid
 #' @noRd
 grid_values <- function(x) {
+  # VALUE-LABELLED COLUMNS SHOW THEIR CODES (THE GRID ADDS THE LABELS)
+  x <- plain_values(x)
   if (is.null(x)) {
     return(x)
   }
@@ -150,12 +152,13 @@ grid_values <- function(x) {
 grid_columns <- function(store, cfg) {
   state <- store$state
   v <- store_view_ids(store)
+  attrs <- store_meta(store)$attrs
   lapply(v$cols, function(cid) {
     pos <- match(cid, state$cids)
     name <- names(state$data)[pos]
     col <- state$data[[pos]]
     opt <- cfg$col_options[[cid]]
-    list(
+    spec <- list(
       field = cid,
       title = name,
       kind = column_kind(col),
@@ -165,8 +168,12 @@ grid_columns <- function(store, cfg) {
       frozen = identical(cid, cfg$rownames_cid),
       # columns without values (templates, new tables) start wider
       empty = all(is.na(col) | (is.character(col) & col %in% "")),
-      filter = column_filter(col, opt, identical(cid, cfg$rownames_cid))
+      filter = column_filter(col, opt, identical(cid, cfg$rownames_cid),
+                             labelled = !is.null(value_labels(col, attrs[[cid]])))
     )
+    # VARIABLE AND VALUE LABELS (R/labelled.R)
+    spec$labels <- grid_labels(col, attrs[[cid]])
+    spec
   })
 }
 
@@ -176,7 +183,7 @@ grid_columns <- function(store, cfg) {
 #' range, everything else a "contains" text box.
 #'
 #' @noRd
-column_filter <- function(x, option = NULL, rownames = FALSE) {
+column_filter <- function(x, option = NULL, rownames = FALSE, labelled = FALSE) {
   if (rownames) {
     return(list(type = "text"))
   }
@@ -186,7 +193,12 @@ column_filter <- function(x, option = NULL, rownames = FALSE) {
   if (is.logical(x)) {
     return(list(type = "values"))
   }
+  x <- plain_values(x)
   n <- length(unique(x[!is.na(x)]))
+  # VALUE-LABELLED CODES ARE PICKED FROM A LIST (WITH THEIR LABELS)
+  if (labelled && n > 0 && n <= 30) {
+    return(list(type = "values"))
+  }
   if (is.numeric(x) && !inherits(x, c("Date", "POSIXt"))) {
     few <- few_numbers(x[!is.na(x)], n, length(x))
     return(list(type = if (few) "values" else "range"))

@@ -1,7 +1,7 @@
 #!/bin/bash
 # Screenshots and GIFs for the vignettes (vignettes/images).
 # Usage: tools/docs/run.sh <scenario> <port>
-#   scenarios: main empty size template options custom stretch track actions summary restore db gif
+#   scenarios: main empty size template options custom stretch track actions summary labelled restore db gif
 # Animated demos for the user guide and README: tools/docs/gifs.sh
 # Needs: DataEditR installed, node with puppeteer-core, Chrome (CHROME_PATH),
 # ffmpeg for GIFs. Output goes to tools/docs/out.

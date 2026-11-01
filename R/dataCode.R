@@ -223,8 +223,10 @@ data_code_pipes <- function(x, x_edit, rowname_col = NULL) {
 
     # Vectorized comparison for shared rows
     shared_row_names <- remaining_rows[shared_indices]
-    orig_vals <- as.character(x[shared_row_names, orig_col])
-    edit_vals <- as.character(x_edit[shared_row_names, edit_col])
+    # CODES OF VALUE-LABELLED COLUMNS (SPSS USER-DEFINED MISSING VALUES ARE
+    # VALUES, NOT NA)
+    orig_vals <- as.character(plain_values(x[shared_row_names, orig_col]))
+    edit_vals <- as.character(plain_values(x_edit[shared_row_names, edit_col]))
     # Handle NA values: NA != NA returns NA, so use explicit NA check
     differs <- (is.na(orig_vals) != is.na(edit_vals)) |
       (!is.na(orig_vals) & !is.na(edit_vals) & orig_vals != edit_vals)
@@ -234,7 +236,7 @@ data_code_pipes <- function(x, x_edit, rowname_col = NULL) {
       # Positions relative to remaining_rows (post-slice)
       positions <- shared_indices[changed]
       values <- vapply(
-        x_edit[shared_row_names[changed], edit_col],
+        plain_values(x_edit[shared_row_names[changed], edit_col]),
         data_code_value,
         character(1)
       )
@@ -272,7 +274,7 @@ data_code_pipes <- function(x, x_edit, rowname_col = NULL) {
     # Use only rows that exist in x_edit
     safe_rows <- remaining_rows[remaining_rows %in% edit_rows]
     for (col in col_changes$added) {
-      vals <- x_edit[safe_rows, col]
+      vals <- plain_values(x_edit[safe_rows, col])
       val_str <- paste(
         vapply(vals, data_code_value, character(1)),
         collapse = ", "
@@ -322,7 +324,8 @@ data_code_pipes <- function(x, x_edit, rowname_col = NULL) {
         ))
       }
       vals <- c(vals, vapply(edit_cols, function(col) {
-        paste0(data_code_quote(col), " = ", data_code_value(row_data[1, col]))
+        paste0(data_code_quote(col), " = ",
+               data_code_value(plain_values(row_data[1, col])))
       }, character(1)))
       # POSITION - APPEND UNLESS INSERTED BEFORE EXISTING ROWS
       if (final_pos[k] <= n_rows) {
@@ -332,6 +335,32 @@ data_code_pipes <- function(x, x_edit, rowname_col = NULL) {
       pipes <- c(pipes, paste0(
         "tibble::add_row(", paste(vals, collapse = ", "), ")"
       ))
+    }
+  }
+
+  # ADDED ROWS DROP THE VARIABLE LABELS ETC. OF PLAIN COLUMNS: PUT THEM BACK
+  if (length(added_rows) > 0) {
+    ops <- unlist(lapply(edit_cols, function(col) {
+      a <- column_attrs(x_edit[[col]])
+      if (is.null(a) || is.factor(x_edit[[col]])) return(NULL)
+      args <- unlist(lapply(names(a), function(nm) {
+        v <- a[[nm]]
+        code <- if (is.character(v) && length(v) == 1 && is.null(names(v))) {
+          data_code_value(v)
+        } else if (!is.null(names(v)) && (is.numeric(v) || is.character(v))) {
+          labels_code(v)
+        }
+        if (!is.null(code)) paste0(data_code_quote(nm), " = ", code)
+      }))
+      if (length(args) == 0) return(NULL)
+      col_q <- data_code_quote(col)
+      paste0(col_q, " = structure(", col_q, ", ", paste(args, collapse = ", "), ")")
+    }))
+    if (length(ops) == 1) {
+      pipes <- c(pipes, paste0("mutate(", ops, ")"))
+    } else if (length(ops) > 1) {
+      pipes <- c(pipes, paste0("mutate(\n    ", paste(ops, collapse = ",\n    "),
+                               "\n  )"))
     }
   }
 

@@ -136,7 +136,11 @@ when \code{viewer} is set to \code{"dialog"}, set 800 by default.}
 DataEditR theme.}
 
 \item{read_fun}{name of the function to use to read in the data when \code{x}
-is the name of a file, set to \code{read.csv} by default.}
+is the name of a file, set to \code{read.csv} by default. SPSS
+(\code{.sav}, \code{.por}), Stata (\code{.dta}) and SAS
+(\code{.sas7bdat}, \code{.xpt}) files are read with the haven package
+unless another function is given (see the \emph{Labelled data}
+section).}
 
 \item{read_args}{a named list of additional arguments to pass to
 \code{read_fun}.}
@@ -144,7 +148,9 @@ is the name of a file, set to \code{read.csv} by default.}
 \item{write_fun}{name of the function to use to write the edited version of
 \code{x} to a file, set to \code{write.csv} by default. Only requirement is
 that the first argument accepts the edited data and the second argument
-accepts the file name supplied to \code{save_as}.}
+accepts the file name supplied to \code{save_as}. When \code{save_as}
+ends in \code{.sav}, \code{.dta} or \code{.xpt} the data is written with
+haven, keeping variable and value labels.}
 
 \item{write_args}{a named list of additional arguments to pass to
 \code{write_fun}.}
@@ -247,6 +253,18 @@ the rows, or type in the boxes under it. The status bar shows how many rows
 and columns are on screen and summarises the selected cells. The menu next
 to \emph{Done} chooses whether all data or only what is on screen is
 returned.
+}
+
+\section{Labelled data}{
+
+Data read from SPSS, Stata or SAS files with haven keeps its variable
+labels (shown when hovering over a column name), value labels and SPSS
+user-defined missing values. Cells show each value with its label
+(\code{1 Male}), the cell editor offers the labels, and a label typed or
+pasted into a cell is stored as its value. \emph{Labels...} in the column
+menu changes the variable label and value labels, and \emph{Change type}
+turns labelled values into factors or text with their labels. The
+returned data and the generated code keep the labels.
 }
 
 \section{Databases}{

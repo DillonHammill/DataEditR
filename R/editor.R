@@ -57,6 +57,9 @@ editr_prepare <- function(x,
     if (!is.null(rn)) rownames(x) <- rn
   }
 
+  # ATTRIBUTES OF PLAIN COLUMNS (VARIABLE LABELS, ...) THAT ROW CHANGES DROP
+  col_attrs <- if (is.data.frame(x)) Filter(Negate(is.null), lapply(x, column_attrs)) else list()
+
   # EMPTY DATA
   if (nrow(x) == 0 && is.null(row_bind)) {
     row_bind <- 1
@@ -173,6 +176,8 @@ editr_prepare <- function(x,
     nm %in% names(x) && is.character(x[[nm]])
   }, logical(1))]
   store$factors <- stats::setNames(factors, name_to_cid(names(factors)))
+  col_attrs <- col_attrs[names(col_attrs) %in% names(x)]
+  store$col_attrs <- stats::setNames(col_attrs, name_to_cid(names(col_attrs)))
   store$auto_type <- cids[auto]
   store$changed <- character(0)
   # ROWS ARE NAMED IN THE CHANGE LOG BY THEIR KEY OR ROW NAME
@@ -598,6 +603,7 @@ editr_code <- function(store, cfg, name = "data", start, end = NULL) {
   original$auto_type <- store$auto_type
   original$hidden <- store$hidden
   original$factors <- store$factors
+  original$col_attrs <- store$col_attrs
   if (missing(start)) {
     start <- editr_result(original, cfg)
   }
@@ -662,7 +668,13 @@ change_items <- function(store, cfg, limit = 200) {
     paste("Row", id)
   }
   fmt <- function(x) {
-    x <- column_as_character(x)
+    labs <- value_labels(x)
+    x <- column_as_character(plain_values(x))
+    # VALUE LABELS: "2 (Female)"
+    if (!is.null(labs)) {
+      hit <- names(labs)[match(x, format_label_codes(labs))]
+      x <- ifelse(is.na(hit), x, paste0(x, " (", hit, ")"))
+    }
     x <- ifelse(is.na(x), "NA", x)
     long <- nchar(x) > 24
     x[long] <- paste0(substr(x[long], 1, 23), "...")
@@ -954,10 +966,15 @@ editr_result <- function(store, cfg, view = FALSE) {
   # OTHER TEXT COLUMNS WITH col_factor = TRUE
   if (cfg$col_factor) {
     for (i in seq_along(data)) {
-      if (is.character(data[[i]]) && !identical(cids[i], cfg$rownames_cid)) {
+      if (is.character(data[[i]]) && !inherits(data[[i]], "haven_labelled") &&
+          !identical(cids[i], cfg$rownames_cid)) {
         data[[i]] <- factor(data[[i]])
       }
     }
+  }
+  # VARIABLE LABELS ETC. OF PLAIN COLUMNS (DROPPED WHEN ROWS CHANGE)
+  for (i in which(cids %in% names(meta$attrs))) {
+    data[[i]] <- restore_attrs(data[[i]], meta$attrs[[cids[i]]])
   }
 
   # ROW NAMES

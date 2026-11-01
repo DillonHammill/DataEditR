@@ -105,6 +105,27 @@ res <- switch(
     data_edit(samples, viewer = noview, quiet = TRUE,
               col_options = list(site = c("north", "south", "east", "west")))
   },
+  labelled = {
+    set.seed(3)
+    n <- 14
+    survey <- tibble::tibble(
+      id = sprintf("R%03d", seq_len(n)),
+      sex = haven::labelled(sample(c(1, 2, 9), n, TRUE, prob = c(0.5, 0.45, 0.05)),
+                            c(Male = 1, Female = 2, Refused = 9),
+                            label = "Sex of respondent"),
+      satisfaction = haven::labelled_spss(
+        sample(c(1:5, -99), n, TRUE),
+        c(`Very low` = 1, Low = 2, Neutral = 3, High = 4, `Very high` = 5,
+          `No answer` = -99),
+        na_values = -99, label = "Satisfaction with the service"
+      ),
+      country = haven::labelled(sample(c("AU", "NZ", "US"), n, TRUE),
+                                c(Australia = "AU", `New Zealand` = "NZ"),
+                                label = "Country of residence"),
+      age = structure(sample(18:80, n), label = "Age in years")
+    )
+    data_edit(survey, viewer = noview, quiet = TRUE)
+  },
   restore = {
     # the draft left by an editor that was closed without pressing Done
     p <- DataEditR:::editr_prepare(mtcars, quiet = TRUE)

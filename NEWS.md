@@ -53,6 +53,31 @@
   no longer converted to numbers. Dates stay dates, and matrices, tibbles and
   data.tables are returned with their original class.
 
+## Labelled data (SPSS, Stata and SAS)
+
+* SPSS (`.sav`, `.por`), Stata (`.dta`) and SAS (`.sas7bdat`, `.xpt`) files
+  are read with haven, from a file name or the Open menu (unless `read_fun`
+  is given). `save_as` files ending in `.sav`, `.dta` or `.xpt` are written
+  with haven, and the Export menu can download SPSS and Stata files.
+* Variable labels, value labels (`haven_labelled`, or the `labels`
+  attribute of labelled/sjlabelled) and SPSS user-defined missing values
+  are kept through every edit, added and removed rows, undo and column
+  actions. Variable labels of plain columns were dropped when rows were
+  added or removed, and text columns with value labels made the editor fail.
+* Cells show values with their labels and columns with value labels get an
+  `lbl` badge. The cell editor lists the labels, and labels typed, pasted or
+  entered in the record form are stored as their values. User-defined
+  missing values are shown muted and count as missing in summaries and the
+  "is missing" filter.
+* **Labels...** in the column menu changes the variable label and the value
+  labels (one `value = label` per line), recorded as one step in the code.
+  **Change type** turns labelled columns into factors or text with their
+  labels (`haven::as_factor()`) or into plain values (`haven::zap_labels()`).
+* The generated code writes SPSS missing values as values (they were written
+  as `NA`) and puts back variable labels that `tibble::add_row()` drops.
+  Formulas may use `haven::as_factor()`, `zap_labels()`, `zap_label()`,
+  `labelled()`, `labelled_spss()` and `structure()`.
+
 ## Column summaries and a record form
 
 * Each column header shows a summary of the column, worked out in R from all
