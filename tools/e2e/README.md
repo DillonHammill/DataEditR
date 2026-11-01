@@ -28,7 +28,8 @@ returned data (and, for `db`, the SQLite file).
 matrices, tibbles and data.tables, templates, files, binds, read-only, hidden
 and protected columns, factors, filtered and exported subsets, Cancel, the
 change log and History tab, restoring a draft after R is killed mid-edit
-(`recover_crash` then `recover`), every column type, the Open menu, the review
+(`recover_crash` then `recover`), column actions, validation rules, column
+summaries and the record form, every column type, the Open menu, the review
 panel, printed code, the simplified editor, database commits and conflicts,
 and shiny apps with `dataEditCommit()`/`dataEditChanges()`. Each scenario starts the app
 (`qa_app.R`), drives it in headless Chrome (`qa.js`) and checks the returned

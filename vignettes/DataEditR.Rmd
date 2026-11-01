@@ -64,7 +64,7 @@ The data editor has four parts:
 
 * the **header** with the *Cancel* button, the name and size of the data, and the *Done* button;
 * the **toolbar** to open other data, undo and redo changes, show or hide columns, see active filters, find values, review changes, see the code that reproduces your edits, export the data and see the keyboard shortcuts;
-* the **grid**, which shows the row indices on the left, a type badge (`abc` for text, `123` for numbers, `date` for dates, `dttm` for date-times, `time` for times, `T/F` for logicals) next to each column name, and a filter box under each column name;
+* the **grid**, which shows the row indices on the left, a type badge (`abc` for text, `123` for numbers, `date` for dates, `dttm` for date-times, `time` for times, `T/F` for logicals) next to each column name, a summary of each column (see [Column summaries](#column-summaries)) and a filter box under each column name;
 * the **status bar** showing how many rows and columns are on screen, a summary of the selected cells and a summary of your changes.
 
 The data editor will open in an RStudio `"dialog"` box by default, but can be optionally displayed in the RStudio viewer pane or a web browser by setting `viewer` to `"pane"` or `"browser"` respectively. The size of the dialog box is controlled by `viewer_width` and `viewer_height`.
@@ -77,6 +77,22 @@ data_edit(mtcars,
 Row names (such as the car names in `mtcars`) are moved inside the table to a frozen `row names` column so that they can be edited, and the row indices are always displayed on the left-hand side to aid navigation. Only the visible rows are drawn in the browser, so scrolling through 100,000 rows is as smooth as scrolling through 10.
 
 Once you are finished, close the data editor by hitting the `Done` button in the top right corner and the edited data will be returned. If you wish to discard all changes made to the data, select the `Cancel` button in the top left corner and the unedited data will be returned instead (or the value supplied to the `cancel` argument).
+
+### 1.1 Column summaries
+
+Under each column name is a small summary of the column, worked out from all of its rows (not only those on screen):
+
+* a **histogram** for numbers and dates (dates are counted by year, month, day or hour, depending on how far apart they are);
+* the **most common values** for text, `TRUE`/`FALSE` columns and columns with a few distinct values, as a bar split by how often each value appears;
+* the **share of missing values** (in red) and the **number of distinct values**.
+
+Hover over a bar to see what it counts. Click a bar to show only those rows, click the share of missing values to show the rows where the value is missing, or click the number of distinct values for the details: the smallest, largest, mean and median values and the standard deviation of numbers, or the earliest and latest dates.
+
+```{r, echo = FALSE, fig.align = "center", out.width = "100%"}
+screenshot("summaries.png")
+```
+
+The summaries are updated as you edit. Hide them with the chart button in the toolbar (the editor remembers your choice), or set `col_summary = FALSE` to leave them out.
 
 ## 2. Data Import
 
@@ -182,7 +198,7 @@ data_edit(mtcars,
 
 ### 3.6 Rename rows or columns
 
-`data_edit()` has full support for editing row and column names. Double-click a column header (or choose `Rename column` from its menu) to rename it; the new name must be unique and cannot be empty. Row names are edited like any other cell in the `row names` column. The row indices cannot be edited.
+`data_edit()` has full support for editing row and column names. Double-click the name of a column (or choose `Rename column` from its menu) to rename it; the new name must be unique and cannot be empty. Row names are edited like any other cell in the `row names` column. The row indices cannot be edited.
 
 ```{r, echo = FALSE, fig.align = "center", out.width = "100%"}
 screenshot("rename-resize.gif")
@@ -296,6 +312,22 @@ samples <- samples %>%
 
 The editor applies an action by running that same verb on your data, so the code always gives exactly the result you saw. Actions can be undone like any other change, and appear in the `History` tab with their code. Set `col_actions = FALSE` to remove them from the column menu.
 
+### 3.13 Edit one record at a time
+
+Wide tables are easier to fill in one record (row) at a time. Click the form button in the toolbar, or the `Record` tab of the side panel, to see the selected row as a form with a labelled field for each visible column:
+
+```{r, echo = FALSE, fig.align = "center", out.width = "100%"}
+screenshot("record.png")
+```
+
+* The fields use the same inputs as the grid (dropdown menus, dates, `TRUE`/`FALSE`, ...) and the same checks, so a value that does not fit its column asks whether to store `NA`.
+* Press `Enter` to save a field and move to the next one.
+* Broken [validation rules](#validation-rules) are shown under the fields they concern, and changed fields are marked.
+* The arrows move to the previous or next row on screen (filters apply), and the grid follows; selecting a cell in the grid shows its row in the form.
+* `New` adds a row at the end and puts the cursor in its first field.
+
+Changes made in the form are ordinary edits: they can be undone, are listed in the review panel and appear in the code.
+
 ## 4. Data Creation
 
 You can also use `data_edit()` to interactively create data.frames from scratch without any coding.
@@ -348,7 +380,7 @@ Every column has a filter box under its name and the box depends on the type of 
 * **columns with a few distinct values** (e.g. `cyl` or `gear`) have a list to pick one or more values (`Any` means no filter);
 * **text** columns keep values that contain what you type.
 
-Rows must match every filter to be shown. Active filters are listed as chips in the toolbar; click the `x` on a chip to remove that filter or `Clear filters` to remove them all. The status bar shows how many of the rows are on screen.
+Clicking a bar of a column's summary (see [Column summaries](#column-summaries)) sets its filter for you, and clicking the share of missing values shows only the rows where the value is missing. Rows must match every filter to be shown. Active filters are listed as chips in the toolbar; click the `x` on a chip to remove that filter or `Clear filters` to remove them all. The status bar shows how many of the rows are on screen.
 
 ```{r, echo = FALSE, fig.align = "center", out.width = "100%"}
 screenshot("filter-rows.gif")
@@ -803,7 +835,7 @@ shinyApp(ui, server)
 | Clear selected cells    | `Delete`                      |
 | Fill down               | `Ctrl+D`                      |
 | Find in data            | `Ctrl+F`, then `Enter` / `Shift+Enter` |
-| Rename column           | Double-click header           |
+| Rename column           | Double-click column name      |
 | Row and column menus    | Right-click                   |
 | Show the shortcuts      | `?`                           |
 

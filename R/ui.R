@@ -12,6 +12,8 @@ editr_icon <- function(name, size = 16) {
     undo = '<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',
     redo = '<path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/>',
     columns = '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M15 3v18"/>',
+    chart = '<path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/>',
+    form = '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 8h4M7 12h10M7 16h10"/>',
     search = '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
     review = '<path d="M3 6h11M3 12h11M3 18h7"/><path d="m15 17 2 2 4-4"/>',
     code = '<path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/>',
@@ -60,7 +62,7 @@ editr_tool <- function(id = NULL, ..., label = NULL, icon = NULL,
     title = title,
     `aria-label` = if (is.null(label)) title else NULL,
     if (!is.null(icon)) editr_icon(icon),
-    if (!is.null(label)) tags$span(label),
+    if (!is.null(label)) tags$span(class = "editr-tool-label", label),
     ...
   )
 }
@@ -117,7 +119,7 @@ editr_shortcuts <- function(id) {
     c("Clear selected cells", "Delete"),
     c("Fill down", "Ctrl D"),
     c("Find in data", "Ctrl F"),
-    c("Rename column", "Double-click header"),
+    c("Rename column", "Double-click column name"),
     c("Row and column menu", "Right-click"),
     c("Show this list", "?")
   )

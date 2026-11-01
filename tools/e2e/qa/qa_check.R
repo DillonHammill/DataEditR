@@ -174,6 +174,14 @@ if (scenario == "df") {
   e$sample[3] <- "S-03"
   same(result, e, "Return anyway returns the data")
 
+} else if (scenario == "summary_form") {
+  e <- input
+  e$ph[3] <- 7.25
+  e$ok[3] <- FALSE
+  e <- rbind(e, data.frame(sample = "S-09", site = "west", ph = 6.8, ok = NA))
+  same(result, e, "edits from the record form")
+  reproduces(code_text(), input, result)
+
 } else if (scenario == "cancel") {
   same(result, input, "Cancel returns the original data")
   check(length(list.files(file.path(out, "drafts"), "rds$")) == 0,

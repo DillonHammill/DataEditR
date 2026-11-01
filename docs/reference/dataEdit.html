@@ -106,6 +106,7 @@ possible.</p>
 <span>  user <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  col_actions <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  rules <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  col_summary <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -296,6 +297,14 @@ show, e.g. <code>list("End must be after the start" = ~ end &gt;= start)</code>.
 Cells that break a rule are marked and listed in the <em>Problems</em>
 tab (see <code><a href="dataEditCommit.html">dataEditProblems</a>()</code>). Users can add rules to a
 column from its menu (<em>Rules...</em>).</p></dd>
+
+
+<dt>col_summary</dt>
+<dd><p>logical indicating whether a summary of each column
+(a histogram or the most common values, the share of missing values and
+the number of distinct values) is shown under its header, set to
+<code>TRUE</code> by default. Clicking a bar shows only those rows; the
+summaries can be hidden with the toolbar button.</p></dd>
 
 
 <dt>...</dt>

@@ -91,6 +91,9 @@ reproduces your edits.
   keeping column types and the class of the data
 - review panel listing every change with one-click revert, and live
   tidyverse-style code that reproduces your edits (`data_code()`)
+- a summary under each column name (histogram or most common values,
+  missing values, distinct values) whose bars filter the rows
+- a form to enter or check data one record at a time
 - formulas, find and replace, recoding, type changes and sorting for
   whole columns, each shown in the generated code as one `dplyr` verb
 - validation rules (required, unique, limits, patterns or any formula),

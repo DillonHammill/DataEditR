@@ -33,6 +33,11 @@
 #'   recoding values, changing the type and sorting the rows. They are shown
 #'   in the generated code as one \code{dplyr} verb each. Set to \code{TRUE}
 #'   by default.
+#' @param col_summary logical indicating whether a summary of each column
+#'   (a histogram or the most common values, the share of missing values and
+#'   the number of distinct values) is shown under its header, set to
+#'   \code{TRUE} by default. Clicking a bar shows only those rows; the
+#'   summaries can be hidden with the toolbar button.
 #' @param rules a list of rules the data should follow, each a one-sided
 #'   formula that is \code{TRUE} for valid rows, named with the message to
 #'   show, e.g. \code{list("End must be after the start" = ~ end >= start)}.
@@ -189,6 +194,8 @@ dataEditUI <- function(id,
       editr_tool(ns("redo"), icon = "redo", title = "Redo (Ctrl+Y)",
                  class = "action-button"),
       span(class = "editr-sep", `aria-hidden` = "true"),
+      editr_tool(ns("summary"), icon = "chart", title = "Column summaries",
+                 `aria-pressed` = "true"),
       editr_tool(ns("columns"), label = "Columns", icon = "columns",
                  title = "Show or hide columns", `aria-haspopup` = "dialog",
                  `aria-expanded` = "false",
@@ -207,12 +214,17 @@ dataEditUI <- function(id,
         tags$kbd("Ctrl F")
       ),
       span(class = "editr-spacer"),
+      editr_tool(ns("open_record"), icon = "form",
+                 title = "Show the selected row as a form",
+                 onclick = js_panel("record"), `aria-pressed` = "false"),
       editr_tool(ns("open_changes"), label = "Review changes", icon = "review",
                  title = "Review changes", onclick = js_panel("changes"),
+                 class = "editr-tool-collapse",
                  `aria-pressed` = "false",
                  span(class = "editr-count", id = ns("review_count"))),
       editr_tool(ns("open_code"), label = "Code", icon = "code",
                  title = "Code to reproduce the edits", onclick = js_panel("code"),
+                 class = "editr-tool-collapse",
                  `aria-pressed` = "false"),
       toolbar_right,
       editr_tool(ns("help"), icon = "help", title = "Keyboard shortcuts (?)",
@@ -231,6 +243,9 @@ dataEditUI <- function(id,
           class = "editr-panel-head",
           role = "tablist",
           tags$button(type = "button", class = "editr-tab", role = "tab",
+                      id = ns("tab_record"), `aria-selected` = "false",
+                      onclick = js_panel("record", FALSE), "Record"),
+          tags$button(type = "button", class = "editr-tab", role = "tab",
                       id = ns("tab_changes"), `aria-selected` = "false",
                       onclick = js_panel("changes", FALSE), "Changes"),
           tags$button(type = "button", class = "editr-tab", role = "tab",
@@ -248,6 +263,8 @@ dataEditUI <- function(id,
                       onclick = sprintf("DataEditR.panel('%s', null)", prefix),
                       editr_icon("close"))
         ),
+        div(class = "editr-pane", id = ns("pane_record"), role = "tabpanel",
+            hidden = NA, div(id = ns("record"), class = "editr-record")),
         div(class = "editr-pane", id = ns("pane_changes"), role = "tabpanel",
             hidden = NA, shiny::uiOutput(ns("changes"))),
         div(class = "editr-pane", id = ns("pane_history"), role = "tabpanel",
@@ -317,6 +334,7 @@ dataEditServer <- function(id,
                            user = NULL,
                            col_actions = TRUE,
                            rules = NULL,
+                           col_summary = TRUE,
                            ...) {
 
   data_r <- if (is.reactive(data)) data else reactive(data)
@@ -458,6 +476,10 @@ dataEditServer <- function(id,
           next_col = store$state$next_cid,
           changed = if (cfg$track) I(view_changed(store)) else NULL,
           actions = isTRUE(col_actions),
+          summary = isTRUE(col_summary),
+          summary_data = if (isTRUE(col_summary) && isolate(summary_on())) {
+            grid_summaries(store, cfg, summary_cache)
+          },
           db = !is.null(cfg$db),
           problems = {
             p <- isolate(problems())
@@ -472,6 +494,8 @@ dataEditServer <- function(id,
             selection = ns("selection"),
             chips = ns("chips"),
             columns_btn = ns("columns"),
+            summary_btn = ns("summary"),
+            record = ns("record"),
             columns_count = ns("columns_count"),
             find = ns("find"),
             find_count = ns("find_count"),
@@ -730,6 +754,23 @@ dataEditServer <- function(id,
       shiny::removeModal()
       bump(rules_tick)
     })
+
+    # COLUMN SUMMARIES ---------------------------------------------------------
+
+    summary_on <- reactiveVal(isTRUE(col_summary))
+    summary_cache <- new.env(parent = emptyenv())
+    observeEvent(input$grid_summary, {
+      summary_on(isTRUE(input$grid_summary))
+    })
+    if (isTRUE(col_summary)) {
+      summary_due <- shiny::debounce(reactive(c(data_tick(), view_tick())), 400)
+      observeEvent(list(summary_due(), summary_on()), {
+        ed <- editor()
+        if (is.null(ed) || !summary_on()) return()
+        grid_send(session, "grid", "set_summary",
+                  list(summary = grid_summaries(ed$store, ed$cfg, summary_cache)))
+      }, ignoreInit = TRUE)
+    }
 
     # COLUMN ACTIONS -----------------------------------------------------------
 

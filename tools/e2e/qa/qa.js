@@ -46,7 +46,7 @@ async function canEdit(page, id, field) {
 async function canRename(page, field) {
   const p = await page.evaluate((f) => {
     const t = document.querySelector(".editr_grid").__editr.table;
-    const b = t.getColumn(f).getElement().querySelector(".tabulator-col-title").getBoundingClientRect();
+    const b = t.getColumn(f).getElement().querySelector(".editr-title").getBoundingClientRect();
     return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
   }, field);
   await page.mouse.click(p.x, p.y, { clickCount: 2 });
@@ -431,6 +431,106 @@ const scenarios = {
     await modalText(page);
     await page.click("#done_anyway");
     await sleep(1500);
+  },
+
+  async summary_form(page) {
+    const rows = () => page.$eval("#edit1-rows", (e) => e.textContent.trim());
+    const chips = () => page.$eval("#edit1-chips", (e) => e.textContent.trim());
+    const sumText = (f) => page.$eval('.editr-summary[data-field="' + f + '"] .editr-sum-foot',
+      (e) => [...e.children].map((x) => x.textContent.trim()).filter((x) => x).join(" "));
+    await sleep(800);
+    check(await page.$$eval(".editr-summary", (els) => els.length) === 4, "a summary for each column");
+    check(await sumText("c2") === "13% NA 3 distinct", "site summary: " + await sumText("c2"));
+    check(await sumText("c3") === "13% NA 7 distinct", "ph summary: " + await sumText("c3"));
+    // a bar of the histogram filters the rows
+    const bins = await page.$$eval('.editr-summary[data-field="c3"] g[data-act="bin"] title', (els) => els.map((e) => e.textContent));
+    // 7.05 and 7.1 are in the bar from 7 to 7.2; 7.2 is in the next bar
+    const i = bins.findIndex((t) => /^7 to 7\.2: 2 rows/.test(t));
+    check(i >= 0, "ph bins: " + bins.join(" | "));
+    await page.evaluate((i) => document.querySelectorAll('.editr-summary[data-field="c3"] g[data-act="bin"] .editr-sum-hit')[i]
+      .dispatchEvent(new MouseEvent("click", { bubbles: true })), i);
+    await L.settle(page, 900);
+    check(await rows() === "2 of 8 rows · 4 columns" && /7 ≤ ph < 7\.2/.test(await chips()),
+      "bin filter: " + await rows() + " / " + await chips());
+    // the last bar includes its upper end
+    await page.evaluate((n) => document.querySelectorAll('.editr-summary[data-field="c3"] g[data-act="bin"] .editr-sum-hit')[n - 1]
+      .dispatchEvent(new MouseEvent("click", { bubbles: true })), bins.length);
+    await L.settle(page, 900);
+    check(await rows() === "1 of 8 rows · 4 columns" && /ph 8\.4.8\.6/.test(await chips()),
+      "last bin filter: " + await rows() + " / " + await chips());
+    // the missing share shows the rows where it is missing
+    await page.click("#edit1-chips .editr-chip button");
+    await L.settle(page, 700);
+    await page.click('.editr-summary[data-field="c2"] [data-act="missing"]');
+    await L.settle(page, 900);
+    check(/site is missing/.test(await chips()) && await rows() === "1 of 8 rows · 4 columns", "missing filter: " + await chips() + " / " + await rows());
+    await page.click("#edit1-chips .editr-chip button");
+    await L.settle(page, 700);
+    // a value of the most common values
+    await page.click('.editr-summary[data-field="c2"] [data-act="value"]');
+    await L.settle(page, 900);
+    check(/site is north/.test(await chips()) && await rows() === "3 of 8 rows · 4 columns", "value filter: " + await chips());
+    await page.click("#edit1-chips .editr-chip button");
+    await L.settle(page, 700);
+    // a value of a text column (its header filter is "contains") filters
+    // on that exact value
+    await page.click('.editr-summary[data-field="c1"] [data-act="value"]');
+    await L.settle(page, 900);
+    check(/sample is S-01/.test(await chips()) && await rows() === "1 of 8 rows · 4 columns", "exact value filter: " + await chips() + " / " + await rows());
+    await page.click("#edit1-chips .editr-chip button");
+    await L.settle(page, 700);
+    // details
+    await page.click('.editr-summary[data-field="c3"] [data-act="details"]');
+    await sleep(400);
+    const det = await page.$eval(".editr-sum-details", (e) => [...e.querySelectorAll("tr")]
+      .map((r) => [...r.children].map((x) => x.textContent).join(" ")).join(" | "));
+    check(/Smallest 6\.4/.test(det) && /Largest 8\.6/.test(det) && /Median 7\.2/.test(det), "details: " + det.slice(0, 160));
+    await page.keyboard.press("Escape");
+    // hide and show the summaries
+    await page.click("#edit1-summary");
+    await L.settle(page, 600);
+    check(await page.$eval(".editr_grid", (e) => e.classList.contains("editr-summaries-off")), "summaries hidden");
+    await page.click("#edit1-summary");
+    await L.settle(page, 600);
+    // the record form follows the selected row
+    await L.selectCell(page, 3, "c1");
+    await page.click("#edit1-open_record");
+    await L.settle(page, 900);
+    const title = () => page.$eval("#edit1-record .editr-form-title", (e) => e.textContent);
+    check(await title() === "Row 3", "form shows row 3: " + await title());
+    // a value that breaks a rule is shown under its field
+    await page.click("#edit1-grid-form-c3", { clickCount: 3 });
+    await page.keyboard.type("15");
+    await page.keyboard.press("Enter");
+    await L.settle(page, 1200);
+    const msg = () => page.$eval('#edit1-record .editr-form-field[data-field="c3"]',
+      (e) => (e.classList.contains("editr-form-bad") ? "bad: " : "") + e.querySelector(".editr-form-msg").textContent);
+    check(await msg() === "bad: pH is between 0 and 14", "rule message in the form: " + await msg());
+    await page.click("#edit1-grid-form-c3", { clickCount: 3 });
+    await page.keyboard.type("7.25");
+    await page.keyboard.press("Enter");
+    await L.settle(page, 900);
+    check(Number((await L.gridData(page)).find((r) => r.__editr_id__ === 3).c3) === 7.25, "form edit reaches the grid");
+    check(await msg() === "", "fixed value clears the message: " + await msg());
+    await page.select("#edit1-grid-form-c4", "FALSE");
+    await L.settle(page, 900);
+    await L.selectCell(page, 5, "c2");
+    await L.settle(page, 500);
+    check(await title() === "Row 5", "form follows the grid: " + await title());
+    // a new record
+    await page.evaluate(() => [...document.querySelectorAll("#edit1-record .editr-form-head button")].find((b) => b.textContent === "New").click());
+    await L.settle(page, 900);
+    check(await title() === "Row 9", "new record: " + await title());
+    await page.keyboard.type("S-09");
+    await page.keyboard.press("Enter");
+    await L.settle(page, 700);
+    await page.select("#edit1-grid-form-c2", "west");
+    await L.settle(page, 700);
+    await page.type("#edit1-grid-form-c3", "6.8");
+    await page.keyboard.press("Enter");
+    await L.settle(page, 900);
+    await page.screenshot({ path: path.join(out, "form.png") });
+    await done(page);
   },
 
   async cancel(page) {

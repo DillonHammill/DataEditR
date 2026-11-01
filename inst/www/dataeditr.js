@@ -3,7 +3,7 @@
   "use strict";
 
   var DataEditR = window.DataEditR = window.DataEditR || {};
-  var TABS = ["changes", "history", "problems", "code"];
+  var TABS = ["record", "changes", "history", "problems", "code"];
 
   // open the review panel on a tab; toggle = true closes it when that tab
   // is already showing
@@ -28,6 +28,9 @@
     if (window.Shiny && Shiny.setInputValue) {
       Shiny.setInputValue(prefix + "panel", next || "");
     }
+    // the grid fills the Record tab itself
+    window.dispatchEvent(new CustomEvent("editr-panel",
+                                         {detail: {prefix: prefix, tab: next}}));
   };
 
   DataEditR.send = function (id, value) {

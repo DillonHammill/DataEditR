@@ -42,7 +42,9 @@ const T = (page, fn, ...a) => page.evaluate(fn, G, ...a);
 async function cell(page, id, field) {
   return page.evaluate(async (g, id, field) => {
     const t = document.getElementById(g).__editr.table;
-    await t.scrollToRow(id, "nearest", false);
+    // scrollToRow() never settles when the row is already on screen
+    await Promise.race([t.scrollToRow(id, "nearest", false).catch(() => null),
+                        new Promise((r) => setTimeout(r, 400))]);
     const el = t.getRow(id).getCell(field).getElement();
     const b = el.getBoundingClientRect();
     return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
@@ -52,7 +54,7 @@ async function cell(page, id, field) {
 async function header(page, field) {
   return page.evaluate((g, field) => {
     const t = document.getElementById(g).__editr.table;
-    const el = t.getColumn(field).getElement().querySelector(".tabulator-col-title");
+    const el = t.getColumn(field).getElement().querySelector(".editr-title") || t.getColumn(field).getElement().querySelector(".tabulator-col-title");
     const b = el.getBoundingClientRect();
     return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
   }, G, field);
@@ -512,6 +514,34 @@ const scenarios = {
     await page.click("#edit1-tab_code");
     await settle(page, 1200);
     await shot(page, "actions-code");
+    await page.click("#done");
+    await sleep(1000);
+  },
+  async summary(page) {
+    const sum = (f, act) => `.editr-summary[data-field="${f}"] [data-act="${act}"]`;
+    await sleep(1200);
+    // the details of a column
+    await page.click(sum("c4", "details"));
+    await sleep(500);
+    await shot(page, "summaries");
+    await page.keyboard.press("Escape");
+    await sleep(300);
+    // click the tallest bar to show those rows
+    await page.evaluate(() => {
+      const box = document.querySelector('.editr-summary[data-field="c4"]');
+      const bars = [...box.querySelectorAll(".editr-sum-bar-v")];
+      const tall = bars.reduce((a, b) => (+b.getAttribute("height") > +a.getAttribute("height") ? b : a));
+      tall.parentNode.querySelector(".editr-sum-hit").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await settle(page, 900);
+    await shot(page, "summary-filter", { x: 0, y: 0, width: W, height: 420 });
+    await page.click("#edit1-chips .editr-chip button");
+    await settle(page, 700);
+    // the record form
+    await click(page, 7, "c2");
+    await page.click("#edit1-open_record");
+    await settle(page, 1000);
+    await shot(page, "record");
     await page.click("#done");
     await sleep(1000);
   },

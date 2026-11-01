@@ -29,18 +29,21 @@
 #' Double-click a cell to edit it. Click and drag to select a range of cells,
 #' then copy (Ctrl+C), paste (Ctrl+V), clear (Delete) or fill down (Ctrl+D).
 #' Right click a row to insert or delete rows, and right click a column header
-#' to insert, rename, hide or delete columns. Double-click a column header to
+#' to insert, rename, hide or delete columns. Double-click a column's name to
 #' rename it. Ctrl+Z and Ctrl+Y undo and redo changes; press ? for the full
 #' list of shortcuts.
 #'
 #' @section Layout:
-#' The toolbar opens other data (\emph{Open}), shows or hides columns, lists
-#' active filters, searches the data (Ctrl+F), and opens the review panel,
-#' which lists every change with a button to revert it and shows the code that
-#' reproduces the edits. Type in the boxes under the column headers to filter
-#' rows. The status bar shows how many rows and columns are on screen and
-#' summarises the selected cells. The menu next to \emph{Done} chooses whether
-#' all data or only what is on screen is returned.
+#' The toolbar opens other data (\emph{Open}), shows or hides column
+#' summaries and columns, lists active filters, searches the data (Ctrl+F),
+#' and opens the side panel. The panel shows the selected row as a form
+#' (\emph{Record}), lists every change with a button to revert it, the
+#' history of changes, broken rules and the code that reproduces the edits.
+#' Under each column name is a summary of the column: click its bars to filter
+#' the rows, or type in the boxes under it. The status bar shows how many rows
+#' and columns are on screen and summarises the selected cells. The menu next
+#' to \emph{Done} chooses whether all data or only what is on screen is
+#' returned.
 #'
 #' @section Databases:
 #' Supply a \code{dbplyr} lazy table (e.g. \code{dplyr::tbl(con, "artists")})
@@ -209,6 +212,13 @@
 #'   \code{kpl = mpg * 0.425}), find and replace, recoding values, changing
 #'   the type and sorting the rows. Each action is shown in the generated code
 #'   as one \code{dplyr} verb. Set to \code{TRUE} by default.
+#' @param col_summary logical indicating whether a summary of each column is
+#'   shown under its header: a histogram of numbers and dates or the most
+#'   common values, the share of missing values and the number of distinct
+#'   values. Click a bar to show only those rows, the missing share to show
+#'   the rows where the value is missing, or the number of values for the
+#'   details (smallest, largest, mean, ...). Set to \code{TRUE} by default;
+#'   the toolbar button hides the summaries.
 #' @param rules a list of rules the data should follow, each a one-sided
 #'   formula that is \code{TRUE} for valid rows and named with the message
 #'   to show, e.g. \code{list("Age is between 0 and 120" = ~ age >= 0 & age <=
@@ -274,6 +284,7 @@ data_edit <- function(x = NULL,
                       autosave = TRUE,
                       col_actions = TRUE,
                       rules = NULL,
+                      col_summary = TRUE,
                       ...) {
 
   # DATA ENVIRONMENT -----------------------------------------------------------
@@ -519,7 +530,8 @@ data_edit <- function(x = NULL,
       code_name = code_name,
       autosave = autosave,
       col_actions = col_actions,
-      rules = rules
+      rules = rules,
+      col_summary = col_summary
     )
     data_active <- attr(data_update, "view")
     editor <- attr(data_update, "editor")

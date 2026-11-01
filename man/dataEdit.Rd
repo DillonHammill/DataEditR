@@ -39,6 +39,7 @@ dataEditServer(
   user = NULL,
   col_actions = TRUE,
   rules = NULL,
+  col_summary = TRUE,
   ...
 )
 }
@@ -177,6 +178,12 @@ show, e.g. \code{list("End must be after the start" = ~ end >= start)}.
 Cells that break a rule are marked and listed in the \emph{Problems}
 tab (see \code{\link{dataEditProblems}()}). Users can add rules to a
 column from its menu (\emph{Rules...}).}
+
+\item{col_summary}{logical indicating whether a summary of each column
+(a histogram or the most common values, the share of missing values and
+the number of distinct values) is shown under its header, set to
+\code{TRUE} by default. Clicking a bar shows only those rows; the
+summaries can be hidden with the toolbar button.}
 
 \item{...}{not in use.}
 }

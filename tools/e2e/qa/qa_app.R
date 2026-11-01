@@ -119,6 +119,18 @@ if (scenario == "df") {
   keep(x, quietly(x, rules = list("pH is between 0 and 14" = ~ ph >= 0 & ph <= 14,
                                   "End is after the start" = ~ end >= start)))
 
+} else if (scenario == "summary_form") {
+  x <- data.frame(
+    sample = sprintf("S-%02d", 1:8),
+    site = c("north", "south", "north", "east", "north", "south", NA, "east"),
+    ph = c(7.05, 6.4, 7.2, 7.4, 7.9, 8.6, NA, 7.1),
+    ok = c(TRUE, FALSE, TRUE, NA, TRUE, TRUE, FALSE, TRUE),
+    stringsAsFactors = FALSE
+  )
+  keep(x, quietly(x, col_options = list(site = c("north", "south", "east", "west")),
+                  rules = list("pH is between 0 and 14" = ~ ph >= 0 & ph <= 14),
+                  code = code_file))
+
 } else if (scenario == "cancel") {
   x <- mtcars[1:3, 1:3]
   keep(x, quietly(x))

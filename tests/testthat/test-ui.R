@@ -70,7 +70,7 @@ test_that("interface helpers build tags and themes", {
                                  title = "Go now", class = "x")
   html <- tag_text(tool)
   expect_match(html, "Go now", fixed = TRUE)
-  expect_match(html, "<span>Go</span>", fixed = TRUE)
+  expect_match(html, "<span class=\"editr-tool-label\">Go</span>", fixed = TRUE)
   html <- tag_text(DataEditR:::editr_tool(icon = "help", title = "Help"))
   expect_match(html, 'aria-label="Help"', fixed = TRUE)
   expect_match(tag_text(DataEditR:::editr_shortcuts("s")), "Ctrl", fixed = TRUE)

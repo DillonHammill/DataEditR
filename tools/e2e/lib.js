@@ -79,7 +79,7 @@ async function cellCentre(page, id, field) {
 async function headerCentre(page, field) {
   return page.evaluate((g, field) => {
     const t = document.getElementById(g).__editr.table;
-    const el = t.getColumn(field).getElement().querySelector(".tabulator-col-title");
+    const el = t.getColumn(field).getElement().querySelector(".editr-title") || t.getColumn(field).getElement().querySelector(".tabulator-col-title");
     const b = el.getBoundingClientRect();
     return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
   }, GRID, field);

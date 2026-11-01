@@ -77,7 +77,9 @@ const T = (page, fn, ...a) => page.evaluate(fn, G, ...a);
 async function cell(page, id, field) {
   return page.evaluate(async (g, id, field) => {
     const t = document.getElementById(g).__editr.table;
-    await t.scrollToRow(id, "nearest", false);
+    // scrollToRow() never settles when the row is already on screen
+    await Promise.race([t.scrollToRow(id, "nearest", false).catch(() => null),
+                        new Promise((r) => setTimeout(r, 400))]);
     const b = t.getRow(id).getCell(field).getElement().getBoundingClientRect();
     return { x: b.x + b.width / 2, y: b.y + b.height / 2, r: b.right, w: b.width };
   }, G, id, field);
@@ -87,7 +89,7 @@ async function header(page, field) {
   return page.evaluate((g, field) => {
     const t = document.getElementById(g).__editr.table;
     const el = t.getColumn(field).getElement();
-    const title = el.querySelector(".tabulator-col-title");
+    const title = el.querySelector(".editr-title") || el.querySelector(".tabulator-col-title");
     const b = title.getBoundingClientRect();
     const c = el.getBoundingClientRect();
     return { x: b.x + b.width / 2, y: b.y + b.height / 2, right: c.right, top: c.top, h: c.height };
@@ -210,6 +212,13 @@ async function reload(page) {
   await page.waitForFunction((g) => document.getElementById(g) && document.getElementById(g).__editr &&
     document.getElementById(g).__editr.ready, { timeout: 30000 }, G);
   await sleep(600);
+  // the changes of the last segment were kept as a draft: start afresh
+  const discard = await page.$("#edit1-draft_discard");
+  if (discard) {
+    await discard.click();
+    await page.waitForFunction(() => !document.querySelector(".modal.show"), { timeout: 10000 });
+    await sleep(600);
+  }
   await decorate(page);
   await page.mouse.move(W / 2, H / 2);
 }
@@ -288,7 +297,7 @@ const scenarios = {
     });
     await reload(page);
     await record(page, "rename-resize", async () => {
-      await caption(page, "Double-click a header to rename the column");
+      await caption(page, "Double-click a column name to rename it");
       await rename(page, "c2", "miles_per_gallon");
       await caption(page, "Edit row names like any other cell");
       await editCell(page, 1, "c1", "Mazda RX4 (2024)");

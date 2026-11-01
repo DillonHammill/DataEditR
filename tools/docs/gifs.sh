@@ -7,7 +7,7 @@
 # man/figures/DataEditR/DataEditR-README.gif).
 cd "$(dirname "$0")"
 port=${1:-8841}
-out=gifout
+out="$PWD/gifout" # absolute: ffmpeg reads the frame lists relative to themselves
 mkdir -p "$out"
 
 # <app scenario> <gif scenario>: app.R starts the editor, gifs.js records
@@ -29,6 +29,8 @@ record track review      # review
 record template template # template
 record options options   # col-checkbox col-dropdown col-date col-password
 record db db             # db-commit
+record paste paste       # paste
+record types types       # col-types
 record readme readme     # readme
 
 # frames -> GIF (800px wide, 900px for the README)
