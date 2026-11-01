@@ -44,6 +44,8 @@ test_that("comments are set, returned with the data and dropped with rows", {
   cm <- attr(DataEditR:::with_comments(result(p, view = TRUE), p$store, p$cfg,
                                        view = TRUE), "comments")
   expect_identical(cm$column, "mpg")
+  # comments on rows that are all gone
+  expect_identical(nrow(DataEditR:::comments_frame(p$store, ids = 99L)), 0L)
   # removing a comment
   DataEditR:::store_comment(p$store, 4, "c2", "")
   DataEditR:::store_comment(p$store, 2, "c3", "")

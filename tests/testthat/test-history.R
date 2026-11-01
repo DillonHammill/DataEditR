@@ -132,6 +132,13 @@ test_that("earlier sessions are read from the log file", {
   expect_identical(x$new[8], "z")
   l <- DataEditR:::log_read(legacy)
   expect_identical(length(unique(l$.session)), 5L)
+  # columns of the file that the log does not have are left empty
+  extra <- withr::local_tempfile(fileext = ".csv")
+  write.csv(data.frame(old_log()[1, ], reviewer = "bo"), extra, row.names = FALSE)
+  DataEditR:::editr_write_log(entries("s9", "q"), extra, "cars")
+  x <- read.csv(extra)
+  expect_identical(x$reviewer, c("bo", NA))
+  expect_identical(x$new, c("2", "q"))
   # files that cannot be read
   bad <- withr::local_tempfile(fileext = ".csv")
   writeLines("a,b\n1,2", bad)

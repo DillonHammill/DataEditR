@@ -764,13 +764,14 @@
         var add = function (v) {
           if (v === null || v === undefined || out.length >= 24) return;
           var s = String(v).trim();
-          var key = (colourHex(s) || "") + "|" + s.toLowerCase();
-          if (!s || seen[key] || !colourCss(s)) return;
+          var key = s.toLowerCase().replace(/\s+/g, "");
+          if (!s || seen[key]) return;
           seen[key] = true;
-          out.push(s);
+          if (colourCss(s)) out.push(s);
         };
+        // the first colours of the column (looking at up to 5,000 rows)
         var used = 0;
-        (grid.table ? grid.table.getData() : []).some(function (row) {
+        (grid.table ? grid.table.getData() : []).slice(0, 5000).some(function (row) {
           var before = out.length;
           add(row[c.field]);
           if (out.length > before) used += 1;
