@@ -31,9 +31,25 @@
 #'   for each new column.
 #' @param col_edit logical indicating whether columns can be added or removed,
 #'   set to TRUE by default.
-#' @param col_options a list named with valid columns names and either
-#'   \code{c(TRUE, FALSE)} for checkboxes, a vector of options for dropdowns,
-#'   \code{"date"} for date input or \code{"password"} for password input.
+#' @param col_options a list named with valid column names and the input to
+#'   use for each column:
+#'   \itemize{
+#'   \item \code{c(TRUE, FALSE)}: checkboxes;
+#'   \item a vector of values, e.g. \code{c("A", "B", "C")}: a dropdown menu;
+#'   \item \code{"date"} or \code{"datetime"}: a date or date-time picker
+#'   (the column is returned as \code{Date} or \code{POSIXct});
+#'   \item \code{"time"}: a time picker (\code{"HH:MM"} text);
+#'   \item \code{"textarea"}: text over several lines;
+#'   \item \code{"password"}: hidden text;
+#'   \item \code{"url"}: web addresses with a button to open them;
+#'   \item \code{"colour"} (or \code{"color"}): colours shown with a swatch;
+#'   \item \code{c(min = 0, max = 10, step = 1)} (any of the three): numbers
+#'   within limits;
+#'   \item \code{"slider"}: a slider and bar for numbers from 0 to 100;
+#'   \item \code{"rating"}: a rating from 0 to 5 stars.
+#'   }
+#'   Use \code{list(type = "slider", min = 0, max = 1, step = 0.1)} or
+#'   \code{list(type = "rating", stars = 10)} to change the defaults.
 #'   Unlike earlier versions, using \code{col_options} no longer disables
 #'   adding or removing columns.
 #' @param col_stretch logical indicating whether columns should be stretched to

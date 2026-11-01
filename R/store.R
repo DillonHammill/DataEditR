@@ -433,12 +433,10 @@ parse_values <- function(col, values) {
   }
   # DATE
   if (inherits(col, "Date")) {
-    out <- as.Date(vapply(vals, function(v) {
-      if (is.na(v)) return(NA_real_)
-      d <- tryCatch(as.Date(trimws(as.character(v)), optional = TRUE),
-                    error = function(e) NA)
-      as.numeric(d)
-    }, numeric(1)), origin = "1970-01-01")
+    # STRICT: as.Date("15/03/2024") WOULD BE THE YEAR 15
+    out <- parse_date_strict(vapply(vals, function(v) {
+      if (is.na(v)) NA_character_ else as.character(v)
+    }, character(1)))
     if (any(is.na(out) & !blank)) {
       return(NULL)
     }
@@ -447,18 +445,13 @@ parse_values <- function(col, values) {
   # DATETIME
   if (inherits(col, "POSIXct")) {
     tz <- attr(col, "tzone") %||% ""
-    out <- vapply(vals, function(v) {
-      if (is.na(v)) return(NA_real_)
-      d <- tryCatch(
-        as.POSIXct(trimws(as.character(v)), tz = tz, optional = TRUE),
-        error = function(e) NA
-      )
-      as.numeric(d)
-    }, numeric(1))
+    out <- parse_datetime_strict(vapply(vals, function(v) {
+      if (is.na(v)) NA_character_ else as.character(v)
+    }, character(1)), tz = tz)
     if (any(is.na(out) & !blank)) {
       return(NULL)
     }
-    return(as.POSIXct(out, origin = "1970-01-01", tz = tz))
+    return(out)
   }
   NULL
 }

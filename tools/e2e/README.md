@@ -11,6 +11,8 @@ R CMD INSTALL ../..
 ./run.sh memory  8761 out-memory  memory.js  && Rscript check_memory.R out-memory
 ./run.sh options 8762 out-options options.js
 ./run.sh db      8763 out-db      db.js      && Rscript check_db.R out-db
+./run.sh clipboard 8766 out-clip clipboard.js && Rscript check_clipboard.R out-clip
+./run.sh types   8767 out-types   types.js   && Rscript check_types.R out-types
 EDITR_N=100000 ./run.sh big 8764 out-big big.js
 ```
 

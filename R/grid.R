@@ -180,7 +180,7 @@ column_filter <- function(x, option = NULL, rownames = FALSE) {
   if (rownames) {
     return(list(type = "text"))
   }
-  if (!is.null(option) && option$type %in% c("checkbox", "dropdown")) {
+  if (!is.null(option) && option$type %in% c("checkbox", "dropdown", "rating")) {
     return(list(type = "values"))
   }
   if (is.logical(x)) {
@@ -210,22 +210,169 @@ column_kind <- function(x) {
 
 #' Normalise col_options into grid option specs keyed by name
 #'
-#' @return named list of list(type, values).
+#' @return named list of list(type, ...): \code{values} for dropdowns,
+#'   \code{min}, \code{max} and \code{step} for numbers, sliders and ratings.
 #'
 #' @noRd
 grid_col_options <- function(col_options) {
   if (is.null(col_options)) {
     return(list())
   }
-  out <- lapply(col_options, function(o) {
-    if (is.logical(o)) {
-      list(type = "checkbox")
-    } else if (length(o) == 1 && o %in% c("date", "password")) {
-      list(type = o)
-    } else {
-      list(type = "dropdown", values = I(as.character(o)))
-    }
-  })
+  out <- lapply(col_options, col_option_spec)
   names(out) <- names(col_options)
+  out
+}
+
+# NAMED COLUMN TYPES (col_options = list(x = "textarea"))
+EDITR_COL_TYPES <- c("date", "datetime", "time", "password", "textarea",
+                     "url", "colour", "rating", "slider", "number",
+                     "checkbox", "dropdown")
+
+#' Option spec for one column
+#'
+#' \code{c(TRUE, FALSE)} is a checkbox, \code{c(min = 0, max = 10)} a number
+#' with limits, a type name such as \code{"textarea"} that type with its
+#' defaults, \code{list(type = , ...)} a type with settings and any other
+#' vector a dropdown of its values.
+#'
+#' @noRd
+col_option_spec <- function(o) {
+  limits <- function(spec, src, min = NULL, max = NULL, step = NULL) {
+    num <- function(v, default) {
+      if (is.null(v)) return(default)
+      v <- suppressWarnings(as.numeric(v)[1])
+      if (is.na(v)) default else v
+    }
+    spec$min <- num(src[["min"]], min)
+    spec$max <- num(src[["max"]], max)
+    spec$step <- num(src[["step"]], step)
+    if (!is.null(spec$min) && !is.null(spec$max) && spec$min > spec$max) {
+      stop("'col_options': 'min' must not be larger than 'max'.", call. = FALSE)
+    }
+    spec
+  }
+  if (is.list(o)) {
+    type <- tolower(as.character(o$type %||% "number")[1])
+    if (type == "color") type <- "colour"
+    if (!type %in% EDITR_COL_TYPES) {
+      stop("'col_options': unknown column type \"", type, "\".", call. = FALSE)
+    }
+    spec <- list(type = type)
+    if (type %in% c("number", "slider")) {
+      spec <- limits(spec, o,
+                     min = if (type == "slider") 0,
+                     max = if (type == "slider") 100,
+                     step = if (type == "slider") 1)
+    } else if (type == "rating") {
+      spec$min <- 0
+      spec$max <- as.numeric(o$stars %||% o$max %||% 5)[1]
+      spec$step <- 1
+    } else if (type == "dropdown") {
+      spec$values <- I(as.character(unlist(o$values)))
+    }
+    return(spec)
+  }
+  if (is.logical(o)) {
+    return(list(type = "checkbox"))
+  }
+  if (is.numeric(o) && !is.null(names(o)) && length(o) > 0 &&
+      all(names(o) %in% c("min", "max", "step"))) {
+    return(limits(list(type = "number"), as.list(o)))
+  }
+  if (is.character(o) && length(o) == 1) {
+    type <- tolower(o)
+    if (type == "color") type <- "colour"
+    if (type %in% setdiff(EDITR_COL_TYPES, c("checkbox", "dropdown"))) {
+      return(col_option_spec(list(type = type)))
+    }
+  }
+  list(type = "dropdown", values = I(as.character(o)))
+}
+
+#' Convert a column to the type its input needs
+#'
+#' @noRd
+col_option_convert <- function(x, spec, name) {
+  n <- length(x)
+  empty <- all(is.na(x) | (is.character(x) & x %in% ""))
+  type <- spec$type
+  if (type == "checkbox") {
+    if (!is.logical(x)) {
+      res <- type.convert(x, as.is = TRUE)
+      x <- if (is.logical(res)) res else rep(NA, n)
+    }
+    return(x)
+  }
+  if (type == "date") {
+    if (empty) return(rep(as.Date(NA), n))
+    if (!inherits(x, "Date")) {
+      res <- parse_date_strict(x)
+      if (!anyNA(res[!is.na(x) & nzchar(as.character(x))])) x <- res
+    }
+    return(x)
+  }
+  if (type == "datetime") {
+    if (empty) return(as.POSIXct(rep(NA_real_, n), origin = "1970-01-01"))
+    if (inherits(x, "Date")) return(as.POSIXct(format(x), tz = ""))
+    if (!inherits(x, "POSIXct")) {
+      res <- parse_datetime_strict(x, tz = "")
+      if (!anyNA(res[!is.na(x) & nzchar(as.character(x))])) x <- res
+    }
+    return(x)
+  }
+  if (type %in% c("number", "slider", "rating")) {
+    if (empty) return(rep(NA_real_, n))
+    if (!is.numeric(x)) {
+      res <- suppressWarnings(as.numeric(as.character(x)))
+      if (anyNA(res[!is.na(x) & nzchar(as.character(x))])) {
+        stop("'col_options': column '", name, "' must contain numbers to use ",
+             "a ", type, " input.", call. = FALSE)
+      }
+      x <- res
+    }
+    return(x)
+  }
+  # TEXT INPUTS (DROPDOWN, PASSWORD, TEXTAREA, TIME, URL, COLOUR)
+  if (empty) {
+    return(rep("", n))
+  }
+  if (!is.character(x)) {
+    x <- as.character(x)
+  }
+  x
+}
+
+#' Strict date parsing: only full YYYY-MM-DD (or YYYY/MM/DD) values
+#'
+#' \code{as.Date()} accepts "15/03/2024" as the year 15.
+#'
+#' @noRd
+parse_date_strict <- function(x) {
+  s <- trimws(as.character(x))
+  ok <- !is.na(s) & grepl("^[0-9]{4}[-/][0-9]{1,2}[-/][0-9]{1,2}$", s)
+  out <- rep(as.Date(NA), length(s))
+  if (any(ok)) {
+    out[ok] <- as.Date(gsub("/", "-", s[ok], fixed = TRUE), format = "%Y-%m-%d")
+  }
+  out
+}
+
+#' Strict date-time parsing: YYYY-MM-DD with an optional HH:MM(:SS) time
+#'
+#' @noRd
+parse_datetime_strict <- function(x, tz = "") {
+  s <- trimws(gsub("T", " ", as.character(x), fixed = TRUE))
+  s <- gsub("/", "-", s, fixed = TRUE)
+  re <- "^[0-9]{4}-[0-9]{1,2}-[0-9]{1,2}( [0-9]{1,2}:[0-9]{2}(:[0-9]{2}([.][0-9]+)?)?)?$"
+  ok <- !is.na(s) & grepl(re, s)
+  out <- as.POSIXct(rep(NA_real_, length(s)), origin = "1970-01-01", tz = tz)
+  if (any(ok)) {
+    v <- s[ok]
+    fmt <- ifelse(grepl(":[0-9]{2}:[0-9]{2}", v), "%Y-%m-%d %H:%M:%OS",
+                  ifelse(grepl(":", v), "%Y-%m-%d %H:%M", "%Y-%m-%d"))
+    out[ok] <- as.POSIXct(vapply(seq_along(v), function(i) {
+      as.numeric(as.POSIXct(v[i], format = fmt[i], tz = tz))
+    }, numeric(1)), origin = "1970-01-01", tz = tz)
+  }
   out
 }

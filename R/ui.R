@@ -111,6 +111,7 @@ editr_shortcuts <- function(id) {
   keys <- list(
     c("Edit cell", "Double-click"),
     c("Cancel edit", "Esc"),
+    c("New line in a text area", "Shift Enter"),
     c("Undo / redo", "Ctrl Z", "Ctrl Y"),
     c("Copy / paste range", "Ctrl C", "Ctrl V"),
     c("Clear selected cells", "Delete"),

@@ -91,28 +91,10 @@ editr_prepare <- function(x,
     }
   }
 
-  # COLUMN OPTIONS
+  # COLUMN OPTIONS - CONVERT COLUMNS TO THE TYPE THEIR INPUT NEEDS
   if (!is.null(col_options)) {
     for (z in names(col_options)) {
-      if (is.logical(col_options[[z]])) {
-        if (!is.logical(x[[z]])) {
-          res <- type.convert(x[[z]], as.is = TRUE)
-          if (!is.logical(res)) {
-            res <- rep(NA, nrow(x))
-          }
-          x[[z]] <- res
-        }
-      } else if (identical(col_options[[z]], "date")) {
-        if (!inherits(x[[z]], "Date")) {
-          res <- tryCatch(as.Date(x[[z]], optional = TRUE),
-                          error = function(e) NULL)
-          if (!is.null(res) && !anyNA(res[!is.na(x[[z]]) & nzchar(x[[z]])])) {
-            x[[z]] <- res
-          }
-        }
-      } else if (all(is.na(x[[z]]))) {
-        x[[z]] <- rep("", nrow(x))
-      }
+      x[[z]] <- col_option_convert(x[[z]], col_option_spec(col_options[[z]]), z)
     }
   }
 

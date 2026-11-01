@@ -22,6 +22,28 @@ if (scenario == "memory") {
                                       pw = "password"),
                    col_readonly = "locked", col_hide = "secret")
   saveRDS(res, file.path(out, "result.rds"))
+} else if (scenario == "clipboard") {
+  df <- data.frame(name = c("a", "b", "c"), n = c(1, 2, 3),
+                   d = as.Date("2024-01-01") + 0:2,
+                   ok = c(TRUE, FALSE, TRUE), grp = c("x", "y", "x"),
+                   stringsAsFactors = FALSE)
+  res <- data_edit(df, viewer = noview, logo = "", quiet = TRUE, theme = NULL,
+                   track = TRUE, col_options = list(grp = c("x", "y", "z")))
+  saveRDS(res, file.path(out, "result.rds"))
+} else if (scenario == "types") {
+  df <- data.frame(
+    notes = c("first", NA), when = c("2024-03-15 10:30:00", NA),
+    at = c("09:30", NA), score = c(3, NA), pct = c(25, NA), stars = c(2, NA),
+    site = c("https://example.org", "javascript:alert(1)"),
+    col = c("red", "grey50"), d = as.Date(c("2024-01-01", NA)),
+    ok = c(TRUE, NA), stringsAsFactors = FALSE
+  )
+  res <- data_edit(df, viewer = noview, logo = "", quiet = TRUE, theme = NULL,
+                   col_options = list(notes = "textarea", when = "datetime",
+                                      at = "time", score = c(min = 0, max = 10),
+                                      pct = "slider", stars = "rating",
+                                      site = "url", col = "colour"))
+  saveRDS(res, file.path(out, "result.rds"))
 } else if (scenario == "mockup") {
   cars <- mtcars
   res <- data_edit(cars, viewer = noview, quiet = TRUE, track = TRUE,

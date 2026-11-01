@@ -77,29 +77,265 @@
     return String(Number(x.toPrecision(6)));
   }
 
-  // why a typed value cannot be stored in a column of this kind (or null)
-  function invalidReason(kind, v) {
-    if (isBlank(v) || typeof v !== "string") return null;
-    var s = v.trim();
-    if (kind === "numeric" && isNaN(Number(s))) {
-      return "is not a number";
+  /* values typed or pasted in other common formats ----------------------- */
+
+  // "1,234.5", "$12.50", "45%" (as copied from formatted spreadsheet cells)
+  // become plain numbers; anything else is returned unchanged
+  function normalizeNumber(v) {
+    if (typeof v !== "string") return v;
+    var t = v.trim();
+    if (t === "" || !isNaN(Number(t))) return v;
+    var pct = /%$/.test(t);
+    if (pct) t = t.slice(0, -1).trim();
+    var sign = "";
+    if (/^[-+]/.test(t)) {
+      sign = t.charAt(0) === "-" ? "-" : "";
+      t = t.slice(1).trim();
     }
-    if (kind === "date" &&
-        !(/^\d{4}-\d{2}-\d{2}$/.test(s) && !isNaN(Date.parse(s)))) {
+    t = t.replace(/^[$€£¥]\s?/, "");
+    if (/^\d{1,3}(,\d{3})+(\.\d+)?$/.test(t)) t = t.replace(/,/g, "");
+    if (!/^(\d+(\.\d*)?|\.\d+)$/.test(t)) return v;
+    var x = Number(sign + t);
+    if (pct) x = Number((x / 100).toPrecision(15));
+    return String(x);
+  }
+
+  var YMD = /^(\d{4})[\/.\-](\d{1,2})[\/.\-](\d{1,2})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}(?:\.\d+)?))?)?$/;
+  var DMY = /^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{4})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}(?:\.\d+)?))?)?$/;
+
+  function pad2(x) {
+    x = String(x);
+    return x.length < 2 ? "0" + x : x;
+  }
+
+  function validDate(s) {
+    var d = new Date(s + "T00:00:00Z");
+    return !isNaN(d.getTime()) && d.toISOString().slice(0, 10) === s;
+  }
+
+  function validDateTime(s) {
+    var m = /^(\d{4}-\d{2}-\d{2})[ T](\d{2}):(\d{2})(?::(\d{2})(\.\d+)?)?$/.exec(s);
+    if (!m) return validDate(s);
+    return validDate(m[1]) && +m[2] < 24 && +m[3] < 60 &&
+      (m[4] === undefined || +m[4] < 60);
+  }
+
+  // day-first or month-first for d/m/y style dates: decided by values that
+  // can only be one of them, otherwise by the browser's language (US English
+  // is month-first)
+  function dayFirst(values) {
+    var dmy = null;
+    values.forEach(function (v) {
+      var m = typeof v === "string" ? DMY.exec(v.trim()) : null;
+      if (!m) return;
+      if (+m[1] > 12) dmy = true;
+      else if (+m[2] > 12 && dmy === null) dmy = false;
+    });
+    if (dmy === null) {
+      var lang = (navigator.languages && navigator.languages[0]) ||
+        navigator.language || "";
+      dmy = !/^en-US$/i.test(lang);
+    }
+    return dmy;
+  }
+
+  // "15/03/2024", "2024/3/15" or "15.03.2024 14:30" -> ISO date or date-time;
+  // anything else is returned unchanged
+  function normalizeDate(v, kind, dmy) {
+    if (typeof v !== "string") return v;
+    var t = v.trim(), m, y, mo, d;
+    if ((m = YMD.exec(t))) {
+      y = m[1]; mo = m[2]; d = m[3];
+    } else if ((m = DMY.exec(t))) {
+      y = m[3]; mo = dmy ? m[2] : m[1]; d = dmy ? m[1] : m[2];
+    } else {
+      return v;
+    }
+    var date = y + "-" + pad2(mo) + "-" + pad2(d);
+    if (!validDate(date)) return v;
+    var h = m[4], mi = m[5], s = m[6];
+    if (kind === "date") {
+      // a time of midnight is how spreadsheets show plain dates
+      if (h !== undefined && (+h !== 0 || +mi !== 0 || (s && +s !== 0))) return v;
+      return date;
+    }
+    if (h === undefined) return date + " 00:00:00";
+    return date + " " + pad2(h) + ":" + mi + ":" + (s ? pad2(s) : "00");
+  }
+
+  var TRUE_WORDS = /^(true|t|yes|y|1)$/i;
+  var FALSE_WORDS = /^(false|f|no|n|0)$/i;
+
+  // checkboxes and R need real logicals ("TRUE" would show an empty box)
+  function normalizeLogical(v) {
+    if (typeof v !== "string") return v;
+    var t = v.trim();
+    if (TRUE_WORDS.test(t)) return true;
+    if (FALSE_WORDS.test(t)) return false;
+    return v;
+  }
+
+  // a typed or pasted value in the format R expects for this column
+  function normalizeValue(c, v, dmy) {
+    if (isBlank(v) || !c) return v;
+    var o = c.option || {};
+    if (c.kind === "numeric") return normalizeNumber(v);
+    if (c.kind === "date" || c.kind === "datetime") {
+      return normalizeDate(v, c.kind, dmy === undefined ? dayFirst([v]) : dmy);
+    }
+    if (c.kind === "logical" || o.type === "checkbox") return normalizeLogical(v);
+    if (typeof v === "string" && o.type === "time") {
+      var m = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(v.trim());
+      if (m) return pad2(m[1]) + ":" + m[2] + (m[3] ? ":" + m[3] : "");
+    }
+    return v;
+  }
+
+  // why a value cannot be stored in a column (or null)
+  function invalidReason(c, v) {
+    if (isBlank(v) || !c) return null;
+    var o = c.option || {};
+    var s = typeof v === "string" ? v.trim() : v;
+    if (o.type === "dropdown") {
+      return toArray(o.values).indexOf(String(s)) === -1 ?
+        "is not one of the options" : null;
+    }
+    if (c.kind === "numeric") {
+      var x = typeof s === "number" ? s : Number(s);
+      if (typeof s === "string" && isNaN(x)) return "is not a number";
+      if (o.min !== undefined && o.min !== null && x < o.min) {
+        return "is less than " + o.min;
+      }
+      if (o.max !== undefined && o.max !== null && x > o.max) {
+        return "is more than " + o.max;
+      }
+      return null;
+    }
+    if (typeof s !== "string") return null;
+    if (c.kind === "date" && !(/^\d{4}-\d{2}-\d{2}$/.test(s) && validDate(s))) {
       return "is not a date (YYYY-MM-DD)";
     }
+    if (c.kind === "datetime" && !validDateTime(s)) {
+      return "is not a date-time (YYYY-MM-DD HH:MM:SS)";
+    }
+    if ((c.kind === "logical" || o.type === "checkbox") &&
+        !/^(true|false|t|f)$/i.test(s)) {
+      return "is not TRUE or FALSE";
+    }
+    if (o.type === "time" && !/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/.test(s)) {
+      return "is not a time (HH:MM)";
+    }
     return null;
+  }
+
+  function kindPhrase(c) {
+    var o = c.option || {};
+    var has = function (x) { return x !== undefined && x !== null; };
+    if (o.type === "dropdown") return "a dropdown column";
+    if (o.type === "rating") return "a rating column (0 to " + o.max + " stars)";
+    if (o.type === "time") return "a time column";
+    if (c.kind === "numeric") {
+      if (has(o.min) && has(o.max)) {
+        return "a numeric column (" + o.min + " to " + o.max + ")";
+      }
+      if (has(o.min)) return "a numeric column (at least " + o.min + ")";
+      if (has(o.max)) return "a numeric column (at most " + o.max + ")";
+      return "a numeric column";
+    }
+    if (c.kind === "date") return "a date column";
+    if (c.kind === "datetime") return "a date-time column";
+    if (c.kind === "logical") return "a TRUE/FALSE column";
+    return "a text column";
+  }
+
+  // can a column whose values do not fit be turned into a text column?
+  function canBecomeText(c) {
+    var o = c.option || {};
+    return !o.type || o.type === "date" || o.type === "datetime";
+  }
+
+  /* clipboard text --------------------------------------------------------- */
+
+  // Spreadsheet clipboard text (Excel, LibreOffice, Google Sheets): cells
+  // separated by tabs, rows by CRLF or LF, usually a trailing line break,
+  // and cells containing tabs, line breaks or quotes wrapped in quotes with
+  // doubled inner quotes. Returns an array of rows of strings.
+  function parseClipboardText(text) {
+    var rows = [], row = [], field = "", start = true, i = 0;
+    var n = typeof text === "string" ? text.length : 0;
+    while (i < n) {
+      var ch = text.charAt(i);
+      if (start && ch === '"') {
+        var j = i + 1, buf = "", closed = false;
+        while (j < n) {
+          if (text.charAt(j) === '"') {
+            if (text.charAt(j + 1) === '"') {
+              buf += '"';
+              j += 2;
+              continue;
+            }
+            closed = true;
+            j += 1;
+            break;
+          }
+          buf += text.charAt(j);
+          j += 1;
+        }
+        var next = text.charAt(j);
+        if (closed && (j >= n || next === "\t" || next === "\n" || next === "\r")) {
+          field = buf.replace(/\r\n?/g, "\n");
+          start = false;
+          i = j;
+          continue;
+        }
+        // not a quoted cell: read the quote as text
+      }
+      if (ch === "\t") {
+        row.push(field);
+        field = "";
+        start = true;
+        i += 1;
+      } else if (ch === "\n" || ch === "\r") {
+        row.push(field);
+        rows.push(row);
+        row = [];
+        field = "";
+        start = true;
+        i += ch === "\r" && text.charAt(i + 1) === "\n" ? 2 : 1;
+      } else {
+        field += ch;
+        start = false;
+        i += 1;
+      }
+    }
+    if (!start || field !== "" || row.length) {
+      row.push(field);
+      rows.push(row);
+    }
+    return rows;
+  }
+
+  // a cell for clipboard text: quoted when it contains tabs, line breaks or
+  // quotes, logicals as TRUE/FALSE and missing values empty
+  function clipboardCell(v) {
+    if (v === null || v === undefined) return "";
+    if (v === true) return "TRUE";
+    if (v === false) return "FALSE";
+    var s = String(v);
+    if (/[\t\n\r"]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+    return s;
   }
 
   var ICONS = {
     lock: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Read-only"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>',
     plus: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>',
     x: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>',
+    external: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6"/><path d="M20 4 10 14"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>',
     alert: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 21h20z"/><path d="M12 10v5M12 18h.01"/></svg>'
   };
 
   var BADGES = {numeric: "123", character: "abc", logical: "T/F",
-                date: "date", datetime: "time"};
+                date: "date", datetime: "dttm"};
 
   function uniqueName(base, existing) {
     var i = 1, name = base + i;
@@ -267,6 +503,11 @@
               v === null || v === undefined ? "" :
                 new Array(String(v).length + 1).join("•"));
           }
+          if (base === "url") return linkNode(v);
+          if (base === "progress" && (v === null || v === undefined || v === "")) {
+            return document.createTextNode("");
+          }
+          if (base === "colour") return colourNode(v);
           if (base) {
             var f = builtinFormatter(base);
             if (f) {
@@ -279,6 +520,129 @@
         };
       }
 
+      // web addresses get a button that opens them in a new tab (the text
+      // itself is not a link, so double-clicking still edits the cell)
+      function linkNode(v) {
+        if (v === null || v === undefined || v === "") return document.createTextNode("");
+        var s = String(v).trim();
+        var wrap = document.createElement("span");
+        wrap.className = "editr-url";
+        var text = document.createElement("span");
+        text.className = "editr-url-text";
+        text.textContent = s;
+        wrap.appendChild(text);
+        if (/^(https?:\/\/|mailto:)/i.test(s)) {
+          var a = document.createElement("a");
+          a.href = s;
+          a.target = "_blank";
+          a.rel = "noopener noreferrer";
+          a.className = "editr-url-open";
+          a.title = "Open " + s;
+          a.setAttribute("aria-label", "Open " + s);
+          a.innerHTML = ICONS.external;
+          a.addEventListener("dblclick", function (e) { e.stopPropagation(); });
+          wrap.appendChild(a);
+        }
+        return wrap;
+      }
+
+      // a swatch next to the colour (hex codes and CSS colour names)
+      function colourNode(v) {
+        var wrap = document.createElement("span");
+        wrap.className = "editr-colour";
+        if (v === null || v === undefined || v === "") return wrap;
+        var s = String(v).trim();
+        var ok = window.CSS && CSS.supports ? CSS.supports("color", s) : true;
+        if (ok) {
+          var sw = document.createElement("span");
+          sw.className = "editr-swatch";
+          sw.style.background = s;
+          wrap.appendChild(sw);
+        }
+        wrap.appendChild(document.createTextNode(s));
+        return wrap;
+      }
+
+      // date-time picker; values are "YYYY-MM-DD HH:MM:SS" like R prints them
+      function datetimeEditor(cell, onRendered, success, cancel) {
+        var old = cell.getValue();
+        var input = document.createElement("input");
+        input.type = "datetime-local";
+        input.step = "1";
+        input.className = "editr-input";
+        input.value = old ? String(old).replace(" ", "T") : "";
+        var done = false;
+        var commit = function () {
+          if (done) return;
+          done = true;
+          var v = input.value ? input.value.replace("T", " ") : null;
+          if (v && v.length === 16) v += ":00";
+          if ((v || null) === (old || null)) cancel(); else success(v);
+        };
+        input.addEventListener("blur", commit);
+        input.addEventListener("keydown", function (e) {
+          if (e.key === "Enter") {
+            commit();
+          } else if (e.key === "Escape") {
+            done = true;
+            cancel();
+          } else if (/^Arrow/.test(e.key)) {
+            e.stopPropagation(); // arrows change the date, not the cell
+          }
+        });
+        // clicks inside the picker must not start a range selection
+        input.addEventListener("mousedown", function (e) { e.stopPropagation(); });
+        onRendered(function () { input.focus({preventScroll: true}); });
+        return input;
+      }
+
+      // slider with the current value next to it; dragging the handle does
+      // not select cells (Tabulator's range editor lost the drag to the range
+      // selection)
+      function sliderEditor(cell, onRendered, success, cancel, params) {
+        var old = cell.getValue();
+        var wrap = document.createElement("div");
+        wrap.className = "editr-slider";
+        var input = document.createElement("input");
+        input.type = "range";
+        input.min = params.min;
+        input.max = params.max;
+        input.step = params.step;
+        input.value = old === null || old === undefined ? params.min : old;
+        var label = document.createElement("span");
+        label.className = "editr-slider-value";
+        label.textContent = input.value;
+        wrap.appendChild(input);
+        wrap.appendChild(label);
+        var done = false;
+        var commit = function () {
+          if (done) return;
+          done = true;
+          var v = Number(input.value);
+          if (v === old) cancel(); else success(v);
+        };
+        input.addEventListener("input", function () { label.textContent = input.value; });
+        input.addEventListener("blur", commit);
+        input.addEventListener("change", function () { input.focus(); });
+        input.addEventListener("keydown", function (e) {
+          if (e.key === "Enter") {
+            commit();
+          } else if (e.key === "Escape") {
+            done = true;
+            cancel();
+          } else if (/^Arrow|^Page|^Home$|^End$/.test(e.key)) {
+            e.stopPropagation();
+          }
+        });
+        ["mousedown", "mousemove", "mouseup", "pointerdown", "pointermove",
+         "click", "dblclick"].forEach(function (type) {
+          wrap.addEventListener(type, function (e) { e.stopPropagation(); });
+        });
+
+        onRendered(function () { input.focus({preventScroll: true}); });
+        return wrap;
+      }
+
       /* ---------------------------------------------------------------- */
       /* columns                                                           */
       /* ---------------------------------------------------------------- */
@@ -286,7 +650,8 @@
       function titleFormatter(cell) {
         var c = grid.colMap[cell.getColumn().getField()] || {};
         var name = c.frozen ? "row names" : c.title;
-        var badge = BADGES[c.kind] || "abc";
+        var badge = c.option && c.option.type === "time" ? "time" :
+          BADGES[c.kind] || "abc";
         return '<span class="editr-title"><span class="editr-badge">' +
           badge + '</span><span class="editr-name">' + escapeHTML(name) +
           '</span>' + (c.readonly ? '<span class="editr-lock">' + ICONS.lock +
@@ -418,6 +783,44 @@
         } else if (o && o.type === "password") {
           def.editorParams = {elementAttributes: {type: "password"}};
           def.formatter = makeFormatter("password");
+        } else if (o && o.type === "datetime") {
+          def.editor = c.readonly ? false : datetimeEditor;
+          def.minWidth = Math.max(def.minWidth, 170);
+        } else if (o && o.type === "time") {
+          def.editor = c.readonly ? false : "time";
+        } else if (o && o.type === "textarea") {
+          // Enter saves like any other cell; Shift+Enter or Alt+Enter adds a
+          // line break
+          def.editor = c.readonly ? false : "textarea";
+          def.editorParams = {enterSubmit: true, shiftEnterNewLine: true,
+                              altEnterNewLine: true, verticalNavigation: "editor"};
+          def.formatter = makeFormatter("textarea");
+          def.variableHeight = true;
+          def.minWidth = Math.max(def.minWidth, 180);
+          def.maxInitialWidth = 360;
+        } else if (o && o.type === "url") {
+          def.formatter = makeFormatter("url");
+        } else if (o && o.type === "colour") {
+          def.formatter = makeFormatter("colour");
+        } else if (o && o.type === "number") {
+          def.editor = c.readonly ? false : "number";
+          def.editorParams = {selectContents: true};
+          if (o.min !== undefined && o.min !== null) def.editorParams.min = o.min;
+          if (o.max !== undefined && o.max !== null) def.editorParams.max = o.max;
+          if (o.step !== undefined && o.step !== null) def.editorParams.step = o.step;
+        } else if (o && o.type === "rating") {
+          def.editor = c.readonly ? false : "star";
+          def.formatter = makeFormatter("star", {stars: o.max});
+          def.hozAlign = "left";
+          def.minWidth = Math.max(def.minWidth, 20 * o.max + 24);
+        } else if (o && o.type === "slider") {
+          def.editor = c.readonly ? false : sliderEditor;
+          def.editorParams = {min: o.min, max: o.max, step: o.step};
+          def.formatter = makeFormatter("progress",
+                                        {min: o.min, max: o.max, legend: true,
+                                         color: "#93B4F5", legendColor: "#1F2933",
+                                         legendAlign: "center"});
+          def.minWidth = Math.max(def.minWidth, 120);
         }
         return def;
       }
@@ -828,12 +1231,13 @@
           '<div class="editr-guard-msg"><span class="editr-guard-icon">' + ICONS.alert +
           '</span><div><div class="editr-guard-title">\u201c' + escapeHTML(raw) +
           '\u201d ' + reason + '</div><div class="editr-guard-sub">' +
-          escapeHTML(c.title) + ' is a ' + (c.kind === "date" ? "date" : "numeric") +
-          ' column. What should happen?</div></div></div>' +
+          escapeHTML(c.title) + ' is ' + kindPhrase(c) +
+          '. What should happen?</div></div></div>' +
           '<div class="editr-guard-actions">' +
           '<button type="button" class="btn btn-primary btn-sm" data-act="na">Store as missing (NA)</button>' +
-          '<button type="button" class="btn btn-outline-secondary btn-sm" data-act="text">Convert ' +
-          escapeHTML(c.title) + ' to text</button>' +
+          (canBecomeText(c) ?
+            '<button type="button" class="btn btn-outline-secondary btn-sm" data-act="text">Convert ' +
+            escapeHTML(c.title) + ' to text</button>' : '') +
           '<button type="button" class="btn btn-link btn-sm" data-act="cancel">Cancel edit</button></div>';
         var decided = false;
         var restore = function (v) {
@@ -850,6 +1254,7 @@
             emit({type: "update", cid: field, ids: [id], values: [null]});
           } else if (act === "text") {
             c.kind = "character";
+            c.option = null;
             c.filter = {type: "text"};
             emit({type: "update", cid: field, ids: [id], values: [raw]});
             var col = grid.table.getColumn(field);
@@ -874,44 +1279,234 @@
       /* clipboard                                                         */
       /* ---------------------------------------------------------------- */
 
-      // Tabulator's built-in range paste uses row.updateData(), which does
-      // not raise cellEdited, so we diff and report the pasted cells here.
-      function pasteRange(data) {
-        var mod = this.table.modules.selectRange;
+      // Paste is ours rather than Tabulator's: its parser splits on "\n" and
+      // "\t" only, so the line break that spreadsheets put after the last row
+      // pasted an empty row over the next row, CRLF left "\r" in the values
+      // and quoted cells with line breaks were split up.
+      function parsePaste(text) {
+        var rows = parseClipboardText(text);
+        return rows.length ? {rows: rows} : false;
+      }
+
+      // Excel-like: a single selected cell takes the whole block; a larger
+      // selection that is a multiple of the block is filled by repeating it.
+      // Rows past the end are added when rows can be added.
+      function pasteRange(parsed) {
+        var table = grid.table;
+        var mod = table.modules.selectRange;
         var range = mod && mod.activeRange;
-        if (!range || !data || !data.length) return [];
+        var block = parsed && parsed.rows;
+        if (!range || !block || !block.length) return [];
         var bounds = range.getBounds();
-        if (!bounds.start) return [];
-        var rows = this.table.rowManager.activeRows.slice();
-        var startRow = rows.indexOf(bounds.start.row);
-        if (startRow < 0) return [];
-        var single = bounds.start === bounds.end;
-        var width = single ? data.length :
-          rows.indexOf(bounds.end.row) - startRow + 1;
-        rows = rows.slice(startRow, startRow + width);
-        var ops = [];
-        this.table.blockRedraw();
-        rows.forEach(function (row, i) {
-          var incoming = data[i % data.length];
-          var old = row.getData();
-          var upd = {};
-          Object.keys(incoming).forEach(function (f) {
-            var c = grid.colMap[f];
-            if (!c || c.readonly || f === ID) return;
-            var v = incoming[f];
-            var o = old[f];
-            if (o === v || ((o === null || o === undefined) && v === "")) return;
-            upd[f] = v;
-            ops.push({type: "update", cid: f, ids: [old[ID]],
-                      values: [jsonValue(v)]});
+        if (!bounds.start || !bounds.end) return [];
+        var rows = table.rowManager.activeRows.slice();
+        var r0 = rows.indexOf(bounds.start.row);
+        var r1 = rows.indexOf(bounds.end.row);
+        var cols = table.columnManager.getVisibleColumnsByIndex();
+        var c0 = cols.indexOf(bounds.start.column);
+        var c1 = cols.indexOf(bounds.end.column);
+        if (r0 < 0 || c0 < 0) return [];
+        var dataRows = block.length;
+        var dataCols = Math.max.apply(null, block.map(function (r) { return r.length; }));
+        var selRows = Math.max(1, r1 - r0 + 1), selCols = Math.max(1, c1 - c0 + 1);
+        var nRows = selRows > dataRows && selRows % dataRows === 0 ? selRows : dataRows;
+        var nCols = selCols > dataCols && selCols % dataCols === 0 ? selCols : dataCols;
+
+        // target columns (the "+" column and anything past it are ignored)
+        var targets = [];
+        for (var j = 0; j < nCols; j++) {
+          var col = cols[c0 + j];
+          var c = col && grid.colMap[col.getField()];
+          targets.push(c ? c : null);
+        }
+        var existing = rows.slice(r0, r0 + nRows);
+        var extra = grid.opts.row_edit ? nRows - existing.length : 0;
+
+        // cell values by column, normalised to the format R expects
+        var cells = [];
+        targets.forEach(function (c, j) {
+          if (!c || c.readonly) return;
+          var vals = [];
+          for (var i = 0; i < existing.length + extra; i++) {
+            var src = block[i % dataRows];
+            var v = src[j % dataCols];
+            if (v === undefined) v = src.length < dataCols ? undefined : "";
+            vals.push(v);
+          }
+          var dmy = c.kind === "date" || c.kind === "datetime" ? dayFirst(vals) : undefined;
+          vals = vals.map(function (v) {
+            return v === undefined ? v : normalizeValue(c, v, dmy);
           });
-          if (Object.keys(upd).length) row.updateData(upd);
+          cells.push({c: c, values: vals});
         });
-        this.table.restoreRedraw();
-        // group by column so each column is one vectorised update
-        ops.sort(function (a, b) { return a.cid < b.cid ? -1 : a.cid > b.cid ? 1 : 0; });
+
+        var problems = [];
+        cells.forEach(function (col) {
+          var bad = col.values.filter(function (v) {
+            return v !== undefined && invalidReason(col.c, v);
+          });
+          if (bad.length) {
+            problems.push({c: col.c, n: bad.length, example: bad[0],
+                           reason: invalidReason(col.c, bad[0])});
+          }
+        });
+
+        var apply = function (act) {
+          applyPaste(existing, extra, cells, act);
+        };
+        if (problems.length) {
+          pasteGuard(bounds.start.getComponent(), problems, apply);
+        } else {
+          apply("paste");
+        }
+        return [];
+      }
+
+      // write a checked paste: add rows, update cells, report one batch of ops
+      // (one undo step) and select the pasted block
+      function applyPaste(existing, extra, cells, act) {
+        var table = grid.table;
+        if (act === "cancel") return;
+        if (act === "text") {
+          cells.forEach(function (col) {
+            var bad = col.values.some(function (v) {
+              return v !== undefined && invalidReason(col.c, v);
+            });
+            if (!bad || !canBecomeText(col.c)) return;
+            col.c.kind = "character";
+            col.c.option = null;
+            col.c.filter = {type: "text"};
+            var column = table.getColumn(col.c.field);
+            if (column) column.updateDefinition(buildColumn(col.c));
+          });
+        }
+        cells.forEach(function (col) {
+          col.values = col.values.map(function (v) {
+            if (v === undefined) return v;
+            if (isBlank(v)) return null;
+            return invalidReason(col.c, v) ? null : v;
+          });
+        });
+        var ops = [];
+        var newIds = [];
+        var newRows = [];
+        for (var k = 0; k < extra; k++) {
+          var id = grid.nextId++;
+          var data = {};
+          data[ID] = id;
+          grid.pinned[id] = true;
+          newIds.push(id);
+          newRows.push(data);
+        }
+        var ids = existing.map(function (row) { return row.getData()[ID]; }).concat(newIds);
+        cells.forEach(function (col) {
+          var f = col.c.field, upIds = [], upVals = [];
+          col.values.forEach(function (v, i) {
+            if (v === undefined) return;
+            if (i < existing.length) {
+              var o = existing[i].getData()[f];
+              if (o === v || ((o === null || o === undefined) && v === null)) return;
+            } else {
+              newRows[i - existing.length][f] = v;
+              if (v === null) return;
+            }
+            upIds.push(ids[i]);
+            upVals.push(v);
+          });
+          if (upIds.length) ops.push({type: "update", cid: f, ids: upIds, values: upVals});
+        });
+        table.blockRedraw();
+        existing.forEach(function (row, i) {
+          var upd = {}, any = false;
+          cells.forEach(function (col) {
+            var v = col.values[i];
+            if (v === undefined) return;
+            var o = row.getData()[col.c.field];
+            if (o === v || ((o === null || o === undefined) && v === null)) return;
+            upd[col.c.field] = v;
+            any = true;
+          });
+          if (any) row.updateData(upd);
+        });
+        table.restoreRedraw();
+        if (newIds.length) {
+          emit({type: "insert_rows", ids: newIds, anchor: null, below: true});
+        }
         ops.forEach(emit);
-        return rows;
+        var done = newRows.length ? table.addData(newRows, false) : Promise.resolve();
+        Promise.resolve(done).then(function () {
+          var fields = cells.map(function (col) { return col.c.field; });
+          if (!fields.length || !ids.length || !table.addRange) return;
+          var first = table.getRow(ids[0]), last = table.getRow(ids[ids.length - 1]);
+          if (!first || !last) return;
+          table.getRanges().forEach(function (r) { r.remove(); });
+          table.addRange(first.getCell(fields[0]), last.getCell(fields[fields.length - 1]));
+          updateStatus();
+          selectionSummary();
+        });
+      }
+
+      // one question for all the pasted values that do not fit their columns
+      function pasteGuard(anchorCell, problems, decide) {
+        var total = problems.reduce(function (a, p) { return a + p.n; }, 0);
+        var text = problems.every(function (p) { return canBecomeText(p.c); });
+        var box = document.createElement("div");
+        box.className = "editr-popup editr-guard";
+        box.setAttribute("role", "alertdialog");
+        box.setAttribute("aria-label", "Pasted values do not match the column types");
+        box.innerHTML =
+          '<div class="editr-guard-msg"><span class="editr-guard-icon">' + ICONS.alert +
+          '</span><div><div class="editr-guard-title">' + total + ' pasted value' +
+          (total === 1 ? " does" : "s do") + ' not fit ' +
+          (problems.length === 1 ? "the column" : "their columns") + '</div>' +
+          problems.map(function (p) {
+            return '<div class="editr-guard-sub">' + escapeHTML(p.c.title) + ' is ' +
+              kindPhrase(p.c) + ': ' + p.n + ' value' + (p.n === 1 ? "" : "s") +
+              ', e.g. “' + escapeHTML(p.example) + '” ' + p.reason + '</div>';
+          }).join("") + '</div></div>' +
+          '<div class="editr-guard-actions">' +
+          '<button type="button" class="btn btn-primary btn-sm" data-act="na">Store as missing (NA)</button>' +
+          (text ? '<button type="button" class="btn btn-outline-secondary btn-sm" data-act="text">Convert ' +
+            (problems.length === 1 ? escapeHTML(problems[0].c.title) : "those columns") +
+            ' to text</button>' : '') +
+          '<button type="button" class="btn btn-link btn-sm" data-act="cancel">Cancel paste</button></div>';
+        var decided = false;
+        box.addEventListener("click", function (e) {
+          var act = e.target.closest && e.target.closest("[data-act]");
+          if (!act) return;
+          decided = true;
+          closePopup();
+          decide(act.getAttribute("data-act"));
+        });
+        var popup = openPopup(anchorCell.getElement(), box, function () {
+          if (!decided) decide("cancel");
+        });
+        popup.kind = "guard";
+        var first = box.querySelector("button");
+        if (first) first.focus();
+      }
+
+      // Copy: Tabulator's plain text does not quote cells with tabs or line
+      // breaks; rebuild it (and the HTML version) from the selected range
+      function copyFormatter(type, output) {
+        var table = grid.table;
+        var ranges = table && table.getRanges ? table.getRanges() : [];
+        if (!ranges.length) return output;
+        var rows = ranges[0].getStructuredCells().map(function (cells) {
+          return cells.filter(function (cell) {
+            return !!grid.colMap[cell.getField()];
+          }).map(function (cell) { return cell.getValue(); });
+        });
+        if (type === "html") {
+          return "<table>" + rows.map(function (r) {
+            return "<tr>" + r.map(function (v) {
+              var s = v === null || v === undefined ? "" :
+                v === true ? "TRUE" : v === false ? "FALSE" : String(v);
+              return "<td>" + escapeHTML(s).replace(/\r?\n/g, "<br>") + "</td>";
+            }).join("") + "</tr>";
+          }).join("") + "</table>";
+        }
+        return rows.map(function (r) { return r.map(clipboardCell).join("\t"); }).join("\n");
       }
 
       /* ---------------------------------------------------------------- */
@@ -1277,7 +1872,8 @@
           clipboardCopyStyled: false,
           clipboardCopyConfig: {rowHeaders: false, columnHeaders: false},
           clipboardCopyRowRange: "range",
-          clipboardPasteParser: "range",
+          clipboardCopyFormatter: copyFormatter,
+          clipboardPasteParser: parsePaste,
           clipboardPasteAction: pasteRange,
           headerFilterLiveFilterDelay: 250,
           footerElement: opts.row_edit ?
@@ -1344,13 +1940,22 @@
             grid.suppress -= 1;
             return;
           }
-          var reason = c && !c.option ? invalidReason(c.kind, cell.getValue()) : null;
+          // "15/03/2024" -> "2024-03-15", "1,234" -> "1234", "yes" -> "TRUE"
+          var value = cell.getValue();
+          var normal = normalizeValue(c, value);
+          if (normal !== value) {
+            grid.suppress += 1;
+            cell.setValue(normal);
+            grid.suppress -= 1;
+            value = normal;
+          }
+          var reason = invalidReason(c, value);
           if (reason) {
             guardEdit(cell, reason);
             return;
           }
           emit({type: "update", cid: field, ids: [cell.getRow().getIndex()],
-                values: [jsonValue(cell.getValue())]});
+                values: [jsonValue(value)]});
           setTimeout(selectionSummary, 0);
         });
 
@@ -1386,13 +1991,30 @@
         }
       });
 
+      // the double-click that opens an editor selects the word under the
+      // pointer; pressing inside the editor would then drag that selection
+      // instead of moving a slider or selecting text
+      el.addEventListener("dragstart", function (e) {
+        if (e.target && e.target.closest && e.target.closest(".tabulator-editing")) {
+          e.preventDefault();
+        }
+      }, true);
+
       el.addEventListener("keydown", function (e) {
         if (!(e.ctrlKey || e.metaKey)) return;
         var key = e.key.toLowerCase();
         var editing = grid.table && grid.table.modules.edit &&
           grid.table.modules.edit.currentCell;
-        if (editing) return;
-        if (key === "d") {
+        var t = e.target;
+        // shortcuts in filter boxes act on the text, not on the data
+        var typing = t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" ||
+                           t.tagName === "SELECT" || t.isContentEditable);
+        if (editing || typing) return;
+        if (key === "c") {
+          // Tabulator has copied the selection; stop the browser's own copy
+          // (of an empty selection) from running after it
+          e.preventDefault();
+        } else if (key === "d") {
           fillDown();
           e.preventDefault();
         } else if (key === "z" && !e.shiftKey) {
