@@ -94,7 +94,18 @@ editr_prepare <- function(x,
   # COLUMN OPTIONS - CONVERT COLUMNS TO THE TYPE THEIR INPUT NEEDS
   if (!is.null(col_options)) {
     for (z in names(col_options)) {
-      x[[z]] <- col_option_convert(x[[z]], col_option_spec(col_options[[z]]), z)
+      spec <- col_option_spec(col_options[[z]])
+      x[[z]] <- col_option_convert(x[[z]], spec, z)
+      n_out <- col_option_outside(x[[z]], spec)
+      if (n_out > 0 && !quiet) {
+        message(
+          "Column '", z, "' has ", n_out, " value", if (n_out > 1) "s",
+          " outside the limits of its ", spec$type, " input (",
+          if (is.null(spec$min)) "-Inf" else spec$min, " to ",
+          if (is.null(spec$max)) "Inf" else spec$max,
+          "). They are kept and marked in the editor."
+        )
+      }
     }
   }
 
@@ -865,7 +876,9 @@ editr_result <- function(store, cfg, view = FALSE) {
   # AUTO-TYPED COLUMNS
   for (i in which(cids %in% store$auto_type)) {
     if (is.character(data[[i]]) || is.logical(data[[i]])) {
-      data[[i]] <- type.convert(data[[i]], as.is = !cfg$col_factor)
+      # CELLS THAT WERE NEVER FILLED IN ARE MISSING, LIKE CLEARED CELLS
+      data[[i]] <- type.convert(data[[i]], as.is = !cfg$col_factor,
+                                na.strings = c("NA", ""))
     }
   }
   # FACTORS

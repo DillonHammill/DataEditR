@@ -21,3 +21,20 @@ performs edits through mouse and keyboard events, presses Done and checks the
 returned data (and, for `db`, the SQLite file).
 
 ./run.sh mockup  8765 out-mock    screenshots.js   # writes the mockup screens to out-mock/
+
+## QA scenarios
+
+`qa/run_qa.sh` runs end-to-end scenarios covering every feature: data frames,
+matrices, tibbles and data.tables, templates, files, binds, read-only, hidden
+and protected columns, factors, filtered and exported subsets, Cancel, every
+column type, the Open menu, the review panel, printed code, the simplified
+editor, database commits and conflicts, and shiny apps with
+`dataEditCommit()`/`dataEditChanges()`. Each scenario starts the app
+(`qa_app.R`), drives it in headless Chrome (`qa.js`) and checks the returned
+data, written files and that the generated code reproduces the result
+(`qa_check.R`).
+
+```sh
+NODE_PATH=/path/to/node_modules tools/e2e/qa/run_qa.sh            # all scenarios
+NODE_PATH=/path/to/node_modules tools/e2e/qa/run_qa.sh df types   # some
+```

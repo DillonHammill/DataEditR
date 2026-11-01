@@ -19,7 +19,8 @@
 #'   or end of the toolbar (\code{data_edit()} adds its Open and Export menus
 #'   here).
 #' @param code_name name of the data used in the code shown in the review
-#'   panel, set to \code{"data"} by default.
+#'   panel, set to \code{"data"} by default. Can also be a reactive expression
+#'   returning the name.
 #' @param data a reactive expression containing an array (e.g. data.frame,
 #'   matrix or data.table), a database table (see \code{\link{db_table}}) or a
 #'   vector indicating the dimensions of the array (e.g. c(10,10)) or column
@@ -48,8 +49,11 @@
 #'   \item \code{"slider"}: a slider and bar for numbers from 0 to 100;
 #'   \item \code{"rating"}: a rating from 0 to 5 stars.
 #'   }
-#'   Use \code{list(type = "slider", min = 0, max = 1, step = 0.1)} or
-#'   \code{list(type = "rating", stars = 10)} to change the defaults.
+#'   Set the limits of a slider with
+#'   \code{c(type = "slider", min = 0, max = 1, step = 0.05)} and the number
+#'   of stars of a rating with \code{c(type = "rating", stars = 10)} (a
+#'   \code{list()} works too). Values outside the limits are marked in the
+#'   editor and cannot be entered.
 #'   Unlike earlier versions, using \code{col_options} no longer disables
 #'   adding or removing columns.
 #' @param col_stretch logical indicating whether columns should be stretched to
@@ -488,7 +492,8 @@ dataEditServer <- function(id,
       data_tick()
       ed <- editor()
       shiny::req(ed)
-      editr_code(ed$store, ed$cfg, code_name)
+      name <- if (is.function(code_name)) code_name() else code_name
+      editr_code(ed$store, ed$cfg, name)
     })
 
     # PANES START HIDDEN - KEEP THEIR OUTPUTS LIVE (they req() the open tab)

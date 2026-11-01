@@ -84,8 +84,11 @@ within limits;
 \item \code{"slider"}: a slider and bar for numbers from 0 to 100;
 \item \code{"rating"}: a rating from 0 to 5 stars.
 }
-Use \code{list(type = "slider", min = 0, max = 1, step = 0.1)} or
-\code{list(type = "rating", stars = 10)} to change the defaults.
+Set the limits of a slider with
+\code{c(type = "slider", min = 0, max = 1, step = 0.05)} and the number
+of stars of a rating with \code{c(type = "rating", stars = 10)} (a
+\code{list()} works too). Values outside the limits are marked in the
+editor and cannot be entered.
 Unlike earlier versions, using \code{col_options} no longer disables
 adding or removing columns.}
 
@@ -141,7 +144,8 @@ valid CSS color (e.g. \code{"#FF0000"} or \code{"red"}) to use a custom
 border color. Set to \code{NULL} by default to disable highlighting.}
 
 \item{code_name}{name of the data used in the code shown in the review
-panel, set to \code{"data"} by default.}
+panel, set to \code{"data"} by default. Can also be a reactive expression
+returning the name.}
 
 \item{...}{not in use.}
 }

@@ -58,6 +58,9 @@ data_code <- function(x, x_edit, name = "data") {
     return(data_code_create(x_edit, name))
   }
 
+  # MATRICES ARE EDITED AS DATA FRAMES AND TURNED BACK INTO MATRICES
+  was_matrix <- is.matrix(x)
+
   # ENSURE DATA.FRAMES
   x <- as.data.frame(x, stringsAsFactors = FALSE)
   x_edit <- as.data.frame(x_edit, stringsAsFactors = FALSE)
@@ -141,6 +144,34 @@ data_code <- function(x, x_edit, name = "data") {
   col_name_map <- setNames(orig_cols, orig_cols)
   for (old in names(col_changes$renames)) {
     col_name_map[old] <- col_changes$renames[[old]]
+  }
+
+  # FACTORS ARE EDITED AS TEXT (AND RETURNED AS FACTORS WITH col_factor)
+  kept <- setdiff(orig_cols, col_changes$removed)
+  kept <- kept[col_name_map[kept] %in% edit_cols]
+  to_text <- kept[vapply(kept, function(col) {
+    is.factor(x[[col]]) && !is.factor(x_edit[[col_name_map[[col]]]])
+  }, logical(1))]
+  to_factor <- unname(col_name_map[kept[vapply(kept, function(col) {
+    !is.factor(x[[col]]) && is.factor(x_edit[[col_name_map[[col]]]])
+  }, logical(1))]])
+  to_factor <- c(to_factor, Filter(function(col) is.factor(x_edit[[col]]),
+                                   col_changes$added))
+  # factors whose values change (new values, added rows) become text first
+  # and factors again at the end, so new values are not lost as NA
+  refactor <- kept[vapply(kept, function(col) {
+    e <- x_edit[[col_name_map[[col]]]]
+    is.factor(x[[col]]) && is.factor(e) &&
+      (!identical(levels(x[[col]]), levels(e)) ||
+         !identical(as.character(x[[col]]), as.character(e)))
+  }, logical(1))]
+  to_text <- union(to_text, refactor)
+  to_factor <- union(to_factor, unname(col_name_map[refactor]))
+  if (length(to_text) > 0) {
+    cols_q <- vapply(unname(col_name_map[to_text]), data_code_quote, character(1))
+    pipes <- c(pipes, paste0(
+      "mutate(", paste0(cols_q, " = as.character(", cols_q, ")", collapse = ", "), ")"
+    ))
   }
 
   # Columns to check: original columns that still exist (not removed)
@@ -255,6 +286,14 @@ data_code <- function(x, x_edit, name = "data") {
     }
   }
 
+  # TEXT TO FACTORS
+  if (length(to_factor) > 0) {
+    cols_q <- vapply(to_factor, data_code_quote, character(1))
+    pipes <- c(pipes, paste0(
+      "mutate(", paste0(cols_q, " = factor(", cols_q, ")", collapse = ", "), ")"
+    ))
+  }
+
   # COLUMN TO ROW NAMES (restore row names from column)
   if (has_rownames) {
     pipes <- c(pipes, paste0(
@@ -268,6 +307,9 @@ data_code <- function(x, x_edit, name = "data") {
     pipes[!grepl("^tibble::(rownames_to_column|column_to_rownames)", pipes)]
   } else {
     pipes
+  }
+  if (was_matrix) {
+    pipes <- c("as.data.frame()", pipes, "as.matrix()")
   }
 
   if (length(actual_pipes) > 0) {
@@ -374,6 +416,14 @@ data_code_columns <- function(orig_cols, edit_cols) {
 #' @noRd
 data_code_create <- function(x_edit, name) {
 
+  # THE CODE RETURNS THE SAME KIND OF OBJECT (TIBBLE, DATA FRAME, MATRIX)
+  out_class <- if (is.matrix(x_edit)) {
+    "matrix"
+  } else if (inherits(x_edit, "tbl_df")) {
+    "tibble"
+  } else {
+    "data.frame"
+  }
   x_edit <- as.data.frame(x_edit, stringsAsFactors = FALSE)
   cols <- colnames(x_edit)
   has_rownames <- data_code_has_rownames(x_edit)
@@ -417,13 +467,16 @@ data_code_create <- function(x_edit, name) {
   if (has_rownames) {
     create_code <- paste0(
       create_code,
-      " %>%\n  tibble::column_to_rownames(var = \"", rowname_col, "\")\n"
+      " %>%\n  tibble::column_to_rownames(var = \"", rowname_col, "\")"
     )
-  } else {
-    create_code <- paste0(create_code, "\n")
+  } else if (out_class == "data.frame") {
+    create_code <- paste0(create_code, " %>%\n  as.data.frame()")
+  }
+  if (out_class == "matrix") {
+    create_code <- paste0(create_code, " %>%\n  as.matrix()")
   }
 
-  create_code
+  paste0(create_code, "\n")
 }
 
 ## QUOTE COLUMN NAME -----------------------------------------------------------

@@ -87,8 +87,11 @@
 #'   \item \code{"slider"}: a slider and bar for numbers from 0 to 100;
 #'   \item \code{"rating"}: a rating from 0 to 5 stars.
 #'   }
-#'   Use \code{list(type = "slider", min = 0, max = 1, step = 0.1)} or
-#'   \code{list(type = "rating", stars = 10)} to change the defaults.
+#'   Set the limits of a slider with
+#'   \code{c(type = "slider", min = 0, max = 1, step = 0.05)} and the number
+#'   of stars of a rating with \code{c(type = "rating", stars = 10)} (a
+#'   \code{list()} works too). Values outside the limits are marked in the
+#'   editor and cannot be entered.
 #' @param col_stretch logical indicating whether columns should be stretched to
 #'   fill the full width of the display, set to FALSE by default.
 #' @param col_factor logical indicating whether character columns should be
@@ -261,9 +264,12 @@ data_edit <- function(x = NULL,
     x_name
   }
 
-  # RESULT OF THE SESSION (code generation for databases)
+  # RESULT OF THE SESSION (code generation for databases) AND THE DATA THE
+  # GENERATED CODE STARTS FROM (CHANGES WHEN OTHER DATA IS OPENED)
   session_info <- new.env(parent = emptyenv())
   session_info$code <- NULL
+  session_info$original <- x_original
+  session_info$name <- x_name
 
   # USER INTERFACE -------------------------------------------------------------
 
@@ -409,6 +415,8 @@ data_edit <- function(x = NULL,
     }
 
     # DATA EDIT - FULL DATA
+    # NAME OF THE DATA IN THE GENERATED CODE
+    code_name <- reactiveVal(x_name)
     data_update <- dataEditServer(
       "edit1",
       data = data_source,
@@ -426,7 +434,7 @@ data_edit <- function(x = NULL,
       read_args = read_args,
       quiet = quiet,
       track = track,
-      code_name = x_name
+      code_name = code_name
     )
     data_active <- attr(data_update, "view")
     editor <- attr(data_update, "editor")
@@ -458,7 +466,8 @@ data_edit <- function(x = NULL,
     })
 
     # OPEN
-    load <- function(obj, name) {
+    # name: shown in the header; code: the name the generated code uses
+    load <- function(obj, name, code = "data") {
       if (is.null(obj)) return()
       if (is_db_input(obj)) {
         obj <- tryCatch(db_table(obj), error = function(e) e)
@@ -476,6 +485,10 @@ data_edit <- function(x = NULL,
       }
       data_source(obj)
       set_text("dataset_name", name)
+      # THE CODE NOW STARTS FROM THE OPENED DATA (A NEW TABLE IS CREATED)
+      session_info$original <- if (!is_db_input(obj) && !identical(code, "")) obj
+      session_info$name <- if (identical(code, "")) "data" else code
+      code_name(session_info$name)
       session$sendCustomMessage("editr_close_dropdown", list(id = "open_toggle"))
     }
     observeEvent(input$open_load, {
@@ -487,7 +500,7 @@ data_edit <- function(x = NULL,
         showNotification(conditionMessage(obj), type = "error")
         return()
       }
-      load(obj, txt)
+      load(obj, txt, code = if (make.names(txt) == txt) txt else "data")
     })
     observeEvent(input$open_file, {
       f <- input$open_file
@@ -497,12 +510,13 @@ data_edit <- function(x = NULL,
         showNotification(conditionMessage(obj), type = "error")
         return()
       }
-      load(obj, f$name)
+      load(obj, f$name,
+           code = make.names(sub("[.][^.]*$", "", basename(f$name))))
     })
     observeEvent(input$open_new, {
       dims <- c(input$open_rows, input$open_cols)
       dims[is.na(dims) | dims < 1] <- 1
-      load(data_template(as.integer(dims)), "New table")
+      load(data_template(as.integer(dims)), "New table", code = "")
     })
 
     # EXPORT
@@ -585,7 +599,7 @@ data_edit <- function(x = NULL,
       ed <- editor()
       db <- ed$cfg$db
       code_text <- if (!isFALSE(code)) {
-        data_code_db(db, ed$store, name = x_name)
+        data_code_db(db, ed$store, name = session_info$name)
       } else {
         NULL
       }
@@ -601,7 +615,8 @@ data_edit <- function(x = NULL,
         ))
         return()
       }
-      removeModal()
+      # NO removeModal(): the gadget closes, and the dialog's inputs would be
+      # unbound after the session has ended
       session_info$code <- code_text
       # ALL DATA IS READ BACK FROM THE DATABASE (INCLUDES GENERATED KEYS)
       finish(if (on_screen) view else data_update())
@@ -625,7 +640,7 @@ data_edit <- function(x = NULL,
     code_text <- if (is_db_input(initial)) {
       session_info$code %||% "# No changes detected\n"
     } else {
-      data_code(x_original, x_edit, name = x_name)
+      data_code(session_info$original, x_edit, name = session_info$name)
     }
     if (is.character(code)) {
       writeLines(code_text, code)

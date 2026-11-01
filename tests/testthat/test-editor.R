@@ -31,8 +31,9 @@ test_that("templates are auto-typed on return", {
       op_update("c2", 1, "hello"))
   res <- result(p)
   expect_identical(res$V1, 1:3)
-  # untouched template cells stay empty strings, as in DataEditR 1.0.0
-  expect_identical(res$V2, c("hello", "", ""))
+  # untouched template cells are missing values, like cleared cells
+  expect_identical(res$V2, c("hello", NA, NA))
+  expect_identical(result(prep(c("A", "B")))$A, NA)
 })
 
 test_that("column-name templates and row/column binding work", {

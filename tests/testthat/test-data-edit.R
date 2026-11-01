@@ -172,6 +172,47 @@ test_that("Open loads R objects, files and new tables", {
   expect_identical(dim(data_edit(mtcars)), c(3L, 1L))
 })
 
+test_that("code follows the data opened from the Open menu", {
+  cars_small <- mtcars[1:4, 1:3]
+  file <- withr::local_tempfile(fileext = ".csv")
+  write.csv(data.frame(u = 1:3), file, row.names = FALSE)
+  mock_gadget(function(session) {
+    session$setInputs(open_object = "cars_small", open_load = 1)
+    session$setInputs(`edit1-grid_ops` = grid_batch(op_update("c2", 1, "50")))
+    session$setInputs(`edit1-panel` = "code")
+    expect_match(session$getOutput("edit1-code"), "cars_small <- cars_small %>%",
+                 fixed = TRUE)
+    session$setInputs(done = 1)
+  })
+  out <- capture.output(res <- data_edit(mtcars, code = TRUE))
+  code <- paste(out, collapse = "\n")
+  expect_match(code, "cars_small <- cars_small %>%", fixed = TRUE)
+  env <- new.env()
+  env$cars_small <- cars_small
+  suppressPackageStartupMessages(eval(parse(text = code), envir = env))
+  expect_equal(env$cars_small, res)
+  # an uploaded file is named after the file, a new table is created
+  mock_gadget(function(session) {
+    session$setInputs(open_file = data.frame(name = "my data.csv", size = 1,
+                                             type = "text/csv",
+                                             datapath = file))
+    session$setInputs(`edit1-grid_ops` = grid_batch(op_update("c1", 1, "7")))
+    session$setInputs(done = 1)
+  })
+  expect_output(data_edit(mtcars, code = TRUE), "my.data <- my.data %>%",
+                fixed = TRUE)
+  mock_gadget(function(session) {
+    session$setInputs(open_rows = 2, open_cols = 1, open_new = 1)
+    session$setInputs(`edit1-grid_ops` = grid_batch(op_update("c1", 1, "7")))
+    session$setInputs(done = 1)
+  })
+  out <- capture.output(res <- data_edit(mtcars, code = TRUE))
+  expect_match(out[3], "data <- tibble::tibble(", fixed = TRUE)
+  env <- new.env()
+  suppressPackageStartupMessages(eval(parse(text = out), envir = env))
+  expect_equal(env$data, res, ignore_attr = FALSE)
+})
+
 test_that("Export downloads all data or what is on screen", {
   out <- list()
   download <- function(session) {

@@ -69,8 +69,11 @@ within limits;
 \item \code{"slider"}: a slider and bar for numbers from 0 to 100;
 \item \code{"rating"}: a rating from 0 to 5 stars.
 }
-Use \code{list(type = "slider", min = 0, max = 1, step = 0.1)} or
-\code{list(type = "rating", stars = 10)} to change the defaults.}
+Set the limits of a slider with
+\code{c(type = "slider", min = 0, max = 1, step = 0.05)} and the number
+of stars of a rating with \code{c(type = "rating", stars = 10)} (a
+\code{list()} works too). Values outside the limits are marked in the
+editor and cannot be entered.}
 
 \item{col_stretch}{logical indicating whether columns should be stretched to
 fill the full width of the display, set to FALSE by default.}

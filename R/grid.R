@@ -251,6 +251,10 @@ col_option_spec <- function(o) {
     }
     spec
   }
+  # NAMED VECTOR WITH A TYPE: c(type = "slider", min = 0, max = 1)
+  if (!is.list(o) && "type" %in% names(o)) {
+    o <- as.list(o)
+  }
   if (is.list(o)) {
     type <- tolower(as.character(o$type %||% "number")[1])
     if (type == "color") type <- "colour"
@@ -340,6 +344,21 @@ col_option_convert <- function(x, spec, name) {
     x <- as.character(x)
   }
   x
+}
+
+#' Values of a numeric column outside the limits of its input
+#'
+#' @return number of values below \code{min} or above \code{max}.
+#'
+#' @noRd
+col_option_outside <- function(x, spec) {
+  if (!is.numeric(x) || is.null(spec$type) ||
+      !spec$type %in% c("number", "slider", "rating")) {
+    return(0L)
+  }
+  low <- if (is.null(spec$min)) FALSE else x < spec$min
+  high <- if (is.null(spec$max)) FALSE else x > spec$max
+  sum((low | high) & !is.na(x))
 }
 
 #' Strict date parsing: only full YYYY-MM-DD (or YYYY/MM/DD) values

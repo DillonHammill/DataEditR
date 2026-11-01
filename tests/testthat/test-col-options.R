@@ -112,3 +112,27 @@ test_that("data_edit() prepares columns for every input type", {
   expect_identical(cols[[9]]$filter$type, "range")
   expect_identical(cols[[8]]$option$max, 5)
 })
+
+test_that("slider and rating settings can be given as a named vector", {
+  spec <- DataEditR:::col_option_spec
+  s <- spec(c(type = "slider", min = 0, max = 1, step = 0.05))
+  expect_identical(s[c("type", "min", "max", "step")],
+                   list(type = "slider", min = 0, max = 1, step = 0.05))
+  expect_identical(spec(c(type = "rating", stars = 10))$max, 10)
+  expect_identical(spec(c(type = "number", max = 3))$max, 3)
+})
+
+test_that("values outside the limits of an input are reported", {
+  out <- DataEditR:::col_option_outside
+  expect_identical(out(c(-1, 0.5, 2, NA), list(type = "slider", min = 0, max = 1)), 2L)
+  expect_identical(out(c(1, 2), list(type = "number")), 0L)
+  expect_identical(out(c("a", "b"), list(type = "slider", min = 0, max = 1)), 0L)
+  expect_identical(out(c(1, 2), list(type = "dropdown")), 0L)
+  df <- data.frame(p = c(0.2, 1.5, 3))
+  expect_message(DataEditR:::editr_prepare(df, col_options = list(p = c(type = "slider", max = 1))),
+                 "2 values outside the limits of its slider input \\(0 to 1\\)")
+  expect_silent(DataEditR:::editr_prepare(df, quiet = TRUE,
+                                          col_options = list(p = c(type = "slider", max = 1))))
+  expect_message(DataEditR:::editr_prepare(df, col_options = list(p = c(max = 2))),
+                 "1 value outside the limits of its number input \\(-Inf to 2\\)")
+})

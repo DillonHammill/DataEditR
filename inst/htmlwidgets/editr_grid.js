@@ -498,6 +498,15 @@
           var key = cell.getRow().getIndex() + "|" + cell.getField();
           element.classList.toggle("editr-changed", !!grid.changed[key]);
           var v = cell.getValue();
+          // values already in the data that do not fit the column's input
+          // (outside a slider's limits, not one of the options, ...)
+          var bad = invalidReason(grid.colMap[cell.getField()], v);
+          element.classList.toggle("editr-invalid", !!bad);
+          if (bad) {
+            element.title = "\u201c" + v + "\u201d " + bad;
+          } else if (element.title) {
+            element.removeAttribute("title");
+          }
           if (base === "password") {
             return document.createTextNode(
               v === null || v === undefined ? "" :
@@ -563,21 +572,40 @@
         return wrap;
       }
 
-      // date-time picker; values are "YYYY-MM-DD HH:MM:SS" like R prints them
-      function datetimeEditor(cell, onRendered, success, cancel) {
+      // date-time and time pickers; date-times are "YYYY-MM-DD HH:MM:SS" like
+      // R prints them and times "HH:MM". A partly filled picker keeps the
+      // old value (the browser reports it as empty), an emptied one clears it.
+      function pickerEditor(type) {
+        return function (cell, onRendered, success, cancel) {
+          return pickerInput(type, cell, onRendered, success, cancel);
+        };
+      }
+
+      function pickerInput(type, cell, onRendered, success, cancel) {
         var old = cell.getValue();
         var input = document.createElement("input");
-        input.type = "datetime-local";
-        input.step = "1";
+        input.type = type;
         input.className = "editr-input";
-        input.value = old ? String(old).replace(" ", "T") : "";
+        if (type === "datetime-local") {
+          input.step = "1";
+          input.value = old ? String(old).replace(" ", "T") : "";
+        } else {
+          input.value = old ? String(old) : "";
+        }
         var done = false;
         var commit = function () {
           if (done) return;
           done = true;
-          var v = input.value ? input.value.replace("T", " ") : null;
-          if (v && v.length === 16) v += ":00";
-          if ((v || null) === (old || null)) cancel(); else success(v);
+          if (input.validity && input.validity.badInput) {
+            cancel();
+            return;
+          }
+          var v = input.value || null;
+          if (v && type === "datetime-local") {
+            v = v.replace("T", " ");
+            if (v.length === 16) v += ":00";
+          }
+          if (v === (old || null)) cancel(); else success(v);
         };
         input.addEventListener("blur", commit);
         input.addEventListener("keydown", function (e) {
@@ -784,10 +812,10 @@
           def.editorParams = {elementAttributes: {type: "password"}};
           def.formatter = makeFormatter("password");
         } else if (o && o.type === "datetime") {
-          def.editor = c.readonly ? false : datetimeEditor;
+          def.editor = c.readonly ? false : pickerEditor("datetime-local");
           def.minWidth = Math.max(def.minWidth, 170);
         } else if (o && o.type === "time") {
-          def.editor = c.readonly ? false : "time";
+          def.editor = c.readonly ? false : pickerEditor("time");
         } else if (o && o.type === "textarea") {
           // Enter saves like any other cell; Shift+Enter or Alt+Enter adds a
           // line break
@@ -1940,9 +1968,11 @@
             grid.suppress -= 1;
             return;
           }
-          // "15/03/2024" -> "2024-03-15", "1,234" -> "1234", "yes" -> "TRUE"
+          // "15/03/2024" -> "2024-03-15", "1,234" -> "1234", "yes" -> TRUE,
+          // and an emptied cell is a missing value like a cleared one
           var value = cell.getValue();
-          var normal = normalizeValue(c, value);
+          var normal = typeof value === "string" && value.trim() === "" ? null :
+            normalizeValue(c, value);
           if (normal !== value) {
             grid.suppress += 1;
             cell.setValue(normal);

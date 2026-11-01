@@ -13,7 +13,11 @@ replay <- function(x, x_edit, name = "x") {
 test_that("missing data gives a comment or creation code", {
   expect_identical(data_code(mtcars, NULL), "# No data to generate code for\n")
   d <- data.frame(a = c(1, NA), b = c("x", "y\"z"), c = c(TRUE, FALSE))
-  expect_equal(as.data.frame(replay(NULL, d)), d)
+  expect_identical(replay(NULL, d), d)
+  # the same kind of object is created
+  expect_s3_class(replay(NULL, tibble::as_tibble(d)), "tbl_df")
+  m <- matrix(1:4, 2, dimnames = list(NULL, c("a", "b")))
+  expect_equal(replay(NULL, m), m)
   code <- data_code(NULL, mtcars[1:2, 1:2], name = "cars")
   expect_match(code, "cars <- tibble::tibble(", fixed = TRUE)
   expect_equal(replay(NULL, mtcars[1:2, 1:2]), mtcars[1:2, 1:2])
@@ -89,6 +93,19 @@ test_that("matrices are compared as data frames", {
   m2 <- m
   m2[2, 2] <- 0L
   expect_match(data_code(m, m2), "b = replace(b, 2, 0)", fixed = TRUE)
+  expect_equal(replay(m, m2), m2)
+})
+
+test_that("code for matrices returns a matrix with its row names", {
+  m <- matrix(c(1, 2, 3, 4, 5, 6), nrow = 3,
+              dimnames = list(c("a", "b", "c"), c("x", "y")))
+  m2 <- rbind(m, d = c(7, 8))
+  m2["a", "x"] <- 10
+  code <- data_code(m, m2)
+  expect_match(code, "as.data.frame() %>%", fixed = TRUE)
+  expect_true(endsWith(code, "as.matrix()\n"))
+  expect_identical(replay(m, m2), m2)
+  expect_identical(data_code(m, m), "# No changes detected\n")
 })
 
 test_that("columns are matched by position and name", {
@@ -123,4 +140,35 @@ test_that("values and names are quoted for R code", {
   expect_false(DataEditR:::data_code_has_rownames(matrix(1:2)))
   expect_false(DataEditR:::data_code_has_rownames(data.frame(a = 1:2)))
   expect_true(DataEditR:::data_code_has_rownames(mtcars))
+})
+
+test_that("factor columns are turned into text and back in the code", {
+  x <- data.frame(name = c("a", "b"), grp = factor(c("A", "B")))
+  # returned as text (col_factor = FALSE)
+  y <- x
+  y$grp <- as.character(y$grp)
+  y$grp[2] <- "C"
+  code <- data_code(x, y)
+  expect_match(code, "mutate(grp = as.character(grp))", fixed = TRUE)
+  expect_identical(replay(x, y), y)
+  # returned as factors (col_factor = TRUE), with an added row
+  z <- rbind(x, data.frame(name = "c", grp = "C"))
+  z$name <- factor(z$name)
+  z$grp <- factor(as.character(z$grp))
+  expect_identical(replay(x, z), z)
+  # a new value in a factor that stays a factor
+  v <- x
+  v$grp <- factor(c("A", "C"))
+  expect_identical(replay(x, v), v)
+  # only levels change
+  w <- x
+  w$name <- factor(w$name)
+  expect_identical(replay(x, w), w)
+})
+
+test_that("a single added column is one mutate()", {
+  x <- data.frame(a = 1:2)
+  y <- cbind(x, b = c("u", "v"))
+  expect_match(data_code(x, y), 'mutate(b = c("u", "v"))', fixed = TRUE)
+  expect_identical(replay(x, y), y)
 })

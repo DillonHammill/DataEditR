@@ -436,3 +436,11 @@ input.editr-rename {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
+
+/* values that do not fit the column's input: a red line under the cell */
+.editr_grid .tabulator .tabulator-cell.editr-invalid {
+  background-image: linear-gradient(#DC2626, #DC2626);
+  background-size: 100% 2px;
+  background-position: bottom;
+  background-repeat: no-repeat;
+}

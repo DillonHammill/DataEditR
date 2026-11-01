@@ -1,7 +1,8 @@
 // Shared helpers for driving the DataEditR grid in headless Chrome.
 const puppeteer = require("puppeteer-core");
 
-const GRID = "edit1-grid";
+let GRID = "edit1-grid";
+function useGrid(id) { GRID = id; }
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 let failures = 0;
@@ -23,10 +24,12 @@ async function launch(port, readyTimeout = 30000) {
   });
   const page = await browser.newPage();
   page.on("pageerror", (e) => { failures += 1; console.log("  PAGE ERROR " + e.message); });
-  page.on("console", (m) => {
-    if (m.type() === "error" && !/favicon|logo|ERR_|Failed to load resource/.test(m.text())) {
-      console.log("  console error: " + m.text());
-    }
+  page.on("console", async (m) => {
+    if (m.type() !== "error" || /favicon|logo|ERR_|Failed to load resource/.test(m.text())) return;
+    // print the message of Error objects rather than "JSHandle@error"
+    const parts = await Promise.all(m.args().map((a) => a.evaluate((v) =>
+      v instanceof Error ? v.message + " " + (v.stack || "").split("\n")[1] : String(v)).catch(() => "?")));
+    console.log("  console error: " + (parts.join(" ") || m.text()));
   });
   for (let i = 0; i < 60; i++) {
     try {
@@ -164,7 +167,7 @@ async function changedKeys(page) {
 }
 
 module.exports = {
-  launch, settle, gridData, columns, editCell, rowMenu, headerMenu, renameColumn,
+  launch, settle, gridData, useGrid, columns, editCell, rowMenu, headerMenu, renameColumn,
   selectCell, paste, key, changedKeys, check, sleep, cellCentre,
   failures: () => failures,
 };
