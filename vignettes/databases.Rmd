@@ -143,7 +143,11 @@ data_edit(db_table(cars_and_owners, table = "cars", key = "id"))
 
 ## 4. Committing changes
 
-Nothing is written to the database while you edit. When you press `Done`, the editor shows a summary of the rows that will be updated, inserted and deleted and asks you to confirm. Choose `Keep editing` to go back to the editor or `Commit` to write the changes.
+Nothing is written to the database while you edit. When you press `Done`, the editor shows a summary of the rows that will be updated, inserted and deleted and asks you to confirm. Choose `Keep editing` to go back to the editor or `Commit` to write the changes. The `Code` panel shows the `rows_update()`, `rows_append()` and `rows_delete()` calls that make the same changes.
+
+```{r, echo = FALSE, fig.align = "center", out.width = "100%", eval = TRUE}
+screenshot("db-commit.gif")
+```
 
 ```{r, echo = FALSE, fig.align = "center", out.width = "100%", eval = TRUE}
 screenshot("db-commit.png")

@@ -45,7 +45,11 @@ install_github("DillonHammill/DataEditR")
 ## Usage
 
 Supply your data to `data_edit()` to open it in the data editor, make
-your changes and press `Done` to get the edited data back:
+your changes and press `Done` to get the edited data back. The animation
+below edits cells, fills down a selection, adds a row, renames a column,
+filters rows, hides columns, finds values, undoes and redoes, reviews
+and reverts changes, shows the code that reproduces the edits and
+returns or saves the data from the `Done` menu:
 
 ``` r
 library(DataEditR)

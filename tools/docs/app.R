@@ -14,6 +14,8 @@ res <- switch(
   scenario,
   main = data_edit(mtcars, viewer = noview, quiet = TRUE,
                    save_as = file.path(out, "mtcars.csv")),
+  empty = data_edit(viewer = noview, quiet = TRUE),
+  size = data_edit(c(20, 15), viewer = noview, quiet = TRUE),
   template = data_edit(c("Date", "Country", "Temperature", "Rainfall",
                          "Visibility", "Humidity"),
                        viewer = noview, quiet = TRUE),
@@ -42,6 +44,8 @@ res <- switch(
                      title = "Car data", logo = logo, logo_size = 26),
   track = data_edit(mtcars, viewer = noview, quiet = TRUE, track = TRUE),
   gif = data_edit(mtcars, viewer = noview, quiet = TRUE, track = TRUE),
+  readme = data_edit(mtcars, viewer = noview, quiet = TRUE, track = TRUE,
+                     save_as = file.path(out, "mtcars_edited.csv")),
   stretch = data_edit(iris[1:20, ], viewer = noview, quiet = TRUE,
                       col_stretch = TRUE),
   db = {

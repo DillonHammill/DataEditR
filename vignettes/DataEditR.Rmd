@@ -98,19 +98,21 @@ The name of an object in your R session can also be supplied as a character stri
 
 ### 2.1 Open other data without leaving the editor
 
-The `Open` menu in the toolbar switches to other data without having to close the data editor. You can load any data frame, matrix or `dbplyr` table from your R session by name, upload a file (read with `read_fun` and `read_args`) or create a new empty table with a chosen number of rows and columns.
+The `Open` menu in the toolbar switches to other data without having to close the data editor. You can load any data frame, matrix or `dbplyr` table from your R session by name, upload a file (read with `read_fun` and `read_args`) or create a new empty table with a chosen number of rows and columns. Opening other data replaces the data in the editor, and `Done` returns the data that is open at the time.
 
 ```{r, echo = FALSE, fig.align = "center", out.width = "100%"}
-screenshot("open-menu.png")
+screenshot("open-data.gif")
 ```
 
 ## 3. Data Manipulation
 
-`data_edit()` provides a variety of spreadsheet-style tools to edit your data. We will explore the use of each of these tools below. Many of them can be reached through the keyboard; press `?` inside the data editor or click the `?` button in the toolbar to see the full list of shortcuts.
+`data_edit()` provides a variety of spreadsheet-style tools to edit your data. We will explore the use of each of these tools below, using `mtcars` as an example:
 
-```{r, echo = FALSE, fig.align = "center", out.width = "100%"}
-screenshot("editing.gif")
+```{r, eval = FALSE}
+data_edit(mtcars)
 ```
+
+Many of the tools can also be reached through the keyboard; press `?` inside the data editor or click the `?` button in the toolbar to see the full list of shortcuts (see [Keyboard shortcuts](#keyboard-shortcuts)).
 
 ### 3.1 Edit cells
 
@@ -119,7 +121,7 @@ Double-click a cell to edit it, then press `Enter` to save the new value or `Esc
 If you type something that does not fit a number or date column, `data_edit()` asks what you would like to do instead of silently converting the whole column to text. You can store a missing value, convert the column to text or cancel the edit.
 
 ```{r, echo = FALSE, fig.align = "center", out.width = "100%"}
-screenshot("type-guard.png")
+screenshot("edit-cells.gif")
 ```
 
 ### 3.2 Select, copy, paste, clear and fill
@@ -127,19 +129,21 @@ screenshot("type-guard.png")
 Click and drag (or `Shift` + click) to select a range of cells. The status bar shows the sum, mean and count of the selected numbers, just like a spreadsheet. Selected cells can be copied (`Ctrl+C`) and pasted (`Ctrl+V`) within the data editor or to and from other software such as Excel, cleared with `Delete`, or filled down with the value in the first row of the selection (`Ctrl+D`). A paste, fill or clear is a single step that can be undone. Click a column header to select the whole column.
 
 ```{r, echo = FALSE, fig.align = "center", out.width = "100%"}
-screenshot("range.png")
+screenshot("ranges.gif")
 ```
+
+`Ctrl+D` replaces the "drag to fill" handle of earlier versions of **DataEditR**: select the cell to copy together with the cells below it and press `Ctrl+D` (or choose `Fill down` from the right-click menu).
 
 ### 3.3 Undo and redo
 
-Every change can be undone with `Ctrl+Z` (or the undo button in the toolbar) and redone with `Ctrl+Y`. This includes edits, pasted ranges, added or removed rows and columns, renamed columns and changes reverted from the review panel.
+Every change can be undone with `Ctrl+Z` (or the undo button in the toolbar) and redone with `Ctrl+Y` (or the redo button). This includes edits, pasted ranges, cleared or filled cells, added or removed rows and columns, renamed columns and changes reverted from the review panel. A paste, fill or clear of many cells is undone in a single step, as shown at the end of the animation above. Undo and redo are also available from the right-click menus.
 
 ### 3.4 Addition or removal of rows or columns
 
 Rows or columns can be added to the data from within the data editor by right clicking on a cell or a column header. This will display a context menu with the options to insert rows above or below, delete the selected rows, fill down, or rename, insert, hide or delete columns.
 
 ```{r, echo = FALSE, fig.align = "center", out.width = "100%"}
-screenshot("row-menu.png")
+screenshot("rows-columns.gif")
 ```
 
 ```{r, echo = FALSE, fig.align = "center", out.width = "100%"}
@@ -161,7 +165,7 @@ data_edit(mtcars,
 `data_edit()` has full support for editing row and column names. Double-click a column header (or choose `Rename column` from its menu) to rename it; the new name must be unique and cannot be empty. Row names are edited like any other cell in the `row names` column. The row indices cannot be edited.
 
 ```{r, echo = FALSE, fig.align = "center", out.width = "100%"}
-screenshot("rename.png")
+screenshot("rename-resize.gif")
 ```
 
 To prevent users from editing column names, set `col_names = FALSE` or supply the names of the columns that cannot be renamed. For example, if we only wanted to prevent users from renaming the `mpg` column:
@@ -173,14 +177,14 @@ data_edit(mtcars,
 
 ### 3.6 Resize columns
 
-To resize columns, go to the right-hand border of the header of that column and drag the cursor to the desired width.
+To resize columns, go to the right-hand border of the header of that column and drag the cursor to the desired width (shown at the end of the animation above). Columns keep their width while you edit, including when changes are undone or redone. To make the columns fill the width of the editor instead, see [Stretch columns to fill page](#stretch-columns-to-fill-page).
 
 ### 3.7 Find values
 
 Press `Ctrl+F` or click `Find in data` to search the rows and columns on screen. The first matching cell is selected and the number of matches is shown (e.g. `1 of 7`); press `Enter` to jump to the next match, `Shift+Enter` to go back and `Esc` to clear the search.
 
 ```{r, echo = FALSE, fig.align = "center", out.width = "100%"}
-screenshot("find.png")
+screenshot("find.gif")
 ```
 
 ### 3.8 Append columns or rows
@@ -246,10 +250,18 @@ If no data is supplied to `data_edit()` an empty data.frame will be constructed 
 data_edit()
 ```
 
+```{r, echo = FALSE, fig.align = "center", out.width = "100%"}
+screenshot("template-empty.png")
+```
+
 The dimensions of the template can be controlled by supplying a vector of the form `c(nrow, ncol)` to indicate the number of rows and columns to use.
 
 ```{r, eval = FALSE}
 data_edit(c(20, 15))
+```
+
+```{r, echo = FALSE, fig.align = "center", out.width = "100%"}
+screenshot("template-size.png")
 ```
 
 ### 4.2 Start with a labelled template
@@ -261,7 +273,7 @@ data_edit(c("Date", "Country", "Temperature", "Rainfall", "Visibility", "Humidit
 ```
 
 ```{r, echo = FALSE, fig.align = "center", out.width = "100%"}
-screenshot("template.png")
+screenshot("template.gif")
 ```
 
 The columns of a template are typed automatically when the data is returned, so a column in which you only entered numbers is returned as a numeric column.
@@ -269,10 +281,6 @@ The columns of a template are typed automatically when the data is returned, so 
 ## 5. Data Filtering
 
 `data_edit()` makes it easy to view and edit a subset of your data: filter rows by typing under the column headers and show or hide columns from the `Columns` menu. Edits made to a subset are applied directly to the complete dataset.
-
-```{r, echo = FALSE, fig.align = "center", out.width = "100%"}
-screenshot("filtering.gif")
-```
 
 ### 5.1 Row filtering
 
@@ -285,7 +293,7 @@ Every column has a filter box under its name and the box depends on the type of 
 Rows must match every filter to be shown. Active filters are listed as chips in the toolbar; click the `x` on a chip to remove that filter or `Clear filters` to remove them all. The status bar shows how many of the rows are on screen.
 
 ```{r, echo = FALSE, fig.align = "center", out.width = "100%"}
-screenshot("filters.png")
+screenshot("filter-rows.gif")
 ```
 
 ### 5.2 Column selection
@@ -293,19 +301,21 @@ screenshot("filters.png")
 Click `Columns` in the toolbar to show or hide columns, or choose `Hide column` from the menu of a column header. `Show all` and `Hide all` change every column at once, and the button shows how many columns are visible.
 
 ```{r, echo = FALSE, fig.align = "center", out.width = "100%"}
-screenshot("columns-menu.png")
+screenshot("select-columns.gif")
 ```
+
+Columns can also be hidden before the data editor opens (`col_hide`, see [Read-only and hidden columns](#read-only-and-hidden-columns)); those columns are not listed in the `Columns` menu and cannot be shown by the user.
 
 ### 5.3 Edits apply to the complete dataset
 
-Filtered rows and hidden columns are only *views* onto your data, so any change you make while a filter is active is made directly to the complete dataset, without requiring any additional action. Rows added while a filter is active stay visible until the filters change.
+Filtered rows and hidden columns are only *views* onto your data, so any change you make while a filter is active is made directly to the complete dataset, without requiring any additional action (earlier versions of **DataEditR** needed a *sync* button for this). Rows added while a filter is active stay visible until the filters change, so you can fill them in even if they do not match the filters yet.
 
 ### 5.4 Return or export data subsets
 
 `data_edit()` will return the complete dataset as an R object for downstream use by default. If you would like to return just the rows and columns that are on screen, open the menu next to the `Done` button and choose `Only what's on screen` before pressing `Done`. The menu shows the size of the data that each option returns.
 
 ```{r, echo = FALSE, fig.align = "center", out.width = "100%"}
-screenshot("done-menu.png")
+screenshot("done-export.gif")
 ```
 
 ```{r, eval = FALSE}
@@ -361,14 +371,40 @@ screenshot("export-menu.png")
 
 `data_edit()` can also be used to accept complex inputs from users and these inputs can be restricted by adding columns with checkboxes, dropdown menus, date pickers or password fields. To use this feature, the options for the columns must be supplied in a named list through the `col_options` argument. Columns with options can still be renamed, and users can still add or remove other columns.
 
+The animations in this section use the following data, with all four kinds of input and a read-only `mpg` column:
+
+```{r, eval = FALSE}
+cars <- data.frame(
+  car = rownames(mtcars)[1:10],
+  mpg = mtcars$mpg[1:10],
+  fast = mtcars$mpg[1:10] > 21,
+  colour = c("red", "blue", "black", "green", "red",
+             "orange", "blue", "black", "green", "red"),
+  bought = as.Date("2024-01-15") + c(0, 31, 45, 90, 120, 151, 200, 230, 260, 301),
+  pin = c("4821", "1937", "5560", "0042", "7713",
+          "2468", "1357", "9090", "3141", "2718")
+)
+
+data_edit(cars,
+          col_options = list(fast = c(TRUE, FALSE),
+                             colour = c("red", "blue", "orange", "green", "black"),
+                             bought = "date",
+                             pin = "password"),
+          col_readonly = "mpg")
+```
+
 ### 7.1 Checkboxes
 
-Checkboxes can be used to obtain `TRUE` or `FALSE` value inputs from users. Double-click a checkbox cell to change its value; ticked cells are returned as `TRUE`.
+Checkboxes can be used to obtain `TRUE` or `FALSE` value inputs from users. Double-click a checkbox cell and click the box (or press `Space`) to change its value; ticked cells are returned as `TRUE`. A new checkbox column can be added to existing data with `col_bind`:
 
 ```{r, eval = FALSE}
 data_edit(mtcars,
           col_bind = "fast",
           col_options = list(fast = c(TRUE, FALSE)))
+```
+
+```{r, echo = FALSE, fig.align = "center", out.width = "100%"}
+screenshot("col-checkbox.gif")
 ```
 
 ### 7.2 Dropdown menus
@@ -387,8 +423,10 @@ data_edit(mtcars,
 ```
 
 ```{r, echo = FALSE, fig.align = "center", out.width = "100%"}
-screenshot("col-options.png")
+screenshot("col-dropdown.gif")
 ```
+
+Typing in a dropdown cell narrows the list down to the matching options, and only the listed options can be entered.
 
 ### 7.3 Dates
 
@@ -400,7 +438,7 @@ data_edit(c("date", "time", "region", "temperature"),
 ```
 
 ```{r, echo = FALSE, fig.align = "center", out.width = "100%"}
-screenshot("col-options-date.png")
+screenshot("col-date.gif")
 ```
 
 ### 7.4 Passwords
@@ -411,6 +449,12 @@ If you would like to keep your data entries a secret, you can convert relevant c
 data_edit(c("date", "time", "user", "password"),
           col_options = list(password = "password"))
 ```
+
+```{r, echo = FALSE, fig.align = "center", out.width = "100%"}
+screenshot("col-password.gif")
+```
+
+The values are only hidden on screen: they are returned (and saved with `save_as`) as plain text.
 
 ## 8. Customisation
 
@@ -489,11 +533,7 @@ data_edit(c("Name", "Email", "Attending"),
 The status bar summarises your changes (e.g. `2 cells edited · 1 row added`) and the `Review changes` button shows how many changes there are. Click it to open the review panel, which lists every edited, added, removed or renamed cell, row and column with its old and new value. Click the name of a row to jump to it in the grid, `Revert` (or `Remove` / `Restore`) to undo that one change, or `Revert all` to go back to the original data. Reverts can be undone with `Ctrl+Z` like any other change.
 
 ```{r, echo = FALSE, fig.align = "center", out.width = "100%"}
-screenshot("reviewing.gif")
-```
-
-```{r, echo = FALSE, fig.align = "center", out.width = "100%"}
-screenshot("review.png")
+screenshot("review.gif")
 ```
 
 ### 9.2 Highlight changed cells
@@ -514,6 +554,35 @@ You can pass any valid CSS color to `track` to customise the highlight colour. F
 ```{r, eval = FALSE}
 data_edit(mtcars,
           track = "red")
+```
+
+### 9.3 Change tracking in shiny modules
+
+Change tracking is also available when the data editor is used in your own shiny applications through `dataEditServer()`. `dataEditChanges()` returns a summary of the changes that have not been saved yet, and `dataEditCommit()` saves them, after which the highlights are cleared:
+
+```{r, eval = FALSE}
+library(shiny)
+library(DataEditR)
+
+ui <- fluidPage(
+  actionButton("save", "Save"),
+  textOutput("unsaved"),
+  dataEditUI("edit")
+)
+
+server <- function(input, output, session) {
+  edited <- dataEditServer("edit",
+                           data = reactive(mtcars),
+                           track = TRUE)
+  output$unsaved <- renderText({
+    paste(dataEditChanges(edited)$total, "unsaved changes")
+  })
+  observeEvent(input$save, {
+    dataEditCommit(edited)
+  })
+}
+
+shinyApp(ui, server)
 ```
 
 ## 10. Keyboard shortcuts
@@ -554,7 +623,7 @@ data_edit(tbl(con, "cars") %>% filter(cyl == 6))
 ```
 
 ```{r, echo = FALSE, fig.align = "center", out.width = "100%"}
-screenshot("db-commit.png")
+screenshot("db-commit.gif")
 ```
 
 The same editor can be added to your own shiny apps, where `dataEditCommit()` writes the changes to the database (for example when a *Save* button is pressed) and `dataEditChanges()` summarises what will be written. See `vignette("databases", package = "DataEditR")` for how to connect to different databases, how rows are matched to the database, saving changes from shiny apps and what happens when someone else changes the data while you are editing it.

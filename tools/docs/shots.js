@@ -396,6 +396,14 @@ const scenarios = {
     });
     await done(page);
   },
+  async empty(page) {
+    await shot(page, "template-empty");
+    await done(page);
+  },
+  async size(page) {
+    await shot(page, "template-size");
+    await done(page);
+  },
   async template(page) {
     await shot(page, "template");
     await done(page);
