@@ -11,7 +11,10 @@ Authors@R: c(
     person(given = "Oli",
            family = "Folkerd",
            role = c("ctb", "cph"),
-           comment = "Author of the included Tabulator library"))
+           comment = "Author of the included Tabulator library"),
+    person(given = "Lucide Contributors",
+           role = "cph",
+           comment = "Icons based on Lucide"))
 Description: An interactive editor built on the 'Tabulator' JavaScript 
   library to allow the interactive viewing, entering, filtering and editing of 
   data in R, including tables stored in databases 
@@ -30,6 +33,8 @@ Imports:
   stats,
   utils
 License: GPL-2
+Copyright: See the file COPYRIGHTS for the copyright holders and licences
+  of the bundled Tabulator library and Lucide icons.
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3

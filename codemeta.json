@@ -38,6 +38,10 @@
       "@type": "Person",
       "givenName": "Oli",
       "familyName": "Folkerd"
+    },
+    {
+      "@type": "Organization",
+      "name": "Lucide Contributors"
     }
   ],
   "funder": {},
