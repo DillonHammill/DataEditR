@@ -1850,7 +1850,8 @@
 
       // Excel-like: a single selected cell takes the whole block; a larger
       // selection that is a multiple of the block is filled by repeating it.
-      // Rows past the end are added when rows can be added.
+      // Rows past the end are added when rows can be added, and columns
+      // past the last column when columns can be added.
       function pasteRange(parsed) {
         var table = grid.table;
         var mod = table.modules.selectRange;
@@ -1872,11 +1873,25 @@
         var nRows = selRows > dataRows && selRows % dataRows === 0 ? selRows : dataRows;
         var nCols = selCols > dataCols && selCols % dataCols === 0 ? selCols : dataCols;
 
-        // target columns (the "+" column and anything past it are ignored)
+        // target columns: the columns from the selection on, then new
+        // columns (V1, V2, ...) for the rest of a wider block, or nothing
+        // when columns cannot be added
+        var room = 0;
+        for (var q = c0; q < cols.length; q++) {
+          if (grid.colMap[cols[q].getField()]) room += 1;
+        }
+        var titles = currentTitles();
         var targets = [];
         for (var j = 0; j < nCols; j++) {
-          var col = cols[c0 + j];
+          var col = j < room ? cols[c0 + j] : null;
           var c = col && grid.colMap[col.getField()];
+          if (!c && j >= room && grid.opts.col_edit) {
+            var title = uniqueName("V", titles);
+            titles.push(title);
+            c = {field: null, title: title, kind: "character", readonly: false,
+                 rename: true, frozen: false, empty: true,
+                 filter: {type: "text"}, added: true};
+          }
           targets.push(c ? c : null);
         }
         var existing = rows.slice(r0, r0 + nRows);
@@ -1899,7 +1914,14 @@
           });
           cells.push({c: c, values: vals});
         });
+        writeBlock(bounds.start.getComponent(), existing, extra, cells,
+                   {label: "paste"});
+        return [];
+      }
 
+      // check the values going into each column, then write them, asking
+      // first when some do not fit their column
+      function writeBlock(anchor, existing, extra, cells, how) {
         var problems = [];
         cells.forEach(function (col) {
           var bad = col.values.filter(function (v) {
@@ -1910,23 +1932,44 @@
                            reason: invalidReason(col.c, bad[0])});
           }
         });
-
         var apply = function (act) {
-          applyPaste(existing, extra, cells, act);
+          applyPaste(existing, extra, cells, act, how);
         };
         if (problems.length) {
-          pasteGuard(bounds.start.getComponent(), problems, apply);
+          pasteGuard(anchor, problems, apply, how.label);
         } else {
-          apply("paste");
+          apply(how.label);
         }
-        return [];
       }
 
-      // write a checked paste: add rows, update cells, report one batch of ops
-      // (one undo step) and select the pasted block
-      function applyPaste(existing, extra, cells, act) {
+      // write a checked paste or fill: add columns and rows, update cells,
+      // report one batch of ops (one undo step) and select what was written
+      // (how.select: [first row, last row, first field, last field])
+      function applyPaste(existing, extra, cells, act, how) {
         var table = grid.table;
+        how = how || {label: "paste"};
+        var label = how.label;
         if (act === "cancel") return;
+        // NEW COLUMNS AFTER THE LAST COLUMN (A PASTE WIDER THAN THE TABLE)
+        var after = null;
+        cells.forEach(function (col) {
+          if (!col.c.added || col.c.field) return;
+          if (!after) {
+            var real = realColumns();
+            after = real.length ? real[real.length - 1].getField() : null;
+          }
+          var cid = "c" + grid.nextCol++;
+          col.c.field = cid;
+          grid.colMap[cid] = col.c;
+          if (after) {
+            table.addColumn(buildColumn(col.c), false, after);
+          } else {
+            table.addColumn(buildColumn(col.c), true);
+          }
+          emit({type: "insert_col", cid: cid, name: col.c.title,
+                anchor: after, right: true}, label);
+          after = cid;
+        });
         if (act === "text") {
           cells.forEach(function (col) {
             var bad = col.values.some(function (v) {
@@ -1990,33 +2033,219 @@
         });
         table.restoreRedraw();
         if (newIds.length) {
-          emit({type: "insert_rows", ids: newIds, anchor: null, below: true}, "paste");
+          emit({type: "insert_rows", ids: newIds, anchor: null, below: true}, label);
         }
-        ops.forEach(function (op) { emit(op, "paste"); });
+        ops.forEach(function (op) { emit(op, label); });
         var done = newRows.length ? table.addData(newRows, false) : Promise.resolve();
         Promise.resolve(done).then(function () {
           var fields = cells.map(function (col) { return col.c.field; });
-          if (!fields.length || !ids.length || !table.addRange) return;
-          var first = table.getRow(ids[0]), last = table.getRow(ids[ids.length - 1]);
-          if (!first || !last) return;
+          var sel = how.select;
+          if (!sel) {
+            if (!fields.length || !ids.length) return;
+            sel = [table.getRow(ids[0]), table.getRow(ids[ids.length - 1]),
+                   fields[0], fields[fields.length - 1]];
+          }
+          if (!table.addRange || !sel[0] || !sel[1]) return;
           table.getRanges().forEach(function (r) { r.remove(); });
-          table.addRange(first.getCell(fields[0]), last.getCell(fields[fields.length - 1]));
+          table.addRange(sel[0].getCell(sel[2]), sel[1].getCell(sel[3]));
           updateStatus();
           selectionSummary();
         });
       }
 
+      /* ---------------------------------------------------------------- */
+      /* fill handle                                                       */
+      /* ---------------------------------------------------------------- */
+
+      // Values for the cells a selection is dragged over (pos: positions
+      // counted from the first selected cell; -1 is the cell before it):
+      // two or more numbers or dates a fixed step apart, or text ending in
+      // such numbers (Week 1, Week 2), carry on as a series; anything else
+      // is repeated. copy = TRUE repeats series too.
+      function fillValues(src, pos, copy) {
+        var k = src.length;
+        var series = copy || k < 2 ? null : fillSeries(src);
+        return pos.map(function (p) {
+          return series ? series(p) : src[((p % k) + k) % k];
+        });
+      }
+
+      function fillSeries(src) {
+        var steady = function (xs) {
+          var step = xs[1] - xs[0];
+          if (!isFinite(step) || step === 0) return null;
+          for (var i = 2; i < xs.length; i++) {
+            if (Math.abs(xs[i] - xs[i - 1] - step) > 1e-9 * Math.max(1, Math.abs(step))) {
+              return null;
+            }
+          }
+          return step;
+        };
+        var decimals = function (x) {
+          var m = /\.(\d+)$/.exec(String(x));
+          return m ? m[1].length : 0;
+        };
+        var round = function (x, d) {
+          return Number(x.toFixed(Math.min(d, 15)));
+        };
+        // numbers
+        if (src.every(function (v) { return typeof v === "number" && isFinite(v); })) {
+          var step = steady(src);
+          if (step === null) return null;
+          var d = Math.max.apply(null, src.map(decimals));
+          return function (p) { return round(src[0] + step * p, d); };
+        }
+        if (!src.every(function (v) { return typeof v === "string"; })) return null;
+        // dates: months apart on the same day, or days apart
+        var dates = src.map(function (v) {
+          return /^\d{4}-\d{2}-\d{2}$/.test(v) && validDate(v) ? v : null;
+        });
+        if (dates.every(function (v) { return v; })) {
+          var ymd = dates.map(function (v) { return v.split("-").map(Number); });
+          var months = ymd.map(function (x) { return x[0] * 12 + x[1] - 1; });
+          var mstep = steady(months);
+          var lastDay = function (y, mo) { return new Date(Date.UTC(y, mo + 1, 0)).getUTCDate(); };
+          var ends = ymd.every(function (x) { return x[2] === lastDay(x[0], x[1] - 1); });
+          if (mstep !== null && (ends || ymd.every(function (x) { return x[2] === ymd[0][2]; }))) {
+            return function (p) {
+              var m = months[0] + mstep * p;
+              var y = Math.floor(m / 12), mo = m - y * 12;
+              // month ends stay month ends; the 31st becomes the last day of
+              // shorter months
+              var day = ends ? lastDay(y, mo) : Math.min(ymd[0][2], lastDay(y, mo));
+              return y + "-" + pad2(mo + 1) + "-" + pad2(day);
+            };
+          }
+          var days = ymd.map(function (x) { return Date.UTC(x[0], x[1] - 1, x[2]) / 864e5; });
+          var dstep = steady(days);
+          if (dstep === null) return null;
+          return function (p) {
+            return new Date((days[0] + dstep * p) * 864e5).toISOString().slice(0, 10);
+          };
+        }
+        // text ending in a number
+        var parts = src.map(function (v) { return /^(.*?)(\d+)$/.exec(v); });
+        if (parts.every(function (m) { return m && m[1] === parts[0][1]; })) {
+          var nums = parts.map(function (m) { return Number(m[2]); });
+          var nstep = steady(nums);
+          if (nstep === null) return null;
+          var width = parts[0][2].charAt(0) === "0" ? parts[0][2].length : 0;
+          return function (p) {
+            var n = nums[0] + nstep * p;
+            if (n < 0) return src[((p % src.length) + src.length) % src.length];
+            var t = String(n);
+            while (t.length < width) t = "0" + t;
+            return parts[0][1] + t;
+          };
+        }
+        return null;
+      }
+
+      // text of a value for another column (filling across columns)
+      function fillText(v) {
+        if (v === null || v === undefined) return v;
+        if (typeof v === "boolean") return v ? "TRUE" : "FALSE";
+        return String(v);
+      }
+
+      // Tabulator draws the fill handle (selectableRangeFill) and the
+      // preview of the cells it is dragged over; we work out the values and
+      // write them like a paste: one undo step, logged as a fill, values
+      // that do not fit a column are asked about. Hold Ctrl to copy without
+      // carrying on a series.
+      function patchFillHandle(table) {
+        var mod = table.modules.selectRange;
+        var fh = mod && mod.fillHandle;
+        if (!fh) return;
+        fh.element.setAttribute("title", "Drag to fill (Ctrl: copy without a series)");
+        fh.handleMouseUp = function (e) {
+          fh.isActive = false;
+          fh.unsubscribe("cell-mousemove", fh.handleCellMouseMove);
+          document.removeEventListener("mouseup", fh.handleMouseUp);
+          var src = fh.source;
+          var target = fh.constructor.extendAlongAxis(src, fh.pointerRow, fh.pointerCol);
+          if (fh.preview) {
+            fh.preview.destroy();
+            fh.preview = null;
+          }
+          fillArea(src, target, !!(e && (e.ctrlKey || e.metaKey)));
+        };
+      }
+
+      function fillArea(src, target, copy) {
+        var mod = grid.table.modules.selectRange;
+        var rows = mod.getTableRows();
+        var cols = mod.getTableColumns();
+        var down = target.top !== src.top || target.bottom !== src.bottom;
+        var across = target.left !== src.left || target.right !== src.right;
+        if (!down && !across) return;
+        var fieldAt = function (j) { return cols[j] && cols[j].getField(); };
+        var defAt = function (j) { return grid.colMap[fieldAt(j)]; };
+        var outside = function (lo, hi, a, b) {
+          var out = [];
+          for (var i = lo; i <= hi; i++) if (i < a || i > b) out.push(i);
+          return out;
+        };
+        var existing, cells = [];
+        if (down) {
+          var tRows = outside(target.top, target.bottom, src.top, src.bottom);
+          existing = tRows.map(function (r) { return rows[r]; });
+          var pos = tRows.map(function (r) { return r - src.top; });
+          for (var j = src.left; j <= src.right; j++) {
+            var c = defAt(j);
+            if (!c || c.readonly) continue;
+            var vals = [];
+            for (var r = src.top; r <= src.bottom; r++) vals.push(rows[r].getData()[c.field]);
+            cells.push({c: c, values: fillValues(vals, pos, copy)});
+          }
+        } else {
+          existing = [];
+          var srcRows = [];
+          for (var r2 = src.top; r2 <= src.bottom; r2++) {
+            existing.push(rows[r2]);
+            var v2 = [];
+            for (var j2 = src.left; j2 <= src.right; j2++) {
+              var d2 = defAt(j2);
+              v2.push(d2 ? rows[r2].getData()[d2.field] : null);
+            }
+            srcRows.push(v2);
+          }
+          outside(target.left, target.right, src.left, src.right).forEach(function (tc) {
+            var c = defAt(tc);
+            if (!c || c.readonly) return;
+            var values = srcRows.map(function (v) {
+              var x = fillText(fillValues(v, [tc - src.left], copy)[0]);
+              return isBlank(x) ? null : normalizeValue(c, x);
+            });
+            cells.push({c: c, values: values});
+          });
+        }
+        if (!cells.length || !existing.length) return;
+        // SELECT THE SELECTION AND WHAT WAS FILLED (REAL COLUMNS ONLY)
+        var lo = target.left, hi = target.right;
+        while (lo < hi && !defAt(lo)) lo++;
+        while (hi > lo && !defAt(hi)) hi--;
+        writeBlock(existing[0].getComponent().getCell(cells[0].c.field), existing, 0, cells, {
+          label: "fill",
+          select: [rows[target.top].getComponent(), rows[target.bottom].getComponent(),
+                   fieldAt(lo), fieldAt(hi)]
+        });
+      }
+
       // one question for all the pasted values that do not fit their columns
-      function pasteGuard(anchorCell, problems, decide) {
+      function pasteGuard(anchorCell, problems, decide, label) {
+        var fill = label === "fill";
         var total = problems.reduce(function (a, p) { return a + p.n; }, 0);
         var text = problems.every(function (p) { return canBecomeText(p.c); });
         var box = document.createElement("div");
         box.className = "editr-popup editr-guard";
         box.setAttribute("role", "alertdialog");
-        box.setAttribute("aria-label", "Pasted values do not match the column types");
+        box.setAttribute("aria-label", (fill ? "Filled" : "Pasted") +
+                         " values do not match the column types");
         box.innerHTML =
           '<div class="editr-guard-msg"><span class="editr-guard-icon">' + ICONS.alert +
-          '</span><div><div class="editr-guard-title">' + total + ' pasted value' +
+          '</span><div><div class="editr-guard-title">' + total +
+          (fill ? ' filled value' : ' pasted value') +
           (total === 1 ? " does" : "s do") + ' not fit ' +
           (problems.length === 1 ? "the column" : "their columns") + '</div>' +
           problems.map(function (p) {
@@ -2029,7 +2258,8 @@
           (text ? '<button type="button" class="btn btn-outline-secondary btn-sm" data-act="text">Convert ' +
             (problems.length === 1 ? escapeHTML(problems[0].c.title) : "those columns") +
             ' to text</button>' : '') +
-          '<button type="button" class="btn btn-link btn-sm" data-act="cancel">Cancel paste</button></div>';
+          '<button type="button" class="btn btn-link btn-sm" data-act="cancel">Cancel ' +
+          (fill ? "fill" : "paste") + '</button></div>';
         var decided = false;
         box.addEventListener("click", function (e) {
           var act = e.target.closest && e.target.closest("[data-act]");
@@ -2827,6 +3057,7 @@
           selectableRangeRows: true,
           selectableRangeClearCells: true,
           selectableRangeClearCellsValue: null,
+          selectableRangeFill: true,
           editTriggerEvent: "dblclick",
           clipboard: true,
           clipboardCopyStyled: false,
@@ -2853,6 +3084,7 @@
           queued.forEach(function (m) { grid.handle(m.method, m.args || {}); });
           patchRowDisplayed(table);
           patchScrollToRow(table);
+          patchFillHandle(table);
           var add = holder.querySelector(".editr-addrow");
           if (add) add.addEventListener("click", addRowAtEnd);
           bindUI();

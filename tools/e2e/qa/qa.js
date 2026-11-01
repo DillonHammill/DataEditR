@@ -674,7 +674,7 @@ const scenarios = {
           "history tags: " + h.map((x) => x.tag).join(", "));
     check(JSON.stringify(h.map((x) => x.title)) === JSON.stringify([
       "Edited 2 cells in disp", "Cleared 2 cells in disp", "Pasted 2 cells in disp",
-      "Filled down 1 cell in cyl", "Edited mpg in row Mazda RX4"]), "history titles: " + h.map((x) => x.title).join(" | "));
+      "Filled 1 cell in cyl", "Edited mpg in row Mazda RX4"]), "history titles: " + h.map((x) => x.title).join(" | "));
     await addNote(page, 4, "source sheet said 30");
     await addNote(page, 2, "not saved", true);
     h = await historyOf(page);

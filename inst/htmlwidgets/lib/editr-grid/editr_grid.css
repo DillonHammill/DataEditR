@@ -41,6 +41,23 @@
   color: #1E3A8A;
 }
 
+/* fill handle: a small square at the corner of the selection, as in
+   spreadsheets; the preview of the cells it fills is dashed */
+.editr_grid .tabulator .tabulator-range-overlay .tabulator-range-fill-handle {
+  width: 9px;
+  height: 9px;
+  right: -5px;
+  bottom: -5px;
+  border: 1.5px solid #FFFFFF;
+  border-radius: 2px;
+  background: #2975DD;
+  box-sizing: border-box;
+}
+
+.editr_grid .tabulator .tabulator-range-overlay .tabulator-range.tabulator-range-fill-preview {
+  border: 1.5px dashed #2975DD;
+}
+
 .editr_grid .tabulator .tabulator-row {
   min-height: 32px;
 }

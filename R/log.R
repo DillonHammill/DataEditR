@@ -299,7 +299,7 @@ log_step_title <- function(entries) {
     parts <- c(parts, if (how == "paste") {
       paste0("pasted ", plural(cells, "cell"), where)
     } else if (how == "fill") {
-      paste0("filled down ", plural(cells, "cell"), where)
+      paste0("filled ", plural(cells, "cell"), where)
     } else if (how == "clear") {
       paste0("cleared ", plural(cells, "cell"), where)
     } else if (cells == 1) {
