@@ -804,10 +804,14 @@ and confirm the summary of changes.</p>
 <span></span>
 <span><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/pkg/dplyr/man/tbl.html" class="external-link">tbl</a></span><span class="op">(</span><span class="va">con</span>, <span class="st">"cars"</span><span class="op">)</span> <span class="op"><a href="https://rdrr.io/pkg/magrittr/man/pipe.html" class="external-link">%&gt;%</a></span> <span class="fu"><a href="https://rdrr.io/pkg/dplyr/man/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">cyl</span> <span class="op">==</span> <span class="fl">6</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p><img src="images/db-commit.png" width="100%" style="display: block; margin: auto;"></p>
-<p>See <code><a href="../articles/databases.html">vignette("databases", package = "DataEditR")</a></code> for how
-to connect to different databases, how rows are matched to the database
-and what happens when someone else changes the data while you are
-editing it.</p>
+<p>The same editor can be added to your own shiny apps, where
+<code><a href="../reference/dataEditCommit.html">dataEditCommit()</a></code> writes the changes to the database (for
+example when a <em>Save</em> button is pressed) and
+<code><a href="../reference/dataEditCommit.html">dataEditChanges()</a></code> summarises what will be written. See
+<code><a href="../articles/databases.html">vignette("databases", package = "DataEditR")</a></code> for how to
+connect to different databases, how rows are matched to the database,
+saving changes from shiny apps and what happens when someone else
+changes the data while you are editing it.</p>
 </div>
 <div class="section level2">
 <h2 id="interactively-edit-googlesheets">13. Interactively Edit Googlesheets<a class="anchor" aria-label="anchor" href="#interactively-edit-googlesheets"></a>
@@ -952,8 +956,12 @@ an editable table to your own shiny applications with
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/pkg/shiny/man/shinyApp.html" class="external-link">shinyApp</a></span><span class="op">(</span><span class="va">ui</span>, <span class="va">server</span><span class="op">)</span></span></code></pre></div>
 <p>Call <code>dataEditCommit(edited)</code> (for example when a
-<em>Save</em> button is pressed) to save the changes; for database
-tables this writes them to the database. See
+<em>Save</em> button is pressed) to save the changes: for database
+tables this writes them to the database, and for other data the current
+data becomes the new starting point for the review panel.
+<code>dataEditChanges(edited)</code> returns the number of changes that
+have not been saved yet, e.g. to enable the <em>Save</em> button only
+when there is something to save. See
 <code><a href="../articles/shiny-modules.html">vignette("shiny-modules", package = "DataEditR")</a></code> for the
 options of the module, saving changes and how it works with the other
 modules in <strong>DataEditR</strong>.</p>

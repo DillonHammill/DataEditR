@@ -45,6 +45,7 @@ screenshot("editor.png")
 * **Safer typing**: typing text into a number or date column asks whether to store `NA`, convert the column to text or cancel, instead of silently converting the column.
 * **Types are preserved**: numbers, dates, logicals and text that looks like a number keep their type, and matrices, tibbles and data.tables are returned with their original class.
 * **Databases**: pass a `dbplyr` table (e.g. `data_edit(tbl(con, "cars"))`) to edit it in place. Changes are written in a single transaction after you confirm them, with checks for changes made by others. See `vignette("databases")`.
+* **Saving from shiny apps**: `dataEditCommit()` saves the changes made in a `dataEditServer()` editor (writing them to a database when the data is a database table) and `dataEditChanges()` counts the changes that have not been saved yet. See `vignette("shiny-modules")`.
 
 ## Where did everything go?
 

@@ -557,7 +557,7 @@ data_edit(tbl(con, "cars") %>% filter(cyl == 6))
 screenshot("db-commit.png")
 ```
 
-See `vignette("databases", package = "DataEditR")` for how to connect to different databases, how rows are matched to the database and what happens when someone else changes the data while you are editing it.
+The same editor can be added to your own shiny apps, where `dataEditCommit()` writes the changes to the database (for example when a *Save* button is pressed) and `dataEditChanges()` summarises what will be written. See `vignette("databases", package = "DataEditR")` for how to connect to different databases, how rows are matched to the database, saving changes from shiny apps and what happens when someone else changes the data while you are editing it.
 
 ## 13. Interactively Edit Googlesheets
 
@@ -681,7 +681,7 @@ server <- function(input, output, session) {
 shinyApp(ui, server)
 ```
 
-Call `dataEditCommit(edited)` (for example when a *Save* button is pressed) to save the changes; for database tables this writes them to the database. See `vignette("shiny-modules", package = "DataEditR")` for the options of the module, saving changes and how it works with the other modules in **DataEditR**.
+Call `dataEditCommit(edited)` (for example when a *Save* button is pressed) to save the changes: for database tables this writes them to the database, and for other data the current data becomes the new starting point for the review panel. `dataEditChanges(edited)` returns the number of changes that have not been saved yet, e.g. to enable the *Save* button only when there is something to save. See `vignette("shiny-modules", package = "DataEditR")` for the options of the module, saving changes and how it works with the other modules in **DataEditR**.
 
 ## Summary
 

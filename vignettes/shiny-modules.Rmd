@@ -15,6 +15,17 @@ knitr::opts_chunk$set(
   comment = "#>",
   eval = FALSE
 )
+
+screenshot <- function(file) {
+  path <- file.path("images", file)
+  if (!file.exists(path)) {
+    path <- paste0(
+      "https://raw.githubusercontent.com/DillonHammill/DataEditR/master/",
+      "vignettes/images/", file
+    )
+  }
+  knitr::include_graphics(path)
+}
 ```
 
 `data_edit()` is a shiny gadget built from a set of shiny modules. The same modules can be used to add an editable table to your own shiny applications. This article shows how to use the `dataEdit` module and how it fits together with the other modules that ship with **DataEditR**.
@@ -38,6 +49,13 @@ server <- function(input, output, session) {
 
 shinyApp(ui, server)
 ```
+
+| Function            | Use it to                                                         |
+|---------------------|-------------------------------------------------------------------|
+| `dataEditUI()`      | place the editor (grid, toolbar, review panel, status bar) in the UI |
+| `dataEditServer()`  | load data into the editor and get the edited data back as a reactive |
+| `dataEditChanges()` | count the changes that have not been saved yet                    |
+| `dataEditCommit()`  | save the changes (write them to a database, or start afresh from the current data) |
 
 `dataEditUI()` adds the grid together with the toolbar (undo/redo, columns, find, review changes, code and keyboard shortcuts), the review panel and the status bar. The grid supports everything described in `vignette("DataEditR")`: editing, range selection, copy and paste, fill down, adding and removing rows and columns, header filters, change tracking and the review panel.
 
@@ -164,6 +182,18 @@ server <- function(input, output, session) {
 }
 
 shinyApp(ui, server)
+```
+
+The *Save* button sits at the end of the editor's toolbar and is only enabled when there are unsaved changes. Pressing it shows a summary of the changes from `dataEditChanges()`:
+
+```{r, echo = FALSE, fig.align = "center", out.width = "100%", eval = TRUE}
+screenshot("shiny-save-confirm.png")
+```
+
+After the changes are written, the rows are read back from the database: the removed row is gone, the edited values are saved and the new row has the `id` the database generated. The button is disabled again until the next edit.
+
+```{r, echo = FALSE, fig.align = "center", out.width = "100%", eval = TRUE}
+screenshot("shiny-save-done.png")
 ```
 
 If a row was changed or removed by someone else since it was loaded, `dataEditCommit()` rolls back the whole transaction, writes nothing and raises an error of class `"editr_conflict"`. The changes stay in the editor, so the user can review them and try again. Other errors (e.g. a lost connection) are raised as usual; wrap the call in `tryCatch()` to show them to the user.

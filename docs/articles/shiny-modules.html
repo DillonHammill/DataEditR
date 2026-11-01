@@ -117,6 +117,37 @@ the data editor these are <code><a href="../reference/dataEdit.html">dataEditUI(
 <span><span class="op">}</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/pkg/shiny/man/shinyApp.html" class="external-link">shinyApp</a></span><span class="op">(</span><span class="va">ui</span>, <span class="va">server</span><span class="op">)</span></span></code></pre></div>
+<table class="table">
+<colgroup>
+<col width="23%">
+<col width="76%">
+</colgroup>
+<thead><tr class="header">
+<th>Function</th>
+<th>Use it to</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td><code><a href="../reference/dataEdit.html">dataEditUI()</a></code></td>
+<td>place the editor (grid, toolbar, review panel, status bar) in the
+UI</td>
+</tr>
+<tr class="even">
+<td><code><a href="../reference/dataEdit.html">dataEditServer()</a></code></td>
+<td>load data into the editor and get the edited data back as a
+reactive</td>
+</tr>
+<tr class="odd">
+<td><code><a href="../reference/dataEditCommit.html">dataEditChanges()</a></code></td>
+<td>count the changes that have not been saved yet</td>
+</tr>
+<tr class="even">
+<td><code><a href="../reference/dataEditCommit.html">dataEditCommit()</a></code></td>
+<td>save the changes (write them to a database, or start afresh from the
+current data)</td>
+</tr>
+</tbody>
+</table>
 <p><code><a href="../reference/dataEdit.html">dataEditUI()</a></code> adds the grid together with the toolbar
 (undo/redo, columns, find, review changes, code and keyboard shortcuts),
 the review panel and the status bar. The grid supports everything
@@ -293,6 +324,15 @@ changes. Like any reactive it updates as the data is edited.</p>
 <span><span class="op">}</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/pkg/shiny/man/shinyApp.html" class="external-link">shinyApp</a></span><span class="op">(</span><span class="va">ui</span>, <span class="va">server</span><span class="op">)</span></span></code></pre></div>
+<p>The <em>Save</em> button sits at the end of the editor’s toolbar and
+is only enabled when there are unsaved changes. Pressing it shows a
+summary of the changes from <code><a href="../reference/dataEditCommit.html">dataEditChanges()</a></code>:</p>
+<p><img src="images/shiny-save-confirm.png" width="100%" style="display: block; margin: auto;"></p>
+<p>After the changes are written, the rows are read back from the
+database: the removed row is gone, the edited values are saved and the
+new row has the <code>id</code> the database generated. The button is
+disabled again until the next edit.</p>
+<p><img src="images/shiny-save-done.png" width="100%" style="display: block; margin: auto;"></p>
 <p>If a row was changed or removed by someone else since it was loaded,
 <code><a href="../reference/dataEditCommit.html">dataEditCommit()</a></code> rolls back the whole transaction, writes
 nothing and raises an error of class <code>"editr_conflict"</code>. The

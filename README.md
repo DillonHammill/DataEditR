@@ -62,8 +62,10 @@ files (read with any reading function) and database tables, and can
 create new tables from scratch. It is also available from the RStudio
 `Addins` menu as *Interactive Data Editor*. The editor is built from
 shiny modules, so you can add it to your own shiny applications with
-`dataEditUI()` and `dataEditServer()`. `data_code()` generates
-tidyverse-style code that reproduces your edits.
+`dataEditUI()` and `dataEditServer()`, save the changes (including to
+databases) with `dataEditCommit()` and count unsaved changes with
+`dataEditChanges()`. `data_code()` generates tidyverse-style code that
+reproduces your edits.
 
 #### General features:
 
@@ -88,7 +90,8 @@ tidyverse-style code that reproduces your edits.
 - support for custom themes through the `bslib` package
 - customisable user interface (title, logo, menus)
 - shiny modules to use the data editor in your own applications, with
-  `dataEditCommit()` to save changes (including to databases)
+  `dataEditCommit()` to save changes (including to databases) and
+  `dataEditChanges()` to count unsaved changes
 
 #### Data editing features:
 

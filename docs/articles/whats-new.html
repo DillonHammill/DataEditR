@@ -143,6 +143,13 @@ data.tables are returned with their original class.</li>
 Changes are written in a single transaction after you confirm them, with
 checks for changes made by others. See
 <code><a href="../articles/databases.html">vignette("databases")</a></code>.</li>
+<li>
+<strong>Saving from shiny apps</strong>:
+<code><a href="../reference/dataEditCommit.html">dataEditCommit()</a></code> saves the changes made in a
+<code><a href="../reference/dataEdit.html">dataEditServer()</a></code> editor (writing them to a database when
+the data is a database table) and <code><a href="../reference/dataEditCommit.html">dataEditChanges()</a></code> counts
+the changes that have not been saved yet. See
+<code><a href="../articles/shiny-modules.html">vignette("shiny-modules")</a></code>.</li>
 </ul>
 </div>
 <div class="section level2">

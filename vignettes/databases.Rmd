@@ -213,7 +213,13 @@ server <- function(input, output, session) {
 }
 ```
 
-See `vignette("shiny-modules")` for a complete app with a confirmation dialog.
+`dataEditChanges()` counts the rows that will be updated, inserted and deleted, which makes it easy to enable a *Save* button only when there is something to save, or to ask the user to confirm:
+
+```{r, echo = FALSE, fig.align = "center", out.width = "100%", eval = TRUE}
+screenshot("shiny-save-confirm.png")
+```
+
+See `vignette("shiny-modules")` for the complete app.
 
 ```{r, include = FALSE}
 DBI::dbDisconnect(con)

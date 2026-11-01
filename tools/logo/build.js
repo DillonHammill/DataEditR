@@ -35,8 +35,8 @@ const C = { navy: "#1E3A8A", blue: "#1D4ED8", ink: "#0F172A", line: "#DCE3EC",
             head: "#EEF3FB", rowhead: "#F6F8FB", value: "#8A97A8", badge: "#DBEAFE" };
 
 // grid: row-number column then data columns; rows of 44px, the edited row 84px
-const rnX = 8, rnW = 52;                       // row-number column x .. x + w
-const colW = 70;
+const rnX = -12, rnW = 44;                     // row-number column (mostly cut by the hexagon)
+const colW = 72;
 const cols = ["mpg", "cyl", "disp", "hp", "drat"];
 const colX = cols.map((_, i) => rnX + rnW + i * colW);
 const right = colX[colX.length - 1] + colW;
@@ -88,24 +88,24 @@ cols.forEach((name, i) => {
 rows.forEach((r) => {
   const mid = r.y + r.h / 2;
   if (r.v === null) {
-    parts.push(textPath(String(r.n), rnX + rnW / 2, mid + 5.8, 16, 700, C.blue, "center").svg);
+    parts.push(textPath(String(r.n), rnX + rnW - 8, mid + 5.8, 16, 700, C.blue, "right").svg);
     return;
   }
-  parts.push(textPath(String(r.n), rnX + rnW / 2, mid + 5.8, 16, 500, C.value, "center").svg);
+  parts.push(textPath(String(r.n), rnX + rnW - 8, mid + 5.8, 16, 500, C.value, "right").svg);
   r.v.forEach((val, i) => {
     parts.push(textPath(String(val), colX[i] + colW - 10, mid + 5.8, 16, 500, C.value, "right").svg);
   });
 });
 // the cell being edited, with the name typed into it
-const box = { x: rnX + rnW + 6, y: edit.y + 6, w: right - (rnX + rnW) - 12, h: edit.h - 12, r: 10 };
+// the editor runs past the right edge of the hexagon
+const box = { x: rnX + rnW + 6, y: edit.y + 6, w: right + 30 - (rnX + rnW + 6), h: edit.h - 12, r: 10 };
 parts.push(`<rect x="${box.x}" y="${box.y + 6}" width="${box.w}" height="${box.h}" rx="${box.r}" fill="#0B1F5C" opacity="0.14"/>`);
 parts.push(`<rect x="${box.x}" y="${box.y}" width="${box.w}" height="${box.h}" rx="${box.r}" fill="#FFFFFF" stroke="${C.blue}" stroke-width="4.5"/>`);
 const size = 60, gap = 6, caretW = 5;
 const probe = textPath("DataEditR", 0, 0, size, 700, C.ink, "left", -1);
 const total = probe.width + gap + caretW;
-// centred in the part of the editor inside the hexagon (it runs past the edge)
-const visibleRight = 386;
-const tx = (box.x + visibleRight) / 2 - total / 2;
+// centred on the hexagon, horizontally and vertically
+const tx = 200 - probe.width / 2;              // the word itself, caret to its right
 const base = 231 + 0.727 * size / 2;
 const dataEdit = textPath("DataEdit", tx, base, size, 700, C.ink, "left", -1);
 const rW = textPath("R", 0, 0, size, 700, C.blue).width;
