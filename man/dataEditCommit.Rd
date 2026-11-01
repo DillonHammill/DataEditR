@@ -4,6 +4,7 @@
 \alias{dataEditCommit}
 \alias{dataEditChanges}
 \alias{dataEditLog}
+\alias{dataEditProblems}
 \title{Save the changes made in a data editor}
 \usage{
 dataEditCommit(x)
@@ -11,6 +12,8 @@ dataEditCommit(x)
 dataEditChanges(x)
 
 dataEditLog(x)
+
+dataEditProblems(x)
 }
 \arguments{
 \item{x}{the reactive expression returned by \code{\link{dataEditServer}()}.}
@@ -65,9 +68,14 @@ a value, a paste, a fill, an undo, ...) is one step, the same unit that
 undo works with.}
 \item{how}{how the change was made: \code{"edit"}, \code{"paste"},
 \code{"fill"}, \code{"clear"}, \code{"undo"}, \code{"redo"} or
-\code{"revert"} (from the review panel).}
+\code{"revert"} (from the review panel), or the column action:
+\code{"formula"}, \code{"replace"}, \code{"recode"}, \code{"type"} or
+\code{"sort"}.}
+\item{code}{for column actions, the \code{dplyr} code of the action, e.g.
+\code{mutate(kpl = mpg * 0.425)}.}
 \item{action}{\code{"edit"}, \code{"add row"}, \code{"remove row"},
-\code{"add column"}, \code{"remove column"} or \code{"rename column"}.}
+\code{"add column"}, \code{"remove column"}, \code{"rename column"},
+\code{"change type"} or \code{"reorder rows"}.}
 \item{row}{the row name, the key of a database row or else the row number
 in the data that was opened (new rows are numbered after the last row).}
 \item{column}{the name of the column.}

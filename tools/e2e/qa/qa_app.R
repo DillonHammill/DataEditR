@@ -97,6 +97,28 @@ if (scenario == "df") {
   saveRDS(x, file.path(out, "input.rds"))
   keep(x, quietly(x, log = file.path(out, "log.csv")))
 
+} else if (scenario == "actions") {
+  x <- data.frame(
+    id = 1:6,
+    name = c("alpha", "Beta", "gamma", "beta", "Alpha", NA),
+    grp = c("a", "b", "a", "c", "b", "a"),
+    value = c(3, 1, 4, 1, 5, 9),
+    when = c("2024-01-05", "2024-02-10", "x", NA, "2024-03-01", "2024-01-20"),
+    stringsAsFactors = FALSE
+  )
+  keep(x, quietly(x, code = code_file, log = file.path(out, "log.csv")))
+
+} else if (scenario == "rules") {
+  x <- data.frame(
+    sample = c("S-01", "S-02", "S-02", "S-04"),
+    ph = c(7.1, 15, 6.8, NA),
+    start = as.Date(c("2024-03-01", "2024-03-02", "2024-03-05", "2024-03-04")),
+    end = as.Date(c("2024-03-03", "2024-03-01", "2024-03-06", "2024-03-04")),
+    stringsAsFactors = FALSE
+  )
+  keep(x, quietly(x, rules = list("pH is between 0 and 14" = ~ ph >= 0 & ph <= 14,
+                                  "End is after the start" = ~ end >= start)))
+
 } else if (scenario == "cancel") {
   x <- mtcars[1:3, 1:3]
   keep(x, quietly(x))

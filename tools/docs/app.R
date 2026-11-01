@@ -74,12 +74,26 @@ res <- switch(
   },
   readme = data_edit(mtcars, viewer = noview, quiet = TRUE, track = TRUE,
                      save_as = file.path(out, "mtcars_edited.csv")),
+  actions = {
+    samples <- data.frame(
+      sample = c("S-01", "S-02", "S-02", "S-04", "S-05", "s06"),
+      site = c("north", "North", "south", "east", "south", "north"),
+      ph = c(7.1, 15, 6.8, NA, 7.4, 6.9),
+      mass = c(1.21, 0.98, 1.4, 1.12, 1.33, 1.05),
+      collected = c("2024-03-01", "2024-03-02", "2024-03-05", "2024-03-04",
+                    "2024-03-08", "2024-03-09"),
+      stringsAsFactors = FALSE
+    )
+    data_edit(samples, viewer = noview, quiet = TRUE,
+              rules = list("pH is between 0 and 14" = ~ ph >= 0 & ph <= 14))
+  },
   restore = {
     # the draft left by an editor that was closed without pressing Done
     p <- DataEditR:::editr_prepare(mtcars, quiet = TRUE)
     s <- p$store
     s$user <- DataEditR:::editr_user()
-    s$draft_key <- DataEditR:::draft_key(s$original, s$user)
+    # drafts belong to the user and the editor (its namespace)
+    s$draft_key <- DataEditR:::draft_key(s$original, paste0(s$user, "|edit1-"))
     up <- function(cid, id, v) {
       list(type = "update", cid = cid, ids = list(id), values = list(v))
     }

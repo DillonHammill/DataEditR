@@ -631,7 +631,9 @@ button.editr-change-title:hover {
   font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 12px;
   line-height: 1.6;
-  white-space: pre;
+  /* long verbs wrap (with a hanging indent) rather than scroll */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 /* status bar ---------------------------------------------------------------- */
@@ -716,4 +718,198 @@ button.editr-change-title:hover {
   overflow: hidden;
   clip: rect(0 0 0 0);
   white-space: nowrap;
+}
+
+/* column actions ----------------------------------------------------------- */
+
+.editr-step-code {
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  font-weight: 500;
+  color: #1F2933;
+  overflow-wrap: anywhere;
+}
+
+.editr-action .editr-action-row {
+  display: flex;
+  gap: 12px;
+}
+
+.editr-action .editr-action-row > .form-group {
+  flex: 1;
+}
+
+.editr-action textarea {
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+}
+
+.editr-recode {
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.editr-recode td {
+  vertical-align: middle;
+}
+
+.editr-recode-from {
+  max-width: 220px;
+  overflow-wrap: anywhere;
+}
+
+.editr-recode-n {
+  width: 56px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.editr-preview {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid #E3E6EA;
+  border-radius: 8px;
+  background: #FBFBFC;
+  font-size: 13px;
+}
+
+.editr-preview-error {
+  border-color: #FECACA;
+  background: #FEF2F2;
+  color: #991B1B;
+}
+
+.editr-preview-summary {
+  font-weight: 500;
+}
+
+.editr-preview-warn {
+  color: #9A3412;
+  font-weight: 400;
+}
+
+.editr-preview-table {
+  margin: 8px 0 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.editr-preview-table td {
+  padding: 2px 8px 2px 0;
+  border: 0;
+  background: transparent;
+}
+
+.editr-preview-code code {
+  display: block;
+  margin-top: 6px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: #0F172A;
+  color: #E2E8F0;
+  font-size: 12px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* validation rules ---------------------------------------------------------- */
+
+.editr-problems-link {
+  color: #B91C1C;
+  font-weight: 600;
+}
+
+.editr-problems-link:empty {
+  display: none;
+}
+
+.editr-pill-bad {
+  background: #FEE2E2;
+  color: #991B1B;
+}
+
+.editr-rules {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.editr-rule {
+  padding: 10px 12px;
+  border: 1px solid #E3E6EA;
+  border-radius: 8px;
+  background: #FFFFFF;
+}
+
+.editr-rule-bad {
+  border-color: #FECACA;
+}
+
+.editr-rule-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.editr-rule-icon {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.editr-rule-ok .editr-rule-icon { background: #DCFCE7; color: #14532D; }
+.editr-rule-bad .editr-rule-icon { background: #FEE2E2; color: #991B1B; }
+.editr-rule-error .editr-rule-icon { background: #FFEDD5; color: #7C2D12; }
+
+.editr-rule-text {
+  flex: 1;
+  min-width: 0;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.editr-rule-count {
+  flex: none;
+  color: #52606D;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.editr-rule-remove {
+  flex: none;
+  font-size: 12px;
+}
+
+.editr-rule-rows {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 6px 0 0 28px;
+  font-size: 12px;
+}
+
+.editr-rule-row {
+  padding: 1px 8px;
+  border: 1px solid #FECACA;
+  border-radius: 999px;
+  background: #FEF2F2;
+  color: #991B1B;
+  font: inherit;
+}
+
+.editr-rule-row:hover {
+  background: #FEE2E2;
+}
+
+.editr-rules-code ul {
+  margin: 4px 0 10px;
+  padding-left: 18px;
 }

@@ -75,6 +75,14 @@
 <li>Column types are preserved: only empty template/new columns are passed through <code><a href="https://rdrr.io/r/utils/type.convert.html" class="external-link">type.convert()</a></code> on return, so character columns such as <code>"001"</code> are no longer converted to numbers. Dates stay dates, and matrices, tibbles and data.tables are returned with their original class.</li>
 </ul></div>
 <div class="section level3">
+<h3 id="column-actions-and-validation-rules-2-0-0">Column actions and validation rules<a class="anchor" aria-label="anchor" href="#column-actions-and-validation-rules-2-0-0"></a></h3>
+<ul><li>A column’s menu (the new <code>⋮</code> button in its header, or a right-click) has actions that change the whole column: <strong>Formula…</strong> (a new column or new values from an R expression such as <code>round(mpg * 0.425, 1)</code>), <strong>Find and replace…</strong>, <strong>Recode values…</strong>, <strong>Change type</strong> and sorting. Each shows a preview and is recorded as one <code>dplyr</code> verb (<code><a href="https://rdrr.io/pkg/dplyr/man/mutate.html" class="external-link">mutate()</a></code>, <code><a href="https://rdrr.io/pkg/dplyr/man/arrange.html" class="external-link">arrange()</a></code>), so the generated code says what was done rather than listing every changed value. The editor runs that same verb, so the code gives exactly the result, and checks this before showing it. Formulas can only use columns and common functions, so they are safe in shiny apps. Turn the actions off with <code>col_actions = FALSE</code>.</li>
+<li>
+<code>rules</code> checks the data as it is edited: formulas that are <code>TRUE</code> for valid rows, named with their messages (e.g. <code>"End is after the start" = ~ end &gt;=   start</code>). Cells that break a rule are marked, a new <code>Problems</code> tab lists them, the status bar counts them and <code>Done</code> asks before returning data with problems. Columns can be made required or unique, given limits or a pattern, or a formula, from their menu (<strong>Rules…</strong>). <code><a href="../reference/dataEditCommit.html">dataEditProblems()</a></code> returns the problems in shiny apps.</li>
+<li>Code for columns inserted between other columns now puts them in place (<code>mutate(..., .after = )</code>).</li>
+<li>The change log gains a <code>code</code> column with the verb of column actions.</li>
+</ul></div>
+<div class="section level3">
 <h3 id="change-log-notes-and-drafts-2-0-0">Change log, notes and drafts<a class="anchor" aria-label="anchor" href="#change-log-notes-and-drafts-2-0-0"></a></h3>
 <ul><li>Every change is recorded with the time, the user and how it was made (typed, pasted, filled, cleared, undone, redone or reverted). The new <code>History</code> tab of the review panel lists the changes step by step, and each step can be given a note saying why it was made.</li>
 <li>

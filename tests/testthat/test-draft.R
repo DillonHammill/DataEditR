@@ -75,7 +75,7 @@ test_that("the data is saved when the history does not lead to it", {
   ops(p, op_update("c2", 1, "50"))
   # a commit made the edited data the starting point, then it was undone
   p$store$original <- p$store$state
-  p$store$draft_base <- length(p$store$undo)
+  p$store$base_txn <- length(p$store$undo)
   ops(p, list(type = "undo"))
   DataEditR:::draft_save(p$store)
   draft <- DataEditR:::draft_read(p$store$draft_key)

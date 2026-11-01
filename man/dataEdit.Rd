@@ -37,6 +37,8 @@ dataEditServer(
   code_name = "data",
   autosave = FALSE,
   user = NULL,
+  col_actions = TRUE,
+  rules = NULL,
   ...
 )
 }
@@ -162,6 +164,19 @@ are removed when the changes are committed or after 30 days.}
 \code{\link{dataEditLog}()}). By default the user signed in to the app
 (\code{session$user}), the \code{DataEditR.user} option or the system
 user name.}
+
+\item{col_actions}{logical indicating whether the column menu offers
+actions that change a whole column: formulas, find and replace,
+recoding values, changing the type and sorting the rows. They are shown
+in the generated code as one \code{dplyr} verb each. Set to \code{TRUE}
+by default.}
+
+\item{rules}{a list of rules the data should follow, each a one-sided
+formula that is \code{TRUE} for valid rows, named with the message to
+show, e.g. \code{list("End must be after the start" = ~ end >= start)}.
+Cells that break a rule are marked and listed in the \emph{Problems}
+tab (see \code{\link{dataEditProblems}()}). Users can add rules to a
+column from its menu (\emph{Rules...}).}
 
 \item{...}{not in use.}
 }

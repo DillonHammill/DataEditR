@@ -108,6 +108,8 @@ database.</p>
 <span>  track <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  log <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  autosave <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  col_actions <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  rules <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -317,6 +319,25 @@ closed, R crashed, ...), opening the same data again offers to restore
 the changes. See the <em>Drafts</em> section.</p></dd>
 
 
+<dt>col_actions</dt>
+<dd><p>logical indicating whether the column menu offers
+actions that change a whole column: formulas (e.g. a new column
+<code>kpl = mpg * 0.425</code>), find and replace, recoding values, changing
+the type and sorting the rows. Each action is shown in the generated code
+as one <code>dplyr</code> verb. Set to <code>TRUE</code> by default.</p></dd>
+
+
+<dt>rules</dt>
+<dd><p>a list of rules the data should follow, each a one-sided
+formula that is <code>TRUE</code> for valid rows and named with the message
+to show, e.g. <code>list("Age is between 0 and 120" = ~ age &gt;= 0 &amp; age &lt;=
+  120, "End is after the start" = ~ end &gt;= start)</code>. Cells that break a
+rule are marked in the grid and listed in the <em>Problems</em> tab, and
+<em>Done</em> asks before returning data with problems. Rules can also be
+added from a column's menu (<em>Rules...</em>). See the <em>Validation</em>
+section.</p></dd>
+
+
 <dt>...</dt>
 <dd><p>not in use.</p></dd>
 
@@ -383,6 +404,30 @@ each edit. Drafts are kept in <code>tools::R_user_dir("DataEditR",
 A draft is removed when <em>Done</em> or <em>Cancel</em> is pressed, when it
 is restored or discarded, and after 30 days. Pressing <em>Cancel</em> asks
 for confirmation before changes are discarded.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="validation">Validation<a class="anchor" aria-label="anchor" href="#validation"></a></h2>
+    
+
+<p>Rules are checked after every change. Missing values pass a rule unless
+the rule says otherwise, so <code>~ end &gt;= start</code> only checks rows where
+both are filled in; add <code>"Start is required" = ~ !is.na(start)</code> to
+require a value. In the editor, a column's menu (<em>Rules...</em>) makes it
+required or unique, sets limits or a pattern, or adds a formula.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="column-actions">Column actions<a class="anchor" aria-label="anchor" href="#column-actions"></a></h2>
+    
+
+<p>A column's menu (or right-clicking its header) has actions that change the
+whole column: <em>Formula...</em> (a new column or new values from an R
+expression, e.g. <code>round(mpg * 0.425, 1)</code>), <em>Find and
+replace...</em>, <em>Recode values...</em>, <em>Change type</em> and sorting. Each
+shows a preview and is recorded as one <code>dplyr</code> verb, so the generated
+code reads <code>mutate(kpl = round(mpg * 0.425, 1), .after = mpg)</code>
+rather than listing every value. Formulas can use column names and common
+functions (arithmetic, <code><a href="https://rdrr.io/r/base/Round.html" class="external-link">round()</a></code>, <code><a href="https://rdrr.io/r/base/ifelse.html" class="external-link">ifelse()</a></code>, <code><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste()</a></code>,
+<code>case_when()</code>, <code><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date()</a></code>, ...), but not other code.</p>
     </div>
     <div class="section level2">
     <h2 id="rstudio-add-in">RStudio add-in<a class="anchor" aria-label="anchor" href="#rstudio-add-in"></a></h2>

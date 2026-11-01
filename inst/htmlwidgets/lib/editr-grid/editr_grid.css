@@ -444,3 +444,25 @@ input.editr-rename {
   background-position: bottom;
   background-repeat: no-repeat;
 }
+
+/* cells that break a validation rule: red corner and a light tint */
+.editr_grid .tabulator .tabulator-cell.editr-problem {
+  background-color: #FEF2F2;
+  background-image: linear-gradient(225deg, #DC2626 7px, transparent 7px);
+}
+
+.editr_grid .tabulator .tabulator-row.tabulator-row-even .tabulator-cell.editr-problem {
+  background-color: #FDECEC;
+}
+
+/* column menu button in the header */
+.editr_grid .tabulator .tabulator-col .tabulator-header-popup-button {
+  padding: 0 4px 0 0;
+  color: #7B8794;
+  opacity: 0.7;
+}
+
+.editr_grid .tabulator .tabulator-col:hover .tabulator-header-popup-button {
+  color: #1F2933;
+  opacity: 1;
+}

@@ -104,6 +104,8 @@ possible.</p>
 <span>  code_name <span class="op">=</span> <span class="st">"data"</span>,</span>
 <span>  autosave <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  user <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  col_actions <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  rules <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -277,6 +279,23 @@ are removed when the changes are committed or after 30 days.</p></dd>
 <code><a href="dataEditCommit.html">dataEditLog</a>()</code>). By default the user signed in to the app
 (<code>session$user</code>), the <code>DataEditR.user</code> option or the system
 user name.</p></dd>
+
+
+<dt>col_actions</dt>
+<dd><p>logical indicating whether the column menu offers
+actions that change a whole column: formulas, find and replace,
+recoding values, changing the type and sorting the rows. They are shown
+in the generated code as one <code>dplyr</code> verb each. Set to <code>TRUE</code>
+by default.</p></dd>
+
+
+<dt>rules</dt>
+<dd><p>a list of rules the data should follow, each a one-sided
+formula that is <code>TRUE</code> for valid rows, named with the message to
+show, e.g. <code>list("End must be after the start" = ~ end &gt;= start)</code>.
+Cells that break a rule are marked and listed in the <em>Problems</em>
+tab (see <code><a href="dataEditCommit.html">dataEditProblems</a>()</code>). Users can add rules to a
+column from its menu (<em>Rules...</em>).</p></dd>
 
 
 <dt>...</dt>

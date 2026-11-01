@@ -449,6 +449,72 @@ const scenarios = {
     await shot(page, "track");
     await done(page);
   },
+  async actions(page) {
+    const menuButton = (field) => page.evaluate((g, f) => {
+      const t = document.getElementById(g).__editr.table;
+      const b = t.getColumn(f).getElement().querySelector(".tabulator-header-popup-button").getBoundingClientRect();
+      return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
+    }, G, field);
+    const pick = (label) => page.evaluate((l) => [...document.querySelectorAll(".tabulator-menu .tabulator-menu-item")]
+      .find((x) => x.textContent.trim().startsWith(l)).click(), label);
+    // the column menu
+    let p = await menuButton("c3");
+    await page.mouse.click(p.x, p.y);
+    await page.waitForSelector(".tabulator-menu");
+    await sleep(400);
+    await shot(page, "column-actions");
+    // a formula
+    await pick("Formula");
+    await page.waitForSelector("#shiny-modal .modal-dialog");
+    await sleep(800);
+    await page.click("#edit1-fx_name", { clickCount: 3 });
+    await page.keyboard.type("ph_class");
+    await page.click("#edit1-fx_expr");
+    await page.keyboard.type('case_when(ph < 7 ~ "acidic", ph > 7 ~ "basic", .default = "neutral")');
+    await sleep(1500);
+    await shot(page, "formula");
+    await page.click("#edit1-action_apply");
+    await settle(page, 1500);
+    // recode the sites (one dialog, the most common values first)
+    p = await menuButton("c2");
+    await page.mouse.click(p.x, p.y);
+    await page.waitForSelector(".tabulator-menu");
+    await sleep(300);
+    await pick("Recode values");
+    await page.waitForSelector("#shiny-modal .modal-dialog");
+    await sleep(800);
+    await page.click("#edit1-rc_3");
+    await page.keyboard.type("north");
+    await sleep(1200);
+    await shot(page, "recode");
+    await page.click("#edit1-action_apply");
+    await settle(page, 1500);
+    // a rule from the column menu
+    p = await menuButton("c1");
+    await page.mouse.click(p.x, p.y);
+    await page.waitForSelector(".tabulator-menu");
+    await sleep(300);
+    await pick("Rules");
+    await page.waitForSelector("#shiny-modal .modal-dialog");
+    await sleep(800);
+    await page.click("#edit1-ru_required");
+    await page.click("#edit1-ru_unique");
+    await page.click("#edit1-ru_pattern");
+    await page.keyboard.type("S-[0-9]{2}");
+    await sleep(1200);
+    await shot(page, "rules-dialog");
+    await page.click("#edit1-rules_save");
+    await settle(page, 1200);
+    await page.click("#edit1-problems_status");
+    await settle(page, 1000);
+    await shot(page, "problems");
+    // the code
+    await page.click("#edit1-tab_code");
+    await settle(page, 1200);
+    await shot(page, "actions-code");
+    await page.click("#done");
+    await sleep(1000);
+  },
   async restore(page) {
     await page.waitForSelector("#shiny-modal .modal-dialog");
     await sleep(900);

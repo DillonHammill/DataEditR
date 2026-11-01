@@ -19,6 +19,14 @@
 #   rename_col  list(type, cid, name)              rename a column
 #   insert_col  list(type, cid, name, at, values)  insert a column
 #   delete_col  list(type, cid)                    remove a column
+#   reorder_rows list(type, ids)                   put the rows in this order
+#   set_meta    list(type, cid, factor, auto)      how a column is returned:
+#               factor = list(levels, ordered) (a factor), FALSE (not a
+#               factor) or NULL (as prepared); auto = TRUE / FALSE / NULL
+#               (type.convert()ed on return or not, or as prepared)
+#
+# Ops may carry an `action` (a column action, see R/actions.R) that the
+# generated code shows as one dplyr verb.
 
 #' Create editor state
 #'
@@ -92,6 +100,8 @@ apply_op <- function(state, op) {
     rename_col = apply_rename_col(state, op),
     insert_col = apply_insert_col(state, op),
     delete_col = apply_delete_col(state, op),
+    reorder_rows = apply_reorder_rows(state, op),
+    set_meta = apply_set_meta(state, op),
     set_state = apply_set_state(state, op),
     stop("Unknown op type '", op$type, "'.", call. = FALSE)
   )
@@ -248,6 +258,54 @@ apply_delete_col <- function(state, op) {
   state$data <- state$data[, -pos, drop = FALSE]
   state$cids <- state$cids[-pos]
   list(state = state, inverse = inverse)
+}
+
+#' Put the rows in a new order (ids lists every row once)
+#' @noRd
+apply_reorder_rows <- function(state, op) {
+  ids <- as.integer(op$ids)
+  if (length(ids) != length(state$ids) || anyDuplicated(ids) ||
+      !all(ids %in% state$ids)) {
+    stop("The new row order must list every row once.", call. = FALSE)
+  }
+  old <- state$ids
+  state$data <- state$data[match(ids, old), , drop = FALSE]
+  rownames(state$data) <- NULL
+  state$ids <- ids
+  list(state = state, inverse = list(type = "reorder_rows", ids = old))
+}
+
+#' Change how a column is returned (factor levels, type conversion)
+#' @noRd
+apply_set_meta <- function(state, op) {
+  meta <- state$meta %||% list(factors = list(), auto = list())
+  cid <- op$cid
+  inverse <- list(type = "set_meta", cid = cid, factor = meta$factors[[cid]],
+                  auto = meta$auto[[cid]])
+  meta$factors[cid] <- list(op$factor)
+  meta$auto[cid] <- list(op$auto)
+  meta$factors <- Filter(Negate(is.null), meta$factors)
+  meta$auto <- Filter(Negate(is.null), meta$auto)
+  state$meta <- meta
+  list(state = state, inverse = inverse)
+}
+
+#' Factor levels and type-converted columns of a store, with the changes
+#' made by column actions
+#' @noRd
+store_meta <- function(store) {
+  factors <- store$factors
+  auto <- store$auto_type
+  meta <- store$state$meta
+  for (cid in names(meta$factors)) {
+    f <- meta$factors[[cid]]
+    factors[cid] <- if (isFALSE(f)) list(NULL) else list(f)
+  }
+  factors <- Filter(Negate(is.null), factors)
+  for (cid in names(meta$auto)) {
+    auto <- if (isTRUE(meta$auto[[cid]])) union(auto, cid) else setdiff(auto, cid)
+  }
+  list(factors = factors, auto = auto)
 }
 
 #' Replace the whole state (used by "revert all"); ids keep counting up so
@@ -481,6 +539,7 @@ editr_store <- function(state) {
   store$logging <- TRUE
   store$user <- ""
   store$label_cids <- NULL # columns that name rows in the log
+  store$rule_specs <- list() # cid -> rules set in the editor (R/rules.R)
   store
 }
 
@@ -544,6 +603,8 @@ store_undo <- function(store) {
   inverses <- rev(lapply(txn, `[[`, "inverse"))
   store_step(store, "undo")
   redo <- store_run(store, inverses)
+  # REDO PUTS BACK THE ORIGINAL OPS (THEY CARRY COLUMN ACTIONS)
+  attr(redo, "ops") <- lapply(txn, `[[`, "op")
   store$redo[[length(store$redo) + 1]] <- redo
   inverses
 }
@@ -559,8 +620,12 @@ store_redo <- function(store) {
   txn <- store$redo[[n]]
   store$redo[[n]] <- NULL
   ops <- rev(lapply(txn, `[[`, "inverse"))
-  store_step(store, "redo")
+  original <- attr(txn, "ops")
+  store_step(store, "redo", code = txn_action(original)$verb)
   undo <- store_run(store, ops)
+  if (length(original) == length(undo)) {
+    for (i in seq_along(undo)) undo[[i]]$op <- original[[i]]
+  }
   store$undo[[length(store$undo) + 1]] <- undo
   ops
 }

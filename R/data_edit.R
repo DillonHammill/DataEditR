@@ -65,6 +65,24 @@
 #' is restored or discarded, and after 30 days. Pressing \emph{Cancel} asks
 #' for confirmation before changes are discarded.
 #'
+#' @section Validation:
+#' Rules are checked after every change. Missing values pass a rule unless
+#' the rule says otherwise, so \code{~ end >= start} only checks rows where
+#' both are filled in; add \code{"Start is required" = ~ !is.na(start)} to
+#' require a value. In the editor, a column's menu (\emph{Rules...}) makes it
+#' required or unique, sets limits or a pattern, or adds a formula.
+#'
+#' @section Column actions:
+#' A column's menu (or right-clicking its header) has actions that change the
+#' whole column: \emph{Formula...} (a new column or new values from an R
+#' expression, e.g. \code{round(mpg * 0.425, 1)}), \emph{Find and
+#' replace...}, \emph{Recode values...}, \emph{Change type} and sorting. Each
+#' shows a preview and is recorded as one \code{dplyr} verb, so the generated
+#' code reads \code{mutate(kpl = round(mpg * 0.425, 1), .after = mpg)}
+#' rather than listing every value. Formulas can use column names and common
+#' functions (arithmetic, \code{round()}, \code{ifelse()}, \code{paste()},
+#' \code{case_when()}, \code{as.Date()}, ...), but not other code.
+#'
 #' @section RStudio add-in:
 #' \code{data_edit()} is also available from the RStudio \emph{Addins} menu
 #' as \emph{Interactive Data Editor}. Highlight the name of a data frame,
@@ -186,6 +204,19 @@
 #'   closed without pressing \emph{Done} or \emph{Cancel} (the window was
 #'   closed, R crashed, ...), opening the same data again offers to restore
 #'   the changes. See the \emph{Drafts} section.
+#' @param col_actions logical indicating whether the column menu offers
+#'   actions that change a whole column: formulas (e.g. a new column
+#'   \code{kpl = mpg * 0.425}), find and replace, recoding values, changing
+#'   the type and sorting the rows. Each action is shown in the generated code
+#'   as one \code{dplyr} verb. Set to \code{TRUE} by default.
+#' @param rules a list of rules the data should follow, each a one-sided
+#'   formula that is \code{TRUE} for valid rows and named with the message
+#'   to show, e.g. \code{list("Age is between 0 and 120" = ~ age >= 0 & age <=
+#'   120, "End is after the start" = ~ end >= start)}. Cells that break a
+#'   rule are marked in the grid and listed in the \emph{Problems} tab, and
+#'   \emph{Done} asks before returning data with problems. Rules can also be
+#'   added from a column's menu (\emph{Rules...}). See the \emph{Validation}
+#'   section.
 #' @param ... not in use.
 #'
 #' @return the edited data as a matrix or data.frame. For database tables the
@@ -241,6 +272,8 @@ data_edit <- function(x = NULL,
                       track = NULL,
                       log = NULL,
                       autosave = TRUE,
+                      col_actions = TRUE,
+                      rules = NULL,
                       ...) {
 
   # DATA ENVIRONMENT -----------------------------------------------------------
@@ -484,7 +517,9 @@ data_edit <- function(x = NULL,
       quiet = quiet,
       track = track,
       code_name = code_name,
-      autosave = autosave
+      autosave = autosave,
+      col_actions = col_actions,
+      rules = rules
     )
     data_active <- attr(data_update, "view")
     editor <- attr(data_update, "editor")
@@ -629,6 +664,14 @@ data_edit <- function(x = NULL,
       }
     }
     finish <- function(result) {
+      # CODE (DATABASES: WORKED OUT BEFORE THE COMMIT)
+      ed <- editor()
+      if (!isFALSE(code) && !is.null(ed) && is.null(ed$cfg$db)) {
+        session_info$code <- editr_code(ed$store, ed$cfg,
+                                        name = session_info$name,
+                                        start = session_info$original,
+                                        end = result)
+      }
       save <- !is.null(save_as) && !isFALSE(input$save_file)
       if (!is.null(result) && save) {
         do.call(write_fun, c(list(result, save_as), write_args))
@@ -641,8 +684,20 @@ data_edit <- function(x = NULL,
       editr_stop(result)
     }
 
-    # DONE
+    # DONE - ASK FIRST WHEN RULES ARE BROKEN
     observeEvent(input$done, {
+      p <- attr(data_update, "problems")()
+      if (!is.null(p) && sum(p$rules$count, na.rm = TRUE) > 0) {
+        showModal(problems_modal(p, "done_anyway"))
+        return()
+      }
+      done_now()
+    })
+    observeEvent(input$done_anyway, {
+      removeModal()
+      done_now()
+    })
+    done_now <- function() {
       result <- result_now()
       ed <- editor()
       db <- if (!is.null(ed)) ed$cfg$db else NULL
@@ -674,7 +729,7 @@ data_edit <- function(x = NULL,
         ),
         easyClose = TRUE
       ))
-    })
+    }
 
     observeEvent(input$db_commit, {
       ed <- editor()
@@ -718,11 +773,7 @@ data_edit <- function(x = NULL,
 
   # CODE
   if (!isFALSE(code)) {
-    code_text <- if (is_db_input(initial)) {
-      session_info$code %||% "# No changes detected\n"
-    } else {
-      data_code(session_info$original, x_edit, name = session_info$name)
-    }
+    code_text <- session_info$code %||% "# No changes detected\n"
     if (is.character(code)) {
       writeLines(code_text, code)
     } else {

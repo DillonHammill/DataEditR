@@ -91,6 +91,10 @@ reproduces your edits.
   keeping column types and the class of the data
 - review panel listing every change with one-click revert, and live
   tidyverse-style code that reproduces your edits (`data_code()`)
+- formulas, find and replace, recoding, type changes and sorting for
+  whole columns, each shown in the generated code as one `dplyr` verb
+- validation rules (required, unique, limits, patterns or any formula),
+  with problem cells marked and listed before you press `Done`
 - a history of every change with who made it and when, notes saying why,
   and a change log kept in a file (`log`)
 - unsaved changes are kept as a draft and offered again if the editor is
@@ -99,8 +103,8 @@ reproduces your edits.
 - customisable user interface (title, logo, menus)
 - shiny modules to use the data editor in your own applications, with
   `dataEditCommit()` to save changes (including to databases),
-  `dataEditChanges()` to count unsaved changes and `dataEditLog()` for
-  the change log
+  `dataEditChanges()` to count unsaved changes, `dataEditProblems()` for
+  broken rules and `dataEditLog()` for the change log
 
 #### Data editing features:
 
