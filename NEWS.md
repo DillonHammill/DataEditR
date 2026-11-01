@@ -109,6 +109,8 @@
 * `col_bind` lists without names get unique column names (`V1`, `V2`, ...).
 * Database tables built from raw SQL queries give a clear error asking for
   `db_table(x, table = , key = )`, and factor values are written as text.
+* The table behind a lazy table is found with dbplyr 2.3, 2.4 and 2.5 (which
+  stores quoted table paths such as `` `main`.`cars` ``).
 * The RStudio add-in returns the highlighted data when cancelled and accepts
   any object with dimensions or a database table.
 * Test suite covers the gadget, the shiny modules (with `shiny::testServer()`)

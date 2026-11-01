@@ -73,7 +73,7 @@ db_table <- function(x,
     con <- dbplyr::remote_con(x)
     query <- x
     if (is.null(table)) {
-      table <- db_base_table(x)
+      table <- db_base_table(x, con)
     }
   } else {
     stop("'x' must be a dbplyr lazy table or a DBI connection.", call. = FALSE)
@@ -147,7 +147,7 @@ db_table_label <- function(table) {
 
 #' Find the table underneath a dbplyr lazy query
 #' @noRd
-db_base_table <- function(x) {
+db_base_table <- function(x, con = NULL) {
   q <- x$lazy_query
   while (!inherits(q, "lazy_base_remote_query")) {
     if (inherits(q, c("lazy_multi_join_query", "lazy_rf_join_query",
@@ -171,11 +171,22 @@ db_base_table <- function(x) {
       call. = FALSE
     )
   }
-  # dbplyr < 2.4 - TABLE NAMES ARE CHARACTER IDENTIFIERS
-  if (is.character(ident)) {
+  if (inherits(ident, "dbplyr_table_path")) {
+    # dbplyr >= 2.5 - QUOTED TABLE PATHS, E.G. `main`.`cars`
+    path <- db_split_path(ident, con %||% dbplyr::remote_con(x))
+    n <- length(path)
+    parts <- list(
+      table = if (n >= 1) path[[n]] else NA_character_,
+      schema = if (n >= 2) path[[n - 1]] else NULL,
+      catalog = if (n >= 3) path[[n - 2]] else NULL
+    )
+  } else if (is.character(ident)) {
+    # dbplyr < 2.4 - TABLE NAMES ARE CHARACTER IDENTIFIERS
     return(as.character(ident))
+  } else {
+    # dbplyr 2.4 - TABLE IDENTIFIERS
+    parts <- unclass(ident)
   }
-  parts <- unclass(ident)
   table <- parts$table
   schema <- parts$schema
   catalog <- parts$catalog
@@ -190,6 +201,14 @@ db_base_table <- function(x) {
     return(DBI::Id(schema = schema, table = table))
   }
   table
+}
+
+#' Split a quoted table path (`catalog`.`schema`.`table`) into its parts
+#' @noRd
+db_split_path <- function(path, con) {
+  quote <- substr(as.character(DBI::dbQuoteIdentifier(con, "x")), 1, 1)
+  scan(text = as.character(path)[1], what = character(), quote = quote,
+       quiet = TRUE, na.strings = character(), sep = ".")
 }
 
 #' Detect primary key columns

@@ -174,6 +174,17 @@ test_that("base tables are found for every kind of table identifier", {
   expect_error(base(fake(list(table = NA_character_))), "Could not determine")
   expect_identical(DataEditR:::db_table_code(DBI::Id(table = "cars")),
                    '"cars"')
+  # dbplyr >= 2.5 stores quoted table paths
+  con <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
+  on.exit(DBI::dbDisconnect(con))
+  path <- function(x) structure(x, class = c("dbplyr_table_path", "character"))
+  expect_identical(base(fake(path("`cars`")), con), "cars")
+  expect_identical(base(fake(path("cars")), con), "cars")
+  expect_identical(base(fake(path("`main`.`cars`")), con),
+                   DBI::Id(schema = "main", table = "cars"))
+  expect_identical(base(fake(path("`db`.`main`.`odd.name`")), con),
+                   DBI::Id(catalog = "db", schema = "main", table = "odd.name"))
+  expect_error(base(fake(path("")), con), "Could not determine")
 })
 
 test_that("primary keys are looked up for other databases", {
