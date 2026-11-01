@@ -140,11 +140,12 @@ async function setEditorValue(page, value) {
       const t = document.getElementById("edit1-grid").__editr.table;
       return [1, 2].map((id) => {
         const s = t.getRow(id).getCell(field).getElement().querySelector(".editr-swatch");
-        return s ? getComputedStyle(s).backgroundColor : null;
+        if (!s) return null;
+        return s.classList.contains("editr-swatch-none") ? "none" : getComputedStyle(s).backgroundColor;
       });
     }, f.col);
     check(swatches[0] === "rgb(255, 0, 0)", "red swatch");
-    check(swatches[1] === null, "no swatch for a colour the browser does not know");
+    check(swatches[1] === "rgb(127, 127, 127)", "R colour names get their swatch (grey50): " + swatches[1]);
 
     console.log("typed values in other formats");
     await L.editCell(page, 2, f.d, "15/03/2024");
