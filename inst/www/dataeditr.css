@@ -1,0 +1,646 @@
+/* DataEditR editor layout (toolbar, status bar, review panel, header) */
+
+.editr-app {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #FFFFFF;
+  color: #1F2933;
+  font-size: 13px;
+}
+
+.editr-app > .editr-editor {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.editr-editor {
+  display: flex;
+  flex-direction: column;
+  border-top: 0;
+  color: #1F2933;
+}
+
+/* header (data_edit) --------------------------------------------------- */
+
+.editr-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 16px;
+  background: #F6F7F9;
+  border-bottom: 1px solid #E3E6EA;
+}
+
+.editr-header-title {
+  flex: 1 1 200px;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.editr-header-title .editr-name {
+  font-size: 15px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.editr-pill {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #E9ECF0;
+  color: #52606D;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.editr-header .btn {
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 14px;
+  font-size: 13px;
+  line-height: 1;
+}
+
+/* Done: a compact split button with a visible divider before the menu */
+.editr-header #done {
+  padding: 0 16px;
+}
+
+.editr-header #done_toggle {
+  width: 28px;
+  padding: 0;
+  border-left: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+.editr-header #done_toggle::after {
+  margin: 0;
+}
+
+.editr-done-menu {
+  width: 340px;
+  padding: 6px;
+}
+
+.editr-done-menu .shiny-input-container,
+.editr-done-menu .form-group {
+  width: 100%;
+  margin-bottom: 0;
+}
+
+.editr-done-menu .shiny-options-group .form-check,
+.editr-done-menu .radio {
+  margin: 0;
+  padding: 0;
+  border-radius: 6px;
+}
+
+/* radio on the left of a two-line label (title + dimensions) */
+.editr-done-menu .radio label,
+.editr-done-menu .shiny-options-group .form-check label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  margin: 0;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.editr-done-menu .radio input[type="radio"],
+.editr-done-menu .shiny-options-group .form-check input[type="radio"] {
+  flex: none;
+  position: static;
+  float: none;
+  margin: 3px 0 0;
+}
+
+.editr-done-menu .shiny-options-group .form-check:has(input:checked),
+.editr-done-menu .radio:has(input:checked) {
+  background: #EFF5FF;
+}
+
+.editr-menu-label {
+  padding: 6px 10px 4px;
+  color: #52606D;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.editr-option-title {
+  display: block;
+  font-weight: 600;
+}
+
+.editr-option-sub {
+  display: block;
+  margin-top: 2px;
+  color: #52606D;
+}
+
+.editr-done-menu .checkbox,
+.editr-done-menu .form-check:not(.shiny-options-group .form-check) {
+  margin: 0;
+  padding: 8px 10px;
+}
+
+.editr-done-menu .checkbox label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  cursor: pointer;
+}
+
+.editr-done-menu .checkbox input[type="checkbox"] {
+  position: static;
+  margin: 0;
+}
+
+/* toolbar --------------------------------------------------------------- */
+
+.editr-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 8px 16px;
+  border-bottom: 1px solid #E3E6EA;
+  background: #FFFFFF;
+}
+
+.editr-tool,
+.editr-toolbar .btn.editr-tool {
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  border: 1px solid #D5D9DF;
+  border-radius: 6px;
+  background: #FFFFFF;
+  color: #1F2933;
+  font-size: 13px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.editr-tool:hover,
+.editr-toolbar .btn.editr-tool:hover {
+  background: #F6F7F9;
+  border-color: #C4CAD2;
+  color: #1F2933;
+}
+
+.editr-tool:focus-visible {
+  outline: 2px solid #1D4ED8;
+  outline-offset: 1px;
+}
+
+.editr-tool-icon,
+.editr-toolbar .btn.editr-tool.editr-tool-icon {
+  width: 36px;
+  padding: 0;
+  justify-content: center;
+}
+
+.editr-tool svg,
+.editr-panel svg,
+.editr-header svg {
+  flex: none;
+}
+
+.editr-tool[aria-pressed="true"],
+.editr-tool[aria-expanded="true"],
+.editr-toolbar .btn.editr-tool[aria-pressed="true"],
+.editr-toolbar .btn.editr-tool[aria-expanded="true"] {
+  border-color: #2563EB;
+  background: #DBEAFE;
+  color: #1E3A8A;
+}
+
+.editr-tool .editr-muted {
+  color: #52606D;
+}
+
+.editr-sep {
+  width: 1px;
+  height: 24px;
+  background: #E3E6EA;
+}
+
+.editr-spacer {
+  flex: 1 1 0;
+}
+
+.editr-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.editr-chips:empty {
+  display: none;
+}
+
+.editr-find {
+  flex: 1 1 160px;
+  min-width: 140px;
+  max-width: 300px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  border: 1px solid #D5D9DF;
+  border-radius: 6px;
+  background: #FFFFFF;
+  color: #52606D;
+  margin: 0;
+}
+
+.editr-find:focus-within {
+  border-color: #1D4ED8;
+  box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.15);
+}
+
+.editr-find input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  font: inherit;
+  color: #1F2933;
+  background: transparent;
+}
+
+.editr-find-count {
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.editr-find-count:empty + kbd {
+  display: inline-block;
+}
+
+.editr-find-count:not(:empty) + kbd {
+  display: none;
+}
+
+/* narrower editors: a smaller find box without the shortcut hint keeps the
+   toolbar on one line for longer */
+.editr-toolbar {
+  container-type: inline-size;
+}
+
+@container (max-width: 1060px) {
+  .editr-find {
+    flex-basis: 120px;
+    min-width: 110px;
+  }
+  .editr-find kbd,
+  .editr-find-count:empty + kbd {
+    display: none;
+  }
+}
+
+.editr-kbd,
+.editr-find kbd {
+  padding: 1px 6px;
+  border: 1px solid #D5D9DF;
+  border-radius: 4px;
+  background: #FFFFFF;
+  color: #52606D;
+  font-family: inherit;
+  font-size: 11px;
+  box-shadow: none;
+}
+
+.editr-count {
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #1D4ED8;
+  color: #FFFFFF;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.editr-count:empty {
+  display: none;
+}
+
+.editr-toolbar .dropdown-menu {
+  font-size: 13px;
+}
+
+.editr-open-menu {
+  width: 380px;
+  padding: 14px;
+}
+
+.editr-open-menu .form-group,
+.editr-open-menu .shiny-input-container {
+  width: 100%;
+  margin-bottom: 0;
+}
+
+.editr-open-menu hr {
+  margin: 12px 0;
+}
+
+.editr-open-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.editr-open-row .shiny-input-container {
+  flex: 1;
+}
+
+.editr-open-row .btn {
+  height: calc(1.5em + 0.75rem + 2px);
+  margin-bottom: 0;
+}
+
+.editr-open-dims .shiny-input-container {
+  flex: 0 0 72px;
+}
+
+/* body: grid + review panel ------------------------------------------------ */
+
+.editr-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+}
+
+.editr-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.editr-main > .html-widget {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.editr-panel {
+  display: none;
+  flex: 0 0 380px;
+  max-width: 45%;
+  min-height: 0;
+  overflow-y: auto;
+  border-left: 1px solid #E3E6EA;
+  background: #FBFBFC;
+}
+
+.editr-panel[data-open] {
+  display: flex;
+  flex-direction: column;
+}
+
+.editr-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 12px 8px;
+  border-bottom: 1px solid #E3E6EA;
+}
+
+.editr-tab {
+  height: 32px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #52606D;
+  font: inherit;
+  font-weight: 500;
+}
+
+.editr-tab[aria-selected="true"] {
+  background: #E9ECF0;
+  color: #1F2933;
+}
+
+.editr-pane {
+  padding: 12px;
+}
+
+.editr-pane-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.editr-pane-head h2 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.editr-link {
+  border: 0;
+  background: transparent;
+  color: #1D4ED8;
+  font: inherit;
+  font-weight: 500;
+  padding: 4px 6px;
+  border-radius: 6px;
+}
+
+.editr-link:hover {
+  background: #EFF5FF;
+}
+
+.editr-changes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.editr-change {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid #E3E6EA;
+  border-radius: 8px;
+  background: #FFFFFF;
+}
+
+.editr-tag {
+  flex: none;
+  width: 64px;
+  padding: 3px 0;
+  border-radius: 4px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.editr-tag-edited { background: #DBEAFE; color: #1E3A8A; }
+.editr-tag-added { background: #DCFCE7; color: #14532D; }
+.editr-tag-removed { background: #FFEDD5; color: #7C2D12; }
+.editr-tag-renamed { background: #EDE9FE; color: #4C1D95; }
+
+.editr-change-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.editr-change-title {
+  display: block;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #1F2933;
+  font: inherit;
+  font-weight: 500;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+button.editr-change-title:hover {
+  color: #1D4ED8;
+  text-decoration: underline;
+}
+
+.editr-change-detail {
+  margin-top: 2px;
+  color: #52606D;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.editr-change .btn {
+  height: 30px;
+  font-size: 12px;
+}
+
+.editr-empty {
+  padding: 24px 8px;
+  color: #52606D;
+  text-align: center;
+}
+
+.editr-code {
+  margin: 0;
+  padding: 14px;
+  overflow-x: auto;
+  border-radius: 8px;
+  background: #0F172A;
+  color: #E2E8F0;
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: pre;
+}
+
+/* status bar ---------------------------------------------------------------- */
+
+.editr-statusbar {
+  display: flex;
+  align-items: center;
+  gap: 6px 20px;
+  flex-wrap: wrap;
+  min-height: 32px;
+  padding: 6px 16px;
+  background: #F6F7F9;
+  border-top: 1px solid #E3E6EA;
+  color: #52606D;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.editr-statusbar .editr-sep {
+  height: 14px;
+  background: #D5D9DF;
+}
+
+.editr-statusbar > span:empty:not(.editr-spacer),
+.editr-statusbar > span:empty + .editr-sep {
+  display: none;
+}
+
+.editr-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: #EAF1FD;
+  box-shadow: inset 0 0 0 1px #2563EB;
+}
+
+.editr-changes-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.editr-changes-status:has(> .editr-status-text:empty) {
+  display: none;
+}
+
+/* shortcuts --------------------------------------------------------------- */
+
+.editr-keys {
+  margin: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 9px 16px;
+  align-items: center;
+}
+
+.editr-keys dd {
+  margin: 0;
+  display: flex;
+  gap: 4px;
+  justify-content: flex-end;
+}
+
+.editr-keys kbd {
+  min-width: 22px;
+  padding: 2px 7px;
+  border: 1px solid #D5D9DF;
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  background: #F6F7F9;
+  color: #1F2933;
+  font-family: inherit;
+  font-size: 12px;
+  text-align: center;
+  box-shadow: none;
+}
+
+.editr-visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

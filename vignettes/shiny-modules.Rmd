@@ -1,0 +1,258 @@
+---
+title: "Using DataEditR in Shiny apps"
+output: 
+  rmarkdown::html_vignette:
+    self_contained: false
+vignette: >
+  %\VignetteIndexEntry{Using DataEditR in Shiny apps}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+
+screenshot <- function(file) {
+  path <- file.path("images", file)
+  if (!file.exists(path)) {
+    path <- paste0(
+      "https://raw.githubusercontent.com/DillonHammill/DataEditR/master/",
+      "vignettes/images/", file
+    )
+  }
+  knitr::include_graphics(path)
+}
+```
+
+`data_edit()` is a shiny gadget built from a set of shiny modules. The same modules can be used to add an editable table to your own shiny applications. This article shows how to use the `dataEdit` module and how it fits together with the other modules that ship with **DataEditR**.
+
+## 1. The dataEdit module
+
+Every shiny module has two parts: a user interface function to place in the UI of your app, and a server function to call in your server. For the data editor these are `dataEditUI()` and `dataEditServer()`. Give both the same `id`:
+
+```{r}
+library(shiny)
+library(DataEditR)
+
+ui <- fluidPage(
+  titlePanel("Car data"),
+  dataEditUI("cars")
+)
+
+server <- function(input, output, session) {
+  cars <- dataEditServer("cars", data = reactive(mtcars))
+}
+
+shinyApp(ui, server)
+```
+
+| Function            | Use it to                                                         |
+|---------------------|-------------------------------------------------------------------|
+| `dataEditUI()`      | place the editor (grid, toolbar, review panel, status bar) in the UI |
+| `dataEditServer()`  | load data into the editor and get the edited data back as a reactive |
+| `dataEditChanges()` | count the changes that have not been saved yet                    |
+| `dataEditCommit()`  | save the changes (write them to a database, or start afresh from the current data) |
+
+`dataEditUI()` adds the grid together with the toolbar (undo/redo, columns, find, review changes, code and keyboard shortcuts), the review panel and the status bar. The grid supports everything described in `vignette("DataEditR")`: editing, range selection, copy and paste, fill down, adding and removing rows and columns, header filters, change tracking and the review panel.
+
+The editor uses Bootstrap 5, so use a Bootstrap 5 page such as `bslib::page_fluid()` (or `fluidPage(theme = bslib::bs_theme(version = 5))`) for the menus and dialogs to look their best.
+
+### 1.1 Layout options
+
+* `height` sets the height of the grid (`"65vh"` by default);
+* `toolbar = FALSE` shows only the grid, without the toolbar, review panel and status bar;
+* `toolbar_left` and `toolbar_right` add your own controls at the start or end of the toolbar. `data_edit()` uses these slots for its `Open` and `Export` menus.
+
+```{r}
+ui <- bslib::page_fluid(
+  dataEditUI(
+    "cars",
+    height = "500px",
+    toolbar_right = downloadButton("save", "Save", class = "btn-sm")
+  )
+)
+```
+
+### 1.2 Server options
+
+`dataEditServer()` accepts the same editing options as `data_edit()`, including `col_bind`, `col_edit`, `col_options`, `col_stretch`, `col_names`, `col_readonly`, `col_hide`, `col_factor`, `row_bind`, `row_edit`, `read_fun`, `read_args`, `quiet` and `track`. The `data` argument can be a reactive expression or a fixed value, and can contain:
+
+* a data.frame, tibble, data.table or matrix;
+* the dimensions (e.g. `c(10, 5)`) or column names of an empty template;
+* the name of a file to read with `read_fun`;
+* a `dbplyr` lazy table or `db_table()` (see `vignette("databases")`).
+
+Whenever `data` changes the editor loads the new data and its history is cleared. `code_name` sets the name of the data in the code shown in the `Code` tab.
+
+### 1.3 The returned data
+
+`dataEditServer()` returns a reactive expression containing the edited data, which updates after every change. Use it like any other reactive:
+
+```{r}
+server <- function(input, output, session) {
+  cars <- dataEditServer("cars", data = reactive(mtcars), track = TRUE)
+
+  output$save <- downloadHandler(
+    filename = "cars.csv",
+    content = function(file) write.csv(cars(), file)
+  )
+}
+```
+
+The reactive also carries a `"view"` attribute: `attr(cars, "view")` is a reactive returning only the rows and columns on screen (after header filters, hidden columns and the `rows`/`columns` arguments below).
+
+### 1.4 Showing part of the data
+
+The `rows` and `columns` arguments restrict what the grid shows without removing anything from the data. They accept fixed values or reactive expressions returning the row indices and column names to display (`NULL` shows everything). Edits made to the visible part are applied directly to the complete data, which is what the returned reactive contains.
+
+```{r}
+ui <- bslib::page_fluid(
+  checkboxGroupInput("cyl", "Cylinders", choices = c(4, 6, 8),
+                     selected = c(4, 6, 8), inline = TRUE),
+  dataEditUI("cars")
+)
+
+server <- function(input, output, session) {
+  cars <- dataEditServer(
+    "cars",
+    data = reactive(mtcars),
+    rows = reactive(which(mtcars$cyl %in% input$cyl)),
+    columns = c("mpg", "cyl", "hp", "wt")
+  )
+}
+```
+
+### 1.5 Saving changes
+
+Pass the reactive returned by `dataEditServer()` to `dataEditCommit()` to save the changes, typically when the user presses a *Save* button, and to `dataEditChanges()` for a summary of the changes that have not been saved yet:
+
+* for **database tables** the changes are written to the database in a single transaction, exactly as `data_edit()` does when you press *Done*. The rows are then read back from the database, so new rows show the keys the database generated and the editor starts afresh;
+* for **data in your R session** nothing is written, but the current data becomes the new starting point: the review panel, change highlights and the code in the `Code` tab start again from the saved data. Write the data wherever it needs to go in the same observer.
+
+`dataEditChanges()` returns the number of rows `updated`, `inserted` and `deleted`, the number of `columns` added, removed or renamed, the number of edited `cells` and the `total` number of changes. Like any reactive it updates as the data is edited.
+
+```{r}
+library(shiny)
+library(DataEditR)
+
+con <- DBI::dbConnect(RSQLite::SQLite(), "cars.sqlite")
+
+ui <- bslib::page_fluid(
+  shinyjs::useShinyjs(),
+  dataEditUI(
+    "cars",
+    toolbar_right = actionButton("save", "Save", class = "btn-primary")
+  )
+)
+
+server <- function(input, output, session) {
+  cars <- dataEditServer("cars", data = dplyr::tbl(con, "cars"))
+
+  # only enable the button when there is something to save
+  observe({
+    ch <- dataEditChanges(cars)
+    shinyjs::toggleState("save", !is.null(ch) && ch$total > 0)
+  })
+
+  # ask before writing to the database
+  observeEvent(input$save, {
+    ch <- dataEditChanges(cars)
+    showModal(modalDialog(
+      title = "Save changes?",
+      sprintf("%d row(s) updated, %d added and %d removed.",
+              ch$updated, ch$inserted, ch$deleted),
+      footer = tagList(modalButton("Keep editing"),
+                       actionButton("confirm", "Save", class = "btn-primary"))
+    ))
+  })
+
+  observeEvent(input$confirm, {
+    removeModal()
+    res <- tryCatch(dataEditCommit(cars), editr_conflict = function(e) e)
+    if (inherits(res, "editr_conflict")) {
+      showNotification(conditionMessage(res), type = "error", duration = NULL)
+    } else {
+      showNotification("Changes saved")
+    }
+  })
+}
+
+shinyApp(ui, server)
+```
+
+The *Save* button sits at the end of the editor's toolbar and is only enabled when there are unsaved changes. Pressing it shows a summary of the changes from `dataEditChanges()`:
+
+```{r, echo = FALSE, fig.align = "center", out.width = "100%", eval = TRUE}
+screenshot("shiny-save-confirm.png")
+```
+
+After the changes are written, the rows are read back from the database: the removed row is gone, the edited values are saved and the new row has the `id` the database generated. The button is disabled again until the next edit.
+
+```{r, echo = FALSE, fig.align = "center", out.width = "100%", eval = TRUE}
+screenshot("shiny-save-done.png")
+```
+
+If a row was changed or removed by someone else since it was loaded, `dataEditCommit()` rolls back the whole transaction, writes nothing and raises an error of class `"editr_conflict"`. The changes stay in the editor, so the user can review them and try again. Other errors (e.g. a lost connection) are raised as usual; wrap the call in `tryCatch()` to show them to the user.
+
+For data frames, save the edited data in the same observer:
+
+```{r}
+observeEvent(input$save, {
+  write.csv(cars(), "cars.csv", row.names = FALSE)
+  dataEditCommit(cars)
+})
+```
+
+## 2. The other modules
+
+Earlier versions of **DataEditR** combined several modules inside `data_edit()`. These are still exported and can be combined with `dataEdit` in your own apps. They use `shinyjs`, so add `shinyjs::useShinyjs()` to your UI.
+
+| Module       | What it does                                                                  |
+|--------------|-------------------------------------------------------------------------------|
+| `dataInput`  | text box to load an R object or template by name, and a file upload           |
+| `dataOutput` | download button that writes the data to a file with any writing function      |
+| `dataFilter` | dialog to build row filters (equal, greater than, between, contains, ...)     |
+| `dataSelect` | dialog to choose columns                                                      |
+| `dataSync`   | merges an edited subset back into the complete data                           |
+
+`dataFilterServer()` returns a list with the filtered `data` and the matching `rows`, and `dataSelectServer()` a list with the selected `data`, column indices (`columns`) and column `names`. These can be passed straight to the `rows` and `columns` arguments of `dataEditServer()`, so there is no need for `dataSync`:
+
+```{r}
+library(shiny)
+library(shinyjs)
+library(DataEditR)
+
+ui <- bslib::page_fluid(
+  useShinyjs(),
+  dataInputUI("input"),
+  dataFilterUI("filter"),
+  dataSelectUI("select"),
+  dataOutputUI("output"),
+  dataEditUI("edit")
+)
+
+server <- function(input, output, session) {
+  data_input <- dataInputServer("input", data = "mtcars")
+  data_filter <- dataFilterServer("filter", data = data_input)
+  data_select <- dataSelectServer("select", data = data_input)
+
+  data_edit <- dataEditServer(
+    "edit",
+    data = data_input,
+    rows = data_filter$rows,
+    columns = data_select$names
+  )
+
+  dataOutputServer("output", data = data_edit)
+}
+
+shinyApp(ui, server)
+```
+
+By default `dataFilterServer()` and `dataSelectServer()` reset whenever their `data` changes. Supply a different trigger to `reset` (e.g. the data input rather than the edited data) to keep filters active while the data is being edited.
+
+`dataSyncServer()` is still available for apps that edit a copy of a subset: give it the complete `data`, the edited `data_subset` and the `rows` and `columns` of the subset, and set `auto = TRUE` to merge changes as they happen.

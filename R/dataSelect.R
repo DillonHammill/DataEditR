@@ -10,31 +10,32 @@
 #'   should be hidden from the user, set to FALSE by default.
 #' @param hover_text text to display on download button when user hovers cursor
 #'   over button, set to NULL by default to turn off hover text.
+#' @param reset optional reactive expression that resets the selection whenever
+#'   it changes. By default the selection is reset whenever \code{data}
+#'   changes.
 #'
-#' @return a list of reactive objects containing the filtered \code{data} and
-#'   indices for selected \code{columns}.
+#' @return a list of reactive objects containing the filtered \code{data},
+#'   indices for selected \code{columns} and the \code{names} of the selected
+#'   columns.
 #'
 #' @importFrom shiny icon is.reactive actionButton NS reactive moduleServer
 #'   reactiveValues observe observeEvent showModal modalDialog tagList insertUI
 #'   removeUI removeModal
-#' @importFrom shinyBS bsButton updateButton
 #' @importFrom htmltools tags
 #' @importFrom shinyjs hidden show
-#' @importFrom shinyBS addTooltip
 #'
 #' @author Dillon Hammill, \email{dillon.hammill21@gmail.com}
 #'
 #' @examples
 #' if (interactive()) {
 #'   library(shiny)
-#'   library(rhandsontable)
 #'   library(shinyjs)
 #'
 #'   ui <- fluidPage(
 #'     useShinyjs(),
 #'     dataInputUI("input1"),
 #'     dataSelectUI("select1"),
-#'     rHandsontableOutput("data1")
+#'     tableOutput("data1")
 #'   )
 #'
 #'   server <- function(input,
@@ -46,10 +47,8 @@
 #'       data = data_input
 #'     )
 #'
-#'     output$data1 <- renderRHandsontable({
-#'       if (!is.null(data_select$data())) {
-#'         rhandsontable(data_select$data())
-#'       }
+#'     output$data1 <- renderTable({
+#'       data_select$data()
 #'     })
 #'
 #'   }
@@ -68,10 +67,8 @@ dataSelectUI <- function(id) {
     actionButton(
       NS(id, "select"),
       label = NULL,
-      icon = icon(
-        "glyphicon glyphicon-screenshot",
-        lib = "glyphicon"
-      ),
+      icon = icon("crosshairs"),
+      title = "Select columns",
       style = "margin-left: 0px;"
     )
   )
@@ -83,7 +80,8 @@ dataSelectUI <- function(id) {
 dataSelectServer <- function(id,
                              data = reactive(NULL),
                              hide = FALSE,
-                             hover_text = NULL) {
+                             hover_text = NULL,
+                             reset = NULL) {
   
   # SERVER
   moduleServer(id, function(input, output, session) {
@@ -95,9 +93,7 @@ dataSelectServer <- function(id,
     if (!hide) {
       show("select")
       if(!is.null(hover_text)) {
-        addTooltip(session = session,
-                   id = ns("select"),
-                   title = hover_text)
+        editr_tooltip("select", hover_text)
       }
     }
     
@@ -109,7 +105,8 @@ dataSelectServer <- function(id,
       data = NULL,
       subset = NULL,
       select = list(),
-      columns = NULL
+      columns = NULL,
+      names = NULL
     )
     
     # DATA
@@ -119,10 +116,21 @@ dataSelectServer <- function(id,
       } else {
         values$data <- data()
       }
-      # RESET FILTERS - NEW DATA
+    })
+    
+    # RESET SELECTION - NEW DATA
+    reset_trigger <- if (!is.null(reset)) {
+      reset
+    } else if (is.reactive(data)) {
+      data
+    } else {
+      reactive(data)
+    }
+    observeEvent(reset_trigger(), {
       values$select <- list()
       values$columns <- NULL
-    })
+      values$names <- NULL
+    }, ignoreNULL = FALSE)
     
     # SELECT UI
     observeEvent(input$select, {
@@ -143,7 +151,7 @@ dataSelectServer <- function(id,
             actionButton(
               ns("close"),
               "Close",
-              icon = icon("eject", lib = "glyphicon")
+              icon = icon("check")
             )
           ),
           # BUTTON ARRAY
@@ -174,37 +182,24 @@ dataSelectServer <- function(id,
               # BUTTON TURNED ON
               if(values$select[[column_name]] == FALSE) {
                 values$select[[column_name]] <<- TRUE
-                updateButton(
-                  session,
-                  ns(button_name),
-                  column_name,
-                  block = FALSE,
-                  style = "success"
-                )
+                editr_button_style(button_name, "success")
               # BUTTON TURNED OFF
               } else if(values$select[[column_name]] == TRUE) {
                 values$select[[column_name]] <<- FALSE
-                updateButton(
-                  session,
-                  ns(button_name),
-                  column_name,
-                  block = FALSE,
-                  style = "danger"
-                )
+                editr_button_style(button_name, "danger")
               }
             })
           }
           # CREATE RED BUTTON
           insertUI(
             selector = paste0("#", ns("placeholder")),
-            ui = bsButton(
+            ui = actionButton(
               ns(button_name),
               column_name,
-              block = FALSE,
-              style = ifelse(values$select[[column_name]],
-                             "success",
-                             "danger"),
-              outline = "2px black;"
+              class = ifelse(values$select[[column_name]],
+                             "btn-success",
+                             "btn-danger"),
+              style = "margin: 2px;"
             )
           )
         })
@@ -219,13 +214,7 @@ dataSelectServer <- function(id,
       # UPDATE BUTTONS
       lapply(1:ncol(values$data), function(z) {
         values$select[[colnames(values$data)[z]]] <- TRUE
-        updateButton(
-          session,
-          ns(paste0("button-", z)),
-          label = colnames(values$data)[z],
-          style = "success",
-          block = FALSE
-        )
+        editr_button_style(paste0("button-", z), "success")
       })
       
     })
@@ -236,13 +225,7 @@ dataSelectServer <- function(id,
       # UPDATE BUTTONS
       lapply(1:ncol(values$data), function(z) {
         values$select[[colnames(values$data)[z]]] <- FALSE
-        updateButton(
-          session,
-          ns(paste0("button-", z)),
-          label = colnames(values$data)[z],
-          style = "danger",
-          block = FALSE
-        )
+        editr_button_style(paste0("button-", z), "danger")
       })
       
     })
@@ -264,12 +247,15 @@ dataSelectServer <- function(id,
         
       }
       
-      # COLUMN INDICES
-      if(!is.null(values$select)) {
-        values$columns <- which(unlist(values$select))
-      }
-      if(length(values$columns) == ncol(values$data)) {
+      # COLUMN INDICES & NAMES - IN DATA ORDER
+      selected <- names(values$select)[unlist(values$select)]
+      selected <- colnames(values$data)[colnames(values$data) %in% selected]
+      values$columns <- match(selected, colnames(values$data))
+      values$names <- selected
+      if(length(values$columns) == ncol(values$data) ||
+         length(values$columns) == 0) {
         values$columns <- NULL
+        values$names <- NULL
       }
       
       # CLOSE POPUP
@@ -281,7 +267,8 @@ dataSelectServer <- function(id,
     return(
       list(
         data = reactive({values$subset}),
-        columns = reactive({values$columns})
+        columns = reactive({values$columns}),
+        names = reactive({values$names})
       )
     )
   })

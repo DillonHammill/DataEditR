@@ -5,40 +5,106 @@
   ],
   "@type": "SoftwareSourceCode",
   "identifier": "DataEditR",
-  "description": "Provides an interactive way to edit matrices, data.frames or \n  tabular data files in R.",
-  "name": "DataEditR: Interactive Editor for Tabular Data",
+  "description": "An interactive editor built on the 'Tabulator' JavaScript library to allow the interactive viewing, entering, filtering and editing of data in R, including tables stored in databases <https://dillonhammill.github.io/DataEditR/>.",
+  "name": "DataEditR: An Interactive Editor for Viewing, Entering, Filtering & Editing Data",
   "codeRepository": "https://github.com/DillonHammill/DataEditR",
   "issueTracker": "https://github.com/DillonHammill/DataEditR/issues",
   "license": "https://spdx.org/licenses/GPL-2.0",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "programmingLanguage": {
     "@type": "ComputerLanguage",
     "name": "R",
     "url": "https://r-project.org"
   },
-  "runtimePlatform": "R version 4.0.2 (2020-06-22)",
+  "runtimePlatform": "R version 4.3.3",
   "author": [
     {
       "@type": "Person",
       "givenName": "Dillon",
       "familyName": "Hammill",
-      "email": "DillonHammill@anu.edu.au",
+      "email": "dillon.hammill21@gmail.com",
       "@id": "https://orcid.org/0000-0002-1407-7223"
     }
   ],
-  "contributor": {},
-  "copyrightHolder": {},
+  "contributor": [
+    {
+      "@type": "Person",
+      "givenName": "Oli",
+      "familyName": "Folkerd"
+    }
+  ],
+  "copyrightHolder": [
+    {
+      "@type": "Person",
+      "givenName": "Oli",
+      "familyName": "Folkerd"
+    },
+    {
+      "@type": "Organization",
+      "name": "Lucide Contributors"
+    }
+  ],
   "funder": {},
   "maintainer": [
     {
       "@type": "Person",
       "givenName": "Dillon",
       "familyName": "Hammill",
-      "email": "DillonHammill@anu.edu.au",
+      "email": "dillon.hammill21@gmail.com",
       "@id": "https://orcid.org/0000-0002-1407-7223"
     }
   ],
   "softwareSuggestions": [
+    {
+      "@type": "SoftwareApplication",
+      "identifier": "data.table",
+      "name": "data.table",
+      "provider": {
+        "@id": "https://cran.r-project.org",
+        "@type": "Organization",
+        "name": "Comprehensive R Archive Network (CRAN)",
+        "url": "https://cran.r-project.org"
+      },
+      "sameAs": "https://CRAN.R-project.org/package=data.table"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "identifier": "DBI",
+      "name": "DBI",
+      "provider": {
+        "@id": "https://cran.r-project.org",
+        "@type": "Organization",
+        "name": "Comprehensive R Archive Network (CRAN)",
+        "url": "https://cran.r-project.org"
+      },
+      "sameAs": "https://CRAN.R-project.org/package=DBI"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "identifier": "dbplyr",
+      "name": "dbplyr",
+      "version": ">= 2.3.0",
+      "provider": {
+        "@id": "https://cran.r-project.org",
+        "@type": "Organization",
+        "name": "Comprehensive R Archive Network (CRAN)",
+        "url": "https://cran.r-project.org"
+      },
+      "sameAs": "https://CRAN.R-project.org/package=dbplyr"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "identifier": "dplyr",
+      "name": "dplyr",
+      "version": ">= 1.1.0",
+      "provider": {
+        "@id": "https://cran.r-project.org",
+        "@type": "Organization",
+        "name": "Comprehensive R Archive Network (CRAN)",
+        "url": "https://cran.r-project.org"
+      },
+      "sameAs": "https://CRAN.R-project.org/package=dplyr"
+    },
     {
       "@type": "SoftwareApplication",
       "identifier": "knitr",
@@ -62,6 +128,43 @@
         "url": "https://cran.r-project.org"
       },
       "sameAs": "https://CRAN.R-project.org/package=rmarkdown"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "identifier": "RSQLite",
+      "name": "RSQLite",
+      "provider": {
+        "@id": "https://cran.r-project.org",
+        "@type": "Organization",
+        "name": "Comprehensive R Archive Network (CRAN)",
+        "url": "https://cran.r-project.org"
+      },
+      "sameAs": "https://CRAN.R-project.org/package=RSQLite"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "identifier": "testthat",
+      "name": "testthat",
+      "version": ">= 3.0.0",
+      "provider": {
+        "@id": "https://cran.r-project.org",
+        "@type": "Organization",
+        "name": "Comprehensive R Archive Network (CRAN)",
+        "url": "https://cran.r-project.org"
+      },
+      "sameAs": "https://CRAN.R-project.org/package=testthat"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "identifier": "tibble",
+      "name": "tibble",
+      "provider": {
+        "@id": "https://cran.r-project.org",
+        "@type": "Organization",
+        "name": "Comprehensive R Archive Network (CRAN)",
+        "url": "https://cran.r-project.org"
+      },
+      "sameAs": "https://CRAN.R-project.org/package=tibble"
     }
   ],
   "softwareRequirements": [
@@ -75,6 +178,7 @@
       "@type": "SoftwareApplication",
       "identifier": "shiny",
       "name": "shiny",
+      "version": ">= 1.7.0",
       "provider": {
         "@id": "https://cran.r-project.org",
         "@type": "Organization",
@@ -85,27 +189,53 @@
     },
     {
       "@type": "SoftwareApplication",
-      "identifier": "shinythemes",
-      "name": "shinythemes",
+      "identifier": "shinyjs",
+      "name": "shinyjs",
       "provider": {
         "@id": "https://cran.r-project.org",
         "@type": "Organization",
         "name": "Comprehensive R Archive Network (CRAN)",
         "url": "https://cran.r-project.org"
       },
-      "sameAs": "https://CRAN.R-project.org/package=shinythemes"
+      "sameAs": "https://CRAN.R-project.org/package=shinyjs"
     },
     {
       "@type": "SoftwareApplication",
-      "identifier": "rhandsontable",
-      "name": "rhandsontable",
+      "identifier": "bslib",
+      "name": "bslib",
+      "version": ">= 0.5.0",
       "provider": {
         "@id": "https://cran.r-project.org",
         "@type": "Organization",
         "name": "Comprehensive R Archive Network (CRAN)",
         "url": "https://cran.r-project.org"
       },
-      "sameAs": "https://CRAN.R-project.org/package=rhandsontable"
+      "sameAs": "https://CRAN.R-project.org/package=bslib"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "identifier": "htmlwidgets",
+      "name": "htmlwidgets",
+      "version": ">= 1.5.0",
+      "provider": {
+        "@id": "https://cran.r-project.org",
+        "@type": "Organization",
+        "name": "Comprehensive R Archive Network (CRAN)",
+        "url": "https://cran.r-project.org"
+      },
+      "sameAs": "https://CRAN.R-project.org/package=htmlwidgets"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "identifier": "rstudioapi",
+      "name": "rstudioapi",
+      "provider": {
+        "@id": "https://cran.r-project.org",
+        "@type": "Organization",
+        "name": "Comprehensive R Archive Network (CRAN)",
+        "url": "https://cran.r-project.org"
+      },
+      "sameAs": "https://CRAN.R-project.org/package=rstudioapi"
     },
     {
       "@type": "SoftwareApplication",
@@ -118,11 +248,21 @@
         "url": "https://cran.r-project.org"
       },
       "sameAs": "https://CRAN.R-project.org/package=htmltools"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "identifier": "stats",
+      "name": "stats"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "identifier": "utils",
+      "name": "utils"
     }
   ],
   "releaseNotes": "https://github.com/DillonHammill/DataEditR/blob/master/NEWS.md",
   "readme": "https://github.com/DillonHammill/DataEditR/blob/master/README.md",
-  "fileSize": "4293.178KB",
   "contIntegration": "https://github.com/DillonHammill/DataEditR/actions",
-  "developmentStatus": "https://www.repostatus.org/#active"
+  "developmentStatus": "https://www.repostatus.org/#active",
+  "url": "https://dillonhammill.github.io/DataEditR/"
 }

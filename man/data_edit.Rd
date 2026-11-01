@@ -24,7 +24,7 @@ data_edit(
   viewer = "dialog",
   viewer_height = 800,
   viewer_width = 1200,
-  theme = "yeti",
+  theme = NULL,
   read_fun = "read.csv",
   read_args = NULL,
   write_fun = "write.csv",
@@ -39,10 +39,10 @@ data_edit(
 }
 \arguments{
 \item{x}{a matrix, data.frame, data.table or the name of a csv file to edit.
-Tibbles are also supported but will be coerced to data.frames. An empty
-table can be created by specifying the dimensions in a vector of the form
-\code{c(nrow, ncol)} or the names of the columns to include in the
-template.}
+Tibbles are also supported. An empty table can be created by specifying
+the dimensions in a vector of the form \code{c(nrow, ncol)} or the names
+of the columns to include in the template. Database tables can be edited
+by supplying a \code{dbplyr} lazy table or a \code{\link{db_table}()}.}
 
 \item{col_bind}{additional columns to add to the data prior to loading into
 editor, can be either an array containing the new data, a vector containing
@@ -52,23 +52,43 @@ for each new column.}
 \item{col_edit}{logical indicating whether columns can be added or removed,
 set to TRUE by default.}
 
-\item{col_options}{named list containing the options for columns that use
-dropdown menus, dates, checkboxes or passwords.}
+\item{col_options}{a list named with valid column names and the input to
+use for each column:
+\itemize{
+\item \code{c(TRUE, FALSE)}: checkboxes;
+\item a vector of values, e.g. \code{c("A", "B", "C")}: a dropdown menu;
+\item \code{"date"} or \code{"datetime"}: a date or date-time picker
+(the column is returned as \code{Date} or \code{POSIXct});
+\item \code{"time"}: a time picker (\code{"HH:MM"} text);
+\item \code{"textarea"}: text over several lines;
+\item \code{"password"}: hidden text;
+\item \code{"url"}: web addresses with a button to open them;
+\item \code{"colour"} (or \code{"color"}): colours shown with a swatch;
+\item \code{c(min = 0, max = 10, step = 1)} (any of the three): numbers
+within limits;
+\item \code{"slider"}: a slider and bar for numbers from 0 to 100;
+\item \code{"rating"}: a rating from 0 to 5 stars.
+}
+Set the limits of a slider with
+\code{c(type = "slider", min = 0, max = 1, step = 0.05)} and the number
+of stars of a rating with \code{c(type = "rating", stars = 10)} (a
+\code{list()} works too). Values outside the limits are marked in the
+editor and cannot be entered.}
 
 \item{col_stretch}{logical indicating whether columns should be stretched to
 fill the full width of the display, set to FALSE by default.}
 
 \item{col_factor}{logical indicating whether character columns should be
 converted to factors prior to returning the edited data, set to FALSE by
-default.}
+default. Factor columns in the data are always returned as factors with
+their levels; new values become new levels after the existing ones.}
 
 \item{col_names}{logical indicating whether column names can be edited or a
 vector of column names that cannot be edited, set to TRUE by default to
 allow editing of column names.}
 
-\item{col_readonly}{names of columns that cannot be edited. Users will be
-able to edit values but these will be reverted to the original values.
-Column names for these column cannot be edited either.}
+\item{col_readonly}{names of columns that cannot be edited. Values and
+names of these columns are locked in the grid.}
 
 \item{col_hide}{names of columns to hide from the editor. Hidden columns will
 not be visible or editable but will be retained in the returned data.}
@@ -83,10 +103,11 @@ to TRUE by default.}
 
 \item{save_as}{name of a csv file to which the edited data should be saved.}
 
-\item{title}{optional title to include above the data editor.}
+\item{title}{optional title to show in the header, set to the name of the
+data by default.}
 
-\item{logo}{optional package logo to include in title above the data editor,
-must be supplied as path to logo png.}
+\item{logo}{optional logo to include next to the title, supplied as the path
+or URL of an image. No logo is shown by default.}
 
 \item{logo_size}{width of the logo in pixels, set to 30 pixels by default.}
 
@@ -97,7 +118,7 @@ default.}
 \item{viewer}{can be either \code{"dialog"}, \code{"browser"} or
 \code{"pane"} to open the application in a dialog box, browser or RStudio
 viewer pane. First letter abbreviations are allowed, set to \code{"dialog"}
-by default.}
+by default. A function accepting the application URL can also be supplied.}
 
 \item{viewer_height}{numeric to control the height of the viewer in pixels
 when \code{viewer} is set to \code{"dialog"}, set 800 by default.}
@@ -105,7 +126,9 @@ when \code{viewer} is set to \code{"dialog"}, set 800 by default.}
 \item{viewer_width}{numeric to control the width of the viewer in pixels when
 \code{viewer} is set to \code{"dialog"}, set to 1200 by default.}
 
-\item{theme}{valid shinytheme name, set to "yeti" by default.}
+\item{theme}{a Bootstrap 5 Bootswatch theme name (e.g. \code{"yeti"}) or a
+\code{bslib::bs_theme()} object. Set to \code{NULL} by default to use the
+DataEditR theme.}
 
 \item{read_fun}{name of the function to use to read in the data when \code{x}
 is the name of a file, set to \code{read.csv} by default.}
@@ -124,18 +147,18 @@ accepts the file name supplied to \code{save_as}.}
 \item{quiet}{logical indicating whether messages should be suppressed, set to
 FALSE by default.}
 
-\item{hide}{logical indicating whether the \code{dataInput} and
-\code{dataOutput} modules should be visible to the user within the
-application. If \code{hide = FALSE} and \code{save_as} is specified, the
-edited data will be written to file after the application is closed.}
+\item{hide}{logical indicating whether the \emph{Open} and \emph{Export}
+menus and the \emph{Done} options should be hidden. When \code{save_as}
+is specified the edited data is written to file when \emph{Done} is
+pressed.}
 
 \item{code}{logical indicating whether tidyverse code required to replicate
 the data edits should be printed to the console, set to \code{FALSE} by
 default. Alternatively, users can supply the name of an R script to write
-the code to. The generated code uses \code{dplyr} verbs such as
-\code{rename()}, \code{select()}, \code{mutate()}, \code{slice()}, and
-\code{tibble::add_row()} to replicate column renames, column
-additions/removals, cell value changes, and row additions/removals.}
+the code to. For data frames the generated code uses \code{dplyr} verbs
+such as \code{rename()}, \code{select()}, \code{mutate()}, \code{slice()},
+and \code{tibble::add_row()}; for database tables it uses
+\code{rows_update()}, \code{rows_append()} and \code{rows_delete()}.}
 
 \item{cancel}{optional value to return when the user hits the \code{cancel}
 button, set to the supplied data by default.}
@@ -148,14 +171,60 @@ color. Set to \code{NULL} by default to disable highlighting.}
 \item{...}{not in use.}
 }
 \value{
-the edited data as a matrix or data.frame.
+the edited data as a matrix or data.frame. For database tables the
+edited rows are returned as a data.frame after the changes have been
+committed.
 }
 \description{
-\code{data_edit} is a shiny application built on \code{rhandsontable} that is
-designed to make it easy to interactively view, enter or edit data without
-any coding. \code{data_edit} is also a wrapper for any reading or writing
-function to make it easy to interactively update data saved to file.
+\code{data_edit} is a shiny application built on the MIT-licensed
+'Tabulator' JavaScript library that is designed to make it easy to
+interactively view, enter or edit data without any coding. \code{data_edit}
+is also a wrapper for any reading or writing function to make it easy to
+interactively update data saved to file, and can edit tables stored in a
+database.
 }
+\section{Editing}{
+
+Double-click a cell to edit it. Click and drag to select a range of cells,
+then copy (Ctrl+C), paste (Ctrl+V), clear (Delete) or fill down (Ctrl+D).
+Right click a row to insert or delete rows, and right click a column header
+to insert, rename, hide or delete columns. Double-click a column header to
+rename it. Ctrl+Z and Ctrl+Y undo and redo changes; press ? for the full
+list of shortcuts.
+}
+
+\section{Layout}{
+
+The toolbar opens other data (\emph{Open}), shows or hides columns, lists
+active filters, searches the data (Ctrl+F), and opens the review panel,
+which lists every change with a button to revert it and shows the code that
+reproduces the edits. Type in the boxes under the column headers to filter
+rows. The status bar shows how many rows and columns are on screen and
+summarises the selected cells. The menu next to \emph{Done} chooses whether
+all data or only what is on screen is returned.
+}
+
+\section{Databases}{
+
+Supply a \code{dbplyr} lazy table (e.g. \code{dplyr::tbl(con, "artists")})
+or a \code{\link{db_table}()} to edit a database table. Rows are matched by
+primary key, changes are staged until you press \emph{Done}, and you are
+asked to confirm before anything is written. Writes happen in a single
+transaction and are rolled back if any row was changed by someone else in
+the meantime. Adding, removing and renaming columns is disabled for
+database tables.
+}
+
+\section{RStudio add-in}{
+
+\code{data_edit()} is also available from the RStudio \emph{Addins} menu
+as \emph{Interactive Data Editor}. Highlight the name of a data frame,
+matrix or database table in the source editor or console and run the add-in
+to open it in the editor; with nothing highlighted an empty table is opened.
+The add-in can be bound to a keyboard shortcut through \emph{Tools > Modify
+Keyboard Shortcuts}.
+}
+
 \examples{
 if(interactive()) {
 

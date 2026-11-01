@@ -28,11 +28,10 @@
 #' @examples
 #' if (interactive()) {
 #'   library(shiny)
-#'   library(rhandsontable)
 #'
 #'   ui <- fluidPage(
 #'     dataInputUI("input1"),
-#'     rHandsontableOutput("data1")
+#'     tableOutput("data1")
 #'   )
 #'
 #'   server <- function(input,
@@ -40,10 +39,8 @@
 #'                      session) {
 #'     data_input1 <- dataInputServer("input1")
 #'
-#'     output$data1 <- renderRHandsontable({
-#'       if (!is.null(data_input1())) {
-#'         rhandsontable(data_input1())
-#'       }
+#'     output$data1 <- renderTable({
+#'       data_input1()
 #'     })
 #'   }
 #'
@@ -99,8 +96,9 @@ dataInputServer <- function(id,
                             output,
                             session) {
     
-    # UPLOADED DATA
+    # UPLOADED DATA & TEMPLATES - SELECTED BY NAME IN THE TEXT INPUT
     upload <- NULL # prevent global assignment below
+    template <- NULL
     
     # HIDE USER INTERFACE
     if (!hide) {
@@ -131,7 +129,6 @@ dataInputServer <- function(id,
         read_fun = read_fun,
         read_args = read_args
       )
-      envir <- environment()
       updateTextInput(
         session,
         "data",
@@ -157,8 +154,7 @@ dataInputServer <- function(id,
           )
         )
         # UPDATE INPUT FIELD
-        envir <- environment()
-        updateTextInput(
+          updateTextInput(
           session,
           "data",
           value = "upload"
@@ -171,8 +167,7 @@ dataInputServer <- function(id,
           read_fun = read_fun,
           read_args = read_args
         )
-        envir <- environment()
-        updateTextInput(
+          updateTextInput(
           session,
           "data",
           value = "template"
@@ -186,13 +181,21 @@ dataInputServer <- function(id,
     # DATA INPUT
     data_input <- eventReactive(input$data, {
       # LOAD INPUT DATA
-      data_input <- tryCatch(
-        eval(parse(text = input$data),
-             envir = envir),
-        error = function(e) {
-          return(NULL)
+      data_input <- tryCatch({
+        if (identical(input$data, "upload") && !is.null(upload)) {
+          upload
+        } else if (identical(input$data, "template") && !is.null(template)) {
+          template
+        } else {
+          eval(parse(text = input$data), envir = envir)
         }
-      )
+      }, error = function(e) {
+        return(NULL)
+      })
+      # DATABASE TABLES - PASSED THROUGH TO DATAEDIT
+      if(is_db_input(data_input)) {
+        return(data_input)
+      }
       # CHECK EMPTY DATA
       if(!is.null(data_input)) {
         # DATA - VECTOR -> ROW
@@ -216,7 +219,7 @@ dataInputServer <- function(id,
           if(ncol(data_input) == 0) {
             data_input <- cbind(
               data_input, 
-              "V1" = rep("", ncol(data_input))
+              "V1" = rep("", nrow(data_input))
             )
           }
           # NO ROWS

@@ -1,0 +1,446 @@
+/* DataEditR grid styling on top of the Tabulator bootstrap5 theme */
+
+.editr_grid {
+  --editr-text: #1F2933;
+  --editr-muted: #52606D;
+  --editr-border: #E3E6EA;
+  --editr-border-strong: #D5D9DF;
+  --editr-chrome: #F6F7F9;
+  --editr-accent: #1D4ED8;
+  --editr-accent-soft: #DBEAFE;
+  --editr-track-color: #2563EB;
+}
+
+.editr_grid .tabulator {
+  font-size: 13px;
+  border: 0;
+  background: #FFFFFF;
+  color: var(--editr-text);
+}
+
+.editr_grid .tabulator .tabulator-header {
+  background: var(--editr-chrome);
+  border-bottom: 1px solid var(--editr-border);
+  color: var(--editr-text);
+}
+
+.editr_grid .tabulator .tabulator-header .tabulator-col {
+  background: var(--editr-chrome);
+  border-right: 1px solid #EEF0F3;
+}
+
+/* headers of the selected range (the rule above would otherwise leave
+   Tabulator's white text of a selected column on the light header) */
+.editr_grid .tabulator .tabulator-header .tabulator-col.tabulator-range-highlight {
+  background: #EEF3FD;
+  color: var(--editr-text);
+}
+
+.editr_grid .tabulator .tabulator-header .tabulator-col.tabulator-range-selected {
+  background: var(--editr-accent-soft);
+  color: #1E3A8A;
+}
+
+.editr_grid .tabulator .tabulator-row {
+  min-height: 32px;
+}
+
+.editr_grid .tabulator .tabulator-row .tabulator-cell {
+  border-right: 1px solid #EEF0F3;
+  font-variant-numeric: tabular-nums;
+}
+
+/* column titles: type badge, name, lock */
+.editr-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+}
+
+.editr-badge {
+  flex: none;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: #E9ECF0;
+  color: var(--editr-muted);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1.4;
+}
+
+.editr-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 600;
+}
+
+.editr-lock {
+  display: inline-flex;
+  color: var(--editr-muted);
+}
+
+/* compact rows, no striping */
+.editr_grid .tabulator .tabulator-row,
+.editr_grid .tabulator .tabulator-row.tabulator-row-even {
+  background-color: #FFFFFF;
+}
+
+.editr_grid .tabulator .tabulator-row .tabulator-cell {
+  padding: 6px 10px;
+}
+
+.editr_grid .tabulator .tabulator-row.tabulator-selectable:hover {
+  background-color: #FBFBFC;
+}
+
+.editr_grid .tabulator .tabulator-header .tabulator-col .tabulator-col-content {
+  padding: 6px 8px;
+}
+
+/* header filters */
+.editr_grid .tabulator .tabulator-header .tabulator-col .tabulator-header-filter {
+  margin-top: 4px;
+}
+
+.editr_grid .tabulator .tabulator-header .tabulator-col .tabulator-header-filter input,
+.editr-range input {
+  height: 26px !important;
+  font-size: 12px !important;
+  line-height: 1.2;
+  box-sizing: border-box;
+  padding: 0 6px !important;
+  border: 1px solid var(--editr-border-strong) !important;
+  border-radius: 4px;
+  background: #FFFFFF;
+  font-family: inherit;
+  font-weight: 400;
+}
+
+.editr-range {
+  display: flex;
+  gap: 4px;
+}
+
+.editr-range input {
+  width: 50%;
+  min-width: 0;
+}
+
+/* cells */
+.tabulator .tabulator-cell.editr-changed {
+  background-color: #EAF1FD;
+  background-color: color-mix(in srgb, var(--editr-track-color, #2563EB) 10%, white);
+  box-shadow: inset 0 0 0 1px var(--editr-track-color, #2563EB);
+}
+
+.tabulator .tabulator-cell.editr-readonly {
+  background-color: var(--editr-chrome, #F6F7F9);
+  color: var(--editr-muted, #52606D);
+}
+
+.tabulator .tabulator-row .tabulator-cell.editr-rowheader,
+.tabulator .tabulator-cell.editr-rowheader {
+  background: var(--editr-chrome, #F6F7F9);
+  color: var(--editr-muted, #52606D);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.tabulator .tabulator-cell.editr-flash {
+  animation: editr-flash 0.9s ease-out;
+}
+
+@keyframes editr-flash {
+  0% { background-color: #FEF3C7; }
+  100% { background-color: transparent; }
+}
+
+/* add column / add row */
+.tabulator .tabulator-col.editr-addcol .tabulator-col-content {
+  padding: 4px;
+  display: flex;
+  justify-content: center;
+}
+
+.editr-addcol-btn {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed #B8BFC8;
+  border-radius: 6px;
+  background: #FFFFFF;
+  color: var(--editr-muted, #52606D);
+  cursor: pointer;
+}
+
+.editr-addcol-btn:hover,
+.editr-addcol-btn:focus-visible {
+  border-color: var(--editr-accent, #1D4ED8);
+  color: var(--editr-accent, #1D4ED8);
+}
+
+.tabulator .tabulator-cell.editr-addcol {
+  background: transparent;
+}
+
+.editr_grid .tabulator .tabulator-footer {
+  background: #FFFFFF;
+  border-top: 1px solid #EEF0F3;
+  padding: 2px 4px;
+}
+
+.editr-addrow {
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--editr-accent, #1D4ED8);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.editr-addrow:hover,
+.editr-addrow:focus-visible {
+  background: #EFF5FF;
+}
+
+/* popups: columns menu, type guard */
+.editr-popup {
+  z-index: 1080;
+  box-sizing: border-box;
+  border: 1px solid #E3E6EA;
+  border-radius: 10px;
+  background: #FFFFFF;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.16);
+  color: #1F2933;
+  font-size: 13px;
+}
+
+.editr-columns-menu {
+  width: 240px;
+  padding: 6px;
+}
+
+.editr-columns-head {
+  display: flex;
+  gap: 4px;
+  padding: 2px 2px 6px;
+  border-bottom: 1px solid #EEF0F3;
+  margin-bottom: 4px;
+}
+
+.editr-columns-head button {
+  border: 0;
+  background: transparent;
+  color: #1D4ED8;
+  font: inherit;
+  font-weight: 500;
+  padding: 4px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.editr-columns-list {
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.editr-columns-list label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.editr-columns-list label:hover {
+  background: #F6F7F9;
+}
+
+.editr-guard {
+  width: 300px;
+  padding: 14px;
+  border-color: #F3C98B;
+}
+
+.editr-guard-msg {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.editr-guard-icon {
+  flex: none;
+  color: #B45309;
+  margin-top: 1px;
+}
+
+.editr-guard-title {
+  font-weight: 600;
+}
+
+.editr-guard-sub {
+  margin-top: 2px;
+  color: #52606D;
+}
+
+.editr-guard-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+/* filter chips (rendered into the toolbar) */
+.editr-chip {
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 4px 0 10px;
+  border-radius: 999px;
+  background: #DBEAFE;
+  color: #1E3A8A;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.editr-chip button {
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.editr-chip button:hover {
+  background: rgba(30, 58, 138, 0.12);
+}
+
+.editr-chip-clear {
+  border: 0;
+  background: transparent;
+  color: #1D4ED8;
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+input.editr-rename {
+  position: absolute;
+  z-index: 10000;
+  box-sizing: border-box;
+  text-align: center;
+  font-weight: 600;
+  border: 2px solid #1D4ED8;
+  border-radius: 4px;
+  outline: none;
+}
+
+/* dropdown (col_options) list editor - match the grid font */
+.tabulator-edit-list {
+  font-size: 13px;
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+}
+
+.tabulator-edit-list .tabulator-edit-list-item {
+  padding: 6px 10px;
+}
+
+.tabulator-edit-list .tabulator-edit-list-item.active,
+.tabulator-edit-list .tabulator-edit-list-item.focused {
+  background: #EFF5FF;
+  color: #1D4ED8;
+  outline: none;
+}
+
+/* column types ------------------------------------------------------------ */
+
+.editr-url {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+}
+
+.editr-url-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.editr-url-open {
+  flex: none;
+  display: inline-flex;
+  color: var(--editr-accent);
+}
+
+.editr-colour {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.editr-swatch {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15);
+}
+
+.editr_grid .tabulator .tabulator-cell .editr-input {
+  width: 100%;
+  height: 100%;
+  padding: 2px 6px;
+  border: 0;
+  box-sizing: border-box;
+  font: inherit;
+}
+
+.editr_grid .tabulator .tabulator-cell textarea {
+  font: inherit;
+  line-height: 1.4;
+}
+
+.editr-slider {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 100%;
+  padding: 0 6px;
+}
+
+.editr-slider input {
+  flex: 1;
+  min-width: 0;
+}
+
+.editr-slider-value {
+  min-width: 2.5em;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* values that do not fit the column's input: a red line under the cell */
+.editr_grid .tabulator .tabulator-cell.editr-invalid {
+  background-image: linear-gradient(#DC2626, #DC2626);
+  background-size: 100% 2px;
+  background-position: bottom;
+  background-repeat: no-repeat;
+}

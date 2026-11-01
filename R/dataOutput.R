@@ -22,21 +22,19 @@
 #' @importFrom shiny downloadButton downloadHandler reactive moduleServer
 #'   is.reactive
 #' @importFrom shinyjs disable enable hidden show
-#' @importFrom shinyBS addTooltip
 #'
 #' @author Dillon Hammill, \email{dillon.hammill21@gmail.com}
 #'
 #' @examples
 #' if (interactive()) {
 #'   library(shiny)
-#'   library(rhandsontable)
 #'   library(shinyjs)
 #'
 #'   ui <- fluidPage(
 #'     useShinyjs(),
 #'     dataInputUI("input1"),
 #'     dataOutputUI("output1"),
-#'     rHandsontableOutput("data1")
+#'     tableOutput("data1")
 #'   )
 #'
 #'   server <- function(input,
@@ -44,10 +42,8 @@
 #'                      session) {
 #'     data_input1 <- dataInputServer("input1")
 #'
-#'     output$data1 <- renderRHandsontable({
-#'       if (!is.null(data_input1())) {
-#'         rhandsontable(data_input1())
-#'       }
+#'     output$data1 <- renderTable({
+#'       data_input1()
 #'     })
 #'
 #'     dataOutputServer("output1",
@@ -96,9 +92,7 @@ dataOutputServer <- function(id,
     if (!hide) {
       show("save")
       if(!is.null(hover_text)) {
-        addTooltip(session = session,
-                   id = ns("save"),
-                   title = hover_text)
+        editr_tooltip("save", hover_text)
       }
     }
     
@@ -107,24 +101,18 @@ dataOutputServer <- function(id,
     
     # DISABLE/ENABLE SAVE
     observe({
-      # UPDATE REACTIVE VALUES
-      if (!is.reactive(data)) {
-        values$data <- data
-      } else {
-        values$data <- data()
-      }
-      # DISABLE/ENABLE BUTTON
-      if (is.null(values$data)) {
+      d <- if (is.reactive(data)) data() else data
+      if (is.null(d)) {
         disable("save")
       } else {
         enable("save")
         # FORMAT ROWNAMES - NUMERIC ROWNAMES ARE RETAINED (ROW INDICES)
-        if (!nzchar(trimws(colnames(values$data)[1]))) {
-          # WARNING - SETTING ROWNAMES ON TIBBLES
-          rownames(values$data) <- values$data[, 1]
-          values$data <- values$data[, -1]
+        if (!nzchar(trimws(colnames(d)[1]))) {
+          rownames(d) <- d[, 1, drop = TRUE]
+          d <- d[, -1, drop = FALSE]
         }
       }
+      values$data <- d
     })
     
     # SAVE DATA
