@@ -36,6 +36,8 @@ data_edit(
   track = NULL,
   log = NULL,
   autosave = TRUE,
+  col_actions = TRUE,
+  rules = NULL,
   ...
 )
 }
@@ -184,6 +186,21 @@ closed without pressing \emph{Done} or \emph{Cancel} (the window was
 closed, R crashed, ...), opening the same data again offers to restore
 the changes. See the \emph{Drafts} section.}
 
+\item{col_actions}{logical indicating whether the column menu offers
+actions that change a whole column: formulas (e.g. a new column
+\code{kpl = mpg * 0.425}), find and replace, recoding values, changing
+the type and sorting the rows. Each action is shown in the generated code
+as one \code{dplyr} verb. Set to \code{TRUE} by default.}
+
+\item{rules}{a list of rules the data should follow, each a one-sided
+formula that is \code{TRUE} for valid rows and named with the message
+to show, e.g. \code{list("Age is between 0 and 120" = ~ age >= 0 & age <=
+  120, "End is after the start" = ~ end >= start)}. Cells that break a
+rule are marked in the grid and listed in the \emph{Problems} tab, and
+\emph{Done} asks before returning data with problems. Rules can also be
+added from a column's menu (\emph{Rules...}). See the \emph{Validation}
+section.}
+
 \item{...}{not in use.}
 }
 \value{
@@ -247,6 +264,28 @@ each edit. Drafts are kept in \code{tools::R_user_dir("DataEditR",
 A draft is removed when \emph{Done} or \emph{Cancel} is pressed, when it
 is restored or discarded, and after 30 days. Pressing \emph{Cancel} asks
 for confirmation before changes are discarded.
+}
+
+\section{Validation}{
+
+Rules are checked after every change. Missing values pass a rule unless
+the rule says otherwise, so \code{~ end >= start} only checks rows where
+both are filled in; add \code{"Start is required" = ~ !is.na(start)} to
+require a value. In the editor, a column's menu (\emph{Rules...}) makes it
+required or unique, sets limits or a pattern, or adds a formula.
+}
+
+\section{Column actions}{
+
+A column's menu (or right-clicking its header) has actions that change the
+whole column: \emph{Formula...} (a new column or new values from an R
+expression, e.g. \code{round(mpg * 0.425, 1)}), \emph{Find and
+replace...}, \emph{Recode values...}, \emph{Change type} and sorting. Each
+shows a preview and is recorded as one \code{dplyr} verb, so the generated
+code reads \code{mutate(kpl = round(mpg * 0.425, 1), .after = mpg)}
+rather than listing every value. Formulas can use column names and common
+functions (arithmetic, \code{round()}, \code{ifelse()}, \code{paste()},
+\code{case_when()}, \code{as.Date()}, ...), but not other code.
 }
 
 \section{RStudio add-in}{

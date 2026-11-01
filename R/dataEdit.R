@@ -28,6 +28,17 @@
 #'   by default. Drafts are kept in \code{tools::R_user_dir("DataEditR",
 #'   "data")} (or the folder set with \code{options(DataEditR.drafts = )}) and
 #'   are removed when the changes are committed or after 30 days.
+#' @param col_actions logical indicating whether the column menu offers
+#'   actions that change a whole column: formulas, find and replace,
+#'   recoding values, changing the type and sorting the rows. They are shown
+#'   in the generated code as one \code{dplyr} verb each. Set to \code{TRUE}
+#'   by default.
+#' @param rules a list of rules the data should follow, each a one-sided
+#'   formula that is \code{TRUE} for valid rows, named with the message to
+#'   show, e.g. \code{list("End must be after the start" = ~ end >= start)}.
+#'   Cells that break a rule are marked and listed in the \emph{Problems}
+#'   tab (see \code{\link{dataEditProblems}()}). Users can add rules to a
+#'   column from its menu (\emph{Rules...}).
 #' @param user name of the person editing, recorded in the change log (see
 #'   \code{\link{dataEditLog}()}). By default the user signed in to the app
 #'   (\code{session$user}), the \code{DataEditR.user} option or the system
@@ -226,6 +237,9 @@ dataEditUI <- function(id,
                       id = ns("tab_history"), `aria-selected` = "false",
                       onclick = js_panel("history", FALSE), "History"),
           tags$button(type = "button", class = "editr-tab", role = "tab",
+                      id = ns("tab_problems"), `aria-selected` = "false",
+                      onclick = js_panel("problems", FALSE), "Problems"),
+          tags$button(type = "button", class = "editr-tab", role = "tab",
                       id = ns("tab_code"), `aria-selected` = "false",
                       onclick = js_panel("code", FALSE), "Code"),
           span(class = "editr-spacer"),
@@ -238,6 +252,8 @@ dataEditUI <- function(id,
             hidden = NA, shiny::uiOutput(ns("changes"))),
         div(class = "editr-pane", id = ns("pane_history"), role = "tabpanel",
             hidden = NA, shiny::uiOutput(ns("history"))),
+        div(class = "editr-pane", id = ns("pane_problems"), role = "tabpanel",
+            hidden = NA, shiny::uiOutput(ns("problems"))),
         div(
           class = "editr-pane", id = ns("pane_code"), role = "tabpanel",
           hidden = NA,
@@ -262,6 +278,9 @@ dataEditUI <- function(id,
       span(class = "editr-sep", `aria-hidden` = "true"),
       span(id = ns("selection")),
       span(class = "editr-spacer"),
+      tags$button(type = "button", class = "editr-link editr-problems-link",
+                  id = ns("problems_status"),
+                  onclick = js_panel("problems", FALSE)),
       span(class = "editr-changes-status",
            span(class = "editr-swatch", `aria-hidden` = "true"),
            span(class = "editr-status-text", id = ns("status")),
@@ -296,6 +315,8 @@ dataEditServer <- function(id,
                            code_name = "data",
                            autosave = FALSE,
                            user = NULL,
+                           col_actions = TRUE,
+                           rules = NULL,
                            ...) {
 
   data_r <- if (is.reactive(data)) data else reactive(data)
@@ -436,6 +457,15 @@ dataEditServer <- function(id,
           next_id = store$state$next_id,
           next_col = store$state$next_cid,
           changed = if (cfg$track) I(view_changed(store)) else NULL,
+          actions = isTRUE(col_actions),
+          db = !is.null(cfg$db),
+          problems = {
+            p <- isolate(problems())
+            if (!is.null(p)) {
+              cells <- problem_cells(p)
+              list(keys = I(cells$keys), messages = I(cells$messages))
+            }
+          },
           track_color = cfg$track_color,
           ui = list(
             rows = ns("rows"),
@@ -572,9 +602,251 @@ dataEditServer <- function(id,
     })
 
     observeEvent(input$goto, {
-      id <- suppressWarnings(as.integer(input$goto$value))
+      # "id" or "id field"
+      parts <- strsplit(as.character(input$goto$value), " ", fixed = TRUE)[[1]]
+      id <- suppressWarnings(as.integer(parts[1]))
       if (!is.na(id)) {
-        grid_send(session, "grid", "scroll_to", list(id = id))
+        field <- if (length(parts) > 1 && nzchar(parts[2])) parts[2]
+        grid_send(session, "grid", "scroll_to", list(id = id, field = field))
+      }
+    })
+
+    # RULES --------------------------------------------------------------------
+
+    code_rules <- rules_prepare(rules)
+    rules_tick <- reactiveVal(0) # rules set in the editor changed
+    rules_cid <- reactiveVal(NULL) # column whose rules dialog is open
+
+    all_rules <- function(store, data, cids) {
+      c(code_rules, user_rules(store$rule_specs, data, cids))
+    }
+
+    problems <- reactive({
+      data_tick()
+      rules_tick()
+      ed <- editor()
+      if (is.null(ed)) return(NULL)
+      if (length(code_rules) == 0 && length(ed$store$rule_specs) == 0) {
+        return(rules_check(data.frame(), integer(0), character(0), list()))
+      }
+      data <- action_data(ed$store, ed$cfg)
+      cids <- action_cids(ed$store, ed$cfg, data)
+      rules_check(data, ed$store$state$ids, cids,
+                  all_rules(ed$store, data, cids))
+    })
+
+    marked <- FALSE # whether the grid shows problems
+    observe({
+      p <- problems()
+      shiny::req(p)
+      ed <- isolate(editor())
+      cells <- problem_cells(p)
+      if (length(cells$keys) > 0 || marked) {
+        grid_send(session, "grid", "set_problems",
+                  list(keys = I(cells$keys), messages = I(cells$messages)))
+        marked <<- length(cells$keys) > 0
+      }
+      n <- sum(p$rules$count, na.rm = TRUE)
+      set_html("problems_status", if (n == 0) "" else {
+        paste0("&#9888; ", n, if (n == 1) " problem" else " problems")
+      })
+    })
+
+    output$problems <- shiny::renderUI({
+      shiny::req(identical(input$panel, "problems"))
+      p <- problems()
+      ed <- isolate(editor())
+      shiny::req(p, ed)
+      problems_ui(p, ed$store$state, ed$store$label_cids, ns)
+    })
+    shiny::outputOptions(output, "problems", suspendWhenHidden = FALSE)
+
+    observeEvent(input$rule_remove, {
+      ed <- editor()
+      if (is.null(ed)) return()
+      ed$store$rule_specs <- rules_remove(ed$store$rule_specs,
+                                          as.character(input$rule_remove$value))
+      bump(rules_tick)
+    })
+
+    # rules as set in the dialog
+    rules_dialog_spec <- function() {
+      list(required = isTRUE(input$ru_required), unique = isTRUE(input$ru_unique),
+           min = input$ru_min %||% "", max = input$ru_max %||% "",
+           pattern = input$ru_pattern %||% "", formula = input$ru_formula %||% "",
+           message = input$ru_message %||% "")
+    }
+
+    output$rules_preview <- shiny::renderUI({
+      cid <- rules_cid()
+      shiny::req(cid)
+      ed <- isolate(editor())
+      data <- action_data(ed$store, ed$cfg)
+      cids <- action_cids(ed$store, ed$cfg, data)
+      pos <- match(cid, cids)
+      shiny::req(!is.na(pos))
+      res <- tryCatch({
+        rules <- rules_from_spec(rules_dialog_spec(), cid, names(data)[pos],
+                                 data[[pos]])
+        rules_check(data, ed$store$state$ids, cids, rules)
+      }, error = function(e) e)
+      if (inherits(res, "error")) {
+        return(tags$div(class = "editr-preview editr-preview-error",
+                        conditionMessage(res)))
+      }
+      if (nrow(res$rules) == 0) return(NULL)
+      err <- res$rules$error[!is.na(res$rules$error)]
+      n <- length(unique(res$rows$id))
+      tags$div(
+        class = paste("editr-preview", if (length(err)) "editr-preview-error"),
+        if (length(err)) err[1] else if (n == 0) {
+          "Every row follows these rules."
+        } else {
+          paste0(n, if (n == 1) " row breaks" else " rows break", " these rules now.")
+        }
+      )
+    })
+
+    observeEvent(input$rules_save, {
+      ed <- editor()
+      cid <- rules_cid()
+      if (is.null(ed) || is.null(cid)) return()
+      data <- action_data(ed$store, ed$cfg)
+      cids <- action_cids(ed$store, ed$cfg, data)
+      pos <- match(cid, cids)
+      spec <- rules_dialog_spec()
+      ok <- tryCatch({
+        rules_from_spec(spec, cid, names(data)[pos], data[[pos]])
+        TRUE
+      }, error = function(e) {
+        showNotification(conditionMessage(e), type = "error")
+        FALSE
+      })
+      if (!ok) return()
+      specs <- ed$store$rule_specs
+      specs[[cid]] <- spec
+      ed$store$rule_specs <- specs
+      rules_cid(NULL)
+      shiny::removeModal()
+      bump(rules_tick)
+    })
+
+    # COLUMN ACTIONS -----------------------------------------------------------
+
+    action_req <- reactiveVal(NULL) # action waiting in a dialog
+
+    # the action as set in its dialog
+    action_spec <- function(req) {
+      spec <- list(kind = req$kind, cid = req$cid)
+      if (req$kind == "formula") {
+        spec$new <- identical(input$fx_target, "new")
+        spec$name <- input$fx_name %||% ""
+        spec$expr <- input$fx_expr %||% ""
+      } else if (req$kind == "replace") {
+        spec$find <- input$rp_find %||% ""
+        spec$replace <- input$rp_replace %||% ""
+        spec$case <- !isFALSE(input$rp_case)
+        spec$whole <- isTRUE(input$rp_whole)
+        spec$regex <- isTRUE(input$rp_regex)
+      } else if (req$kind == "recode") {
+        spec$from <- req$values
+        spec$to <- vapply(seq_along(req$values), function(i) {
+          as.character(input[[paste0("rc_", i)]] %||% "")
+        }, character(1))
+      } else if (req$kind == "type") {
+        spec$to <- req$to
+      } else if (req$kind == "sort") {
+        spec$desc <- isTRUE(req$desc)
+      }
+      spec
+    }
+
+    run_action <- function(spec) {
+      ed <- editor()
+      res <- tryCatch(editr_action(ed$store, ed$cfg, spec),
+                      error = function(e) e)
+      if (inherits(res, "error")) {
+        showNotification(conditionMessage(res), type = "error")
+        return(FALSE)
+      }
+      for (p in res$patches) {
+        grid_send(session, "grid", p$method, p$args)
+      }
+      bump(data_tick)
+      TRUE
+    }
+
+    observeEvent(input$grid_action, {
+      ed <- editor()
+      a <- input$grid_action
+      if (is.null(ed) || !isTRUE(col_actions)) return()
+      kind <- as.character(as_scalar(a$kind) %||% "")
+      cid <- as.character(as_scalar(a$cid) %||% "")
+      if (!cid %in% ed$store$state$cids) return()
+      req <- list(kind = kind, cid = cid, to = as_scalar(a$to),
+                  desc = isTRUE(as_scalar(a$desc)))
+      if (kind == "sort") {
+        run_action(action_spec(req))
+        return()
+      }
+      data <- action_data(ed$store, ed$cfg)
+      name <- names(data)[match(cid, action_cids(ed$store, ed$cfg, data))]
+      if (is.na(name)) return()
+      if (kind == "type") {
+        plan <- tryCatch(action_plan(ed$store, ed$cfg, action_spec(req)),
+                         error = function(e) e)
+        if (inherits(plan, "error")) {
+          showNotification(conditionMessage(plan), type = "error")
+          return()
+        }
+        lost <- which(is.na(plan$after) & !is.na(plan$before))
+        if (length(lost) == 0) {
+          run_action(action_spec(req))
+          return()
+        }
+        action_req(req)
+        showModal(type_modal(name, plan, lost, ns))
+        return()
+      }
+      if (kind == "recode") {
+        values <- recode_values(data[[name]])$value
+        req$values <- ifelse(is.na(values), "NA", values)
+      }
+      if (kind == "rules") {
+        rules_cid(cid)
+        mine <- Filter(function(r) name %in% all.vars(r$expr), code_rules)
+        showModal(rules_modal(name, data[[name]],
+                              rules_spec(ed$store$rule_specs, cid), mine, ns))
+        return()
+      }
+      if (!kind %in% c("formula", "replace", "recode")) return()
+      action_req(req)
+      showModal(action_modal(
+        kind, name, data[[name]], ns, can_add = isTRUE(ed$cfg$col_edit),
+        can_change = !cid %in% ed$cfg$readonly,
+        new_name = unique_name("V", names(data))
+      ))
+    })
+
+    output$action_preview <- shiny::renderUI({
+      req <- action_req()
+      shiny::req(req, req$kind != "type")
+      ed <- isolate(editor())
+      spec <- action_spec(req)
+      if (identical(spec$kind, "formula") && !nzchar(trimws(spec$expr))) {
+        return(NULL)
+      }
+      plan <- tryCatch(action_plan(ed$store, ed$cfg, spec),
+                       error = function(e) e)
+      action_preview_ui(plan, ed$store, ed$cfg)
+    })
+
+    observeEvent(input$action_apply, {
+      req <- action_req()
+      if (is.null(req) || is.null(editor())) return()
+      if (run_action(action_spec(req))) {
+        action_req(NULL)
+        shiny::removeModal()
       }
     })
 
@@ -612,7 +884,8 @@ dataEditServer <- function(id,
 
     if (isTRUE(autosave)) {
       draft_prune()
-      draft_due <- shiny::debounce(reactive(c(data_tick(), notes_tick())), 1000)
+      draft_due <- shiny::debounce(reactive(c(data_tick(), notes_tick(),
+                                              rules_tick())), 1000)
       observeEvent(draft_due(), {
         ed <- editor()
         if (!is.null(ed)) draft_sync(ed$store, draft_label())
@@ -662,11 +935,11 @@ dataEditServer <- function(id,
         store$original <- store$state
         store$changed <- character(0)
         store$committed_step <- store$step
+        # THE CODE AND DRAFTS NOW START FROM THE COMMITTED DATA
+        store$base_txn <- length(store$undo)
         if (isTRUE(autosave)) {
-          # THE DRAFT NOW STARTS FROM THE COMMITTED DATA
           draft_delete(store$draft_key)
           store$draft_key <- draft_key(store$original, draft_owner)
-          store$draft_base <- length(store$undo)
         }
         if (isTRUE(ed$cfg$track)) {
           grid_send(session, "grid", "set_changed", list(keys = I(character(0))))
@@ -704,6 +977,7 @@ dataEditServer <- function(id,
       if (is.null(ed)) return(NULL)
       editr_changes(ed)
     })
+    attr(result, "problems") <- problems
     attr(result, "log") <- reactive({
       data_tick()
       notes_tick()
@@ -758,9 +1032,14 @@ dataEditServer <- function(id,
 #' undo works with.}
 #' \item{how}{how the change was made: \code{"edit"}, \code{"paste"},
 #' \code{"fill"}, \code{"clear"}, \code{"undo"}, \code{"redo"} or
-#' \code{"revert"} (from the review panel).}
+#' \code{"revert"} (from the review panel), or the column action:
+#' \code{"formula"}, \code{"replace"}, \code{"recode"}, \code{"type"} or
+#' \code{"sort"}.}
+#' \item{code}{for column actions, the \code{dplyr} code of the action, e.g.
+#' \code{mutate(kpl = mpg * 0.425)}.}
 #' \item{action}{\code{"edit"}, \code{"add row"}, \code{"remove row"},
-#' \code{"add column"}, \code{"remove column"} or \code{"rename column"}.}
+#' \code{"add column"}, \code{"remove column"}, \code{"rename column"},
+#' \code{"change type"} or \code{"reorder rows"}.}
 #' \item{row}{the row name, the key of a database row or else the row number
 #' in the data that was opened (new rows are numbered after the last row).}
 #' \item{column}{the name of the column.}
@@ -861,4 +1140,19 @@ dataEditLog <- function(x) {
          call. = FALSE)
   }
   log()
+}
+
+#' @rdname dataEditCommit
+#' @export
+dataEditProblems <- function(x) {
+  problems <- attr(x, "problems")
+  editor <- attr(x, "editor")
+  if (!is.function(problems) || !is.function(editor)) {
+    stop("'x' must be the reactive returned by dataEditServer().",
+         call. = FALSE)
+  }
+  p <- problems()
+  ed <- editor()
+  if (is.null(p) || is.null(ed)) return(NULL)
+  problems_df(p, ed$store$state, ed$store$label_cids)
 }

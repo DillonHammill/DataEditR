@@ -108,6 +108,41 @@ async function confirmCancel(page) {
   await sleep(1500);
 }
 
+// open a column's menu with its button and pick an item (and a submenu item)
+async function columnMenu(page, field, label, sub) {
+  const p = await page.evaluate((f) => {
+    const t = document.querySelector(".editr_grid").__editr.table;
+    const b = t.getColumn(f).getElement().querySelector(".tabulator-header-popup-button").getBoundingClientRect();
+    return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
+  }, field);
+  await page.mouse.click(p.x, p.y);
+  await sleep(300);
+  await page.evaluate((label) => [...document.querySelectorAll(".tabulator-menu .tabulator-menu-item")]
+    .find((x) => x.textContent.trim().startsWith(label)).click(), label);
+  await sleep(400);
+  if (sub) {
+    await page.evaluate((sub) => [...document.querySelectorAll(".tabulator-menu .tabulator-menu-item")]
+      .find((x) => x.textContent.trim() === sub).click(), sub);
+  }
+  await L.settle(page, 900);
+}
+async function modalText(page) {
+  await page.waitForSelector("#shiny-modal .modal-dialog", { timeout: 5000 });
+  await sleep(700);
+  return page.$eval("#shiny-modal", (e) => e.textContent.replace(/\s+/g, " ").trim());
+}
+async function typeInto(page, sel, text) {
+  await page.click(sel, { clickCount: 3 });
+  await page.keyboard.type(text);
+  await sleep(700);
+}
+const previewText = (page) => page.$eval("#edit1-action_preview", (e) => e.textContent.replace(/\s+/g, " ").trim());
+async function apply(page) {
+  await page.click("#edit1-action_apply");
+  await L.settle(page, 1500);
+  await page.waitForFunction(() => !document.querySelector("#shiny-modal .modal-dialog"), { timeout: 5000 });
+}
+
 const scenarios = {
   async df(page) {
     const id7 = 7;
@@ -268,6 +303,134 @@ const scenarios = {
     await page.click("#export_all");
     check(await waitFile(path.join(out, "cars.csv")), "export downloaded cars.csv");
     await done(page, "view");
+  },
+
+  async actions(page) {
+    // a formula column after value
+    await columnMenu(page, "c4", "Formula");
+    await modalText(page);
+    await typeInto(page, "#edit1-fx_name", "value2");
+    await typeInto(page, "#edit1-fx_expr", "value * 2");
+    let pv = await previewText(page);
+    check(/New column value2/.test(pv) && /mutate\(value2 = value \* 2, \.after = value\)/.test(pv), "formula preview: " + pv.slice(0, 120));
+    await page.screenshot({ path: path.join(out, "formula.png") });
+    await apply(page);
+    const titles = (await L.columns(page)).map((c) => c.title);
+    check(titles.join() === "id,name,grp,value,value2,when", "new column placed after value: " + titles.join());
+    // a formula with an error keeps the dialog open
+    await columnMenu(page, "c4", "Formula");
+    await modalText(page);
+    await page.click('input[name="edit1-fx_target"][value="replace"]');
+    await typeInto(page, "#edit1-fx_expr", "valu * 2");
+    pv = await previewText(page);
+    check(/no column called 'valu'/.test(pv), "formula error shown: " + pv);
+    await page.click("#edit1-action_apply");
+    await sleep(800);
+    check(!!(await page.$("#shiny-modal .modal-dialog")), "dialog stays open on error");
+    await page.click("#shiny-modal .modal-footer button.btn-default, #shiny-modal .modal-footer [data-bs-dismiss]");
+    await sleep(700);
+    // find and replace, ignoring case
+    await columnMenu(page, "c2", "Find and replace");
+    await modalText(page);
+    await typeInto(page, "#edit1-rp_find", "alpha");
+    await typeInto(page, "#edit1-rp_replace", "ALPHA");
+    await page.click("#edit1-rp_case");
+    await sleep(800);
+    pv = await previewText(page);
+    check(/2 cells change/.test(pv), "replace preview: " + pv.slice(0, 80));
+    await apply(page);
+    // recode groups
+    await columnMenu(page, "c3", "Recode values");
+    await modalText(page);
+    const values = await page.$$eval("#shiny-modal .editr-recode-from", (els) => els.map((e) => e.textContent.trim()));
+    check(values.join() === "a,b,c", "values to recode, most common first: " + values.join());
+    await typeInto(page, "#edit1-rc_1", "A group");
+    await typeInto(page, "#edit1-rc_2", "B group");
+    await page.screenshot({ path: path.join(out, "recode.png") });
+    await apply(page);
+    // text to dates: one value cannot be read
+    await columnMenu(page, "c5", "Change type", "Date");
+    const msg = await modalText(page);
+    check(/1 value cannot be turned into date/.test(msg) && /\bx\b/.test(msg), "type change asks: " + msg.slice(0, 100));
+    await apply(page);
+    const kinds = await page.evaluate(() => document.querySelector(".editr_grid").__editr.colMap.c5.kind);
+    check(kinds === "date", "column is now dates: " + kinds);
+    // sort, undo, redo
+    await columnMenu(page, "c4", "Sort descending");
+    let d = await L.gridData(page);
+    check(d.map((r) => r.c1).join() === "6,5,3,1,2,4", "sorted by value: " + d.map((r) => r.c1).join());
+    await page.click("#edit1-undo");
+    await L.settle(page, 900);
+    d = await L.gridData(page);
+    check(d.map((r) => r.c1).join() === "1,2,3,4,5,6", "undo puts the rows back");
+    await page.click("#edit1-redo");
+    await L.settle(page, 900);
+    // a typed edit in between
+    await L.editCell(page, 6, "c4", "10");
+    // history and code show the verbs
+    await page.click("#edit1-open_code");
+    await L.settle(page, 1200);
+    const code = await page.$eval("#edit1-code", (e) => e.textContent);
+    for (const v of ["mutate(value2 = value * 2, .after = value)", "gsub(\"alpha\", \"ALPHA\", name, ignore.case = TRUE)",
+                     "case_match(grp", "as.Date(when, format = \"%Y-%m-%d\")", "arrange(desc(value))"]) {
+      check(code.includes(v), "code has " + v);
+    }
+    await page.screenshot({ path: path.join(out, "code.png") });
+    await page.click("#edit1-tab_history");
+    await L.settle(page, 900);
+    const tags = await page.$$eval("#edit1-history .editr-tag", (els) => els.map((e) => e.textContent.trim()));
+    check(tags.join() === "Edit,Redo,Undo,Sort,Type,Recode,Replace,Formula", "history: " + tags.join());
+    await done(page);
+  },
+
+  async rules(page) {
+    const status = () => page.$eval("#edit1-problems_status", (e) => e.textContent.trim());
+    const marked = () => page.$$eval(".tabulator-cell.editr-problem", (els) => els.length);
+    check(await status() === "\u26a0 2 problems", "status: " + await status());
+    check(await marked() === 3, "cells marked: " + await marked());
+    const tip = await page.evaluate(() => {
+      const t = document.querySelector(".editr_grid").__editr.table;
+      return t.getRow(2).getCell("c2").getElement().title;
+    });
+    check(tip === "pH is between 0 and 14", "tooltip: " + tip);
+    await page.click("#edit1-problems_status");
+    await L.settle(page, 900);
+    let rules = await page.$$eval("#edit1-problems .editr-rule-text", (els) => els.map((e) => e.textContent.trim()));
+    check(rules.join("|") === "pH is between 0 and 14|End is after the start", "problems tab: " + rules.join("|"));
+    // a rule from the column menu
+    await columnMenu(page, "c1", "Rules");
+    await modalText(page);
+    await page.click("#edit1-ru_unique");
+    await typeInto(page, "#edit1-ru_pattern", "S-[0-9]{2}");
+    const pv = await page.$eval("#edit1-rules_preview", (e) => e.textContent.trim());
+    check(/2 rows break/.test(pv), "rules preview: " + pv);
+    await page.screenshot({ path: path.join(out, "rules-dialog.png") });
+    await page.click("#edit1-rules_save");
+    await L.settle(page, 1200);
+    check(await status() === "\u26a0 4 problems", "after the new rule: " + await status());
+    await page.screenshot({ path: path.join(out, "problems.png") });
+    // clicking a problem selects its cell
+    await page.evaluate(() => [...document.querySelectorAll("#edit1-problems .editr-rule-row")][0].click());
+    await L.settle(page, 700);
+    const sel = await page.evaluate(() => {
+      const r = document.querySelector(".editr_grid").__editr.table.getRanges()[0];
+      return r ? r.getCells()[0][0].getField() + ":" + r.getCells()[0][0].getRow().getIndex() : "";
+    });
+    check(sel === "c2:2", "problem selected: " + sel);
+    // fix values
+    await L.editCell(page, 2, "c2", "7.5");
+    await L.editCell(page, 3, "c1", "S-03");
+    check(await status() === "\u26a0 1 problem", "after fixing: " + await status());
+    // Done asks, Keep editing, then return anyway
+    await page.click("#done");
+    let msg = await modalText(page);
+    check(/1 row breaks/.test(msg) && /End is after the start/.test(msg), "Done asks: " + msg.slice(0, 90));
+    await page.click("#shiny-modal .modal-footer [data-bs-dismiss], #shiny-modal .modal-footer [data-dismiss]");
+    await sleep(800);
+    await page.click("#done");
+    await modalText(page);
+    await page.click("#done_anyway");
+    await sleep(1500);
   },
 
   async cancel(page) {

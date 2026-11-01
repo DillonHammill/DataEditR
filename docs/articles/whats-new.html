@@ -129,6 +129,17 @@ added, removed or renamed cell, row and column with a button to revert
 it, and a <code>Code</code> tab with the code that reproduces your
 edits, updated as you edit.</li>
 <li>
+<strong>Column actions</strong>: formulas
+(<code>round(mpg * 0.425, 1)</code> as a new column), find and replace,
+recoding values, changing types and sorting from a column’s menu, each
+previewed and shown in the code as one <code>dplyr</code> verb.</li>
+<li>
+<strong>Validation rules</strong>:
+<code>rules = list("End is after the start" = ~ end &gt;= start)</code>,
+or required, unique, limits and patterns from a column’s menu. Cells
+that break a rule are marked and listed in a <code>Problems</code> tab,
+and <code>Done</code> asks before returning them.</li>
+<li>
 <strong>History and change log</strong>: a <code>History</code> tab
 lists every change with when it was made and by whom, and each step can
 be given a note saying why. <code>data_edit(log = "changes.csv")</code>

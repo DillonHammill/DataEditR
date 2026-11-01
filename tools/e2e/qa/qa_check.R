@@ -28,9 +28,16 @@ read <- function(f) readRDS(file.path(out, f))
 reproduces <- function(code, input, result, name = "x") {
   env <- new.env()
   assign(name, input, envir = env)
+  # row names compared as text ("3" from tibble::column_to_rownames(), 3L
+  # from the editor)
+  rn <- function(x) {
+    if (is.data.frame(x)) attr(x, "row.names") <- rownames(x)
+    x
+  }
   ok <- tryCatch({
     suppressMessages(eval(parse(text = code), envir = env))
-    isTRUE(all.equal(get(name, envir = env), result, check.attributes = TRUE))
+    isTRUE(all.equal(rn(get(name, envir = env)), rn(result),
+                     check.attributes = TRUE))
   }, error = function(e) {
     cat("    error:", conditionMessage(e), "\n")
     FALSE
@@ -38,7 +45,7 @@ reproduces <- function(code, input, result, name = "x") {
   check(ok, "generated code reproduces the result")
   if (!ok) {
     cat(code, sep = "\n")
-    print(all.equal(get(name, envir = env), result))
+    print(all.equal(rn(get(name, envir = env)), rn(result)))
   }
 }
 code_text <- function() paste(readLines(file.path(out, "code.R")), collapse = "\n")
@@ -138,6 +145,35 @@ if (scenario == "df") {
   saved <- read.csv(file.path(out, "saved", "cars.csv"), row.names = 1)
   same(saved, e, "Done saved what it returned to save_as")
 
+} else if (scenario == "actions") {
+  e <- input
+  e$value2 <- e$value * 2
+  e <- e[, c("id", "name", "grp", "value", "value2", "when")]
+  e$name <- gsub("alpha", "ALPHA", e$name, ignore.case = TRUE)
+  e$grp <- c("A group", "B group", "A group", "c", "B group", "A group")
+  e$when <- as.Date(e$when, format = "%Y-%m-%d")
+  e <- e[order(-e$value), ]
+  e$value[e$id == 6] <- 10
+  rownames(e) <- NULL
+  same(unname(as.list(result)), unname(as.list(e)), "actions applied")
+  check(identical(result$id, c(6L, 5L, 3L, 1L, 2L, 4L)), "rows sorted")
+  code <- code_text()
+  for (v in c("mutate(value2 = value * 2, .after = value)", "arrange(desc(value))",
+              "case_match(grp", "as.Date(when")) {
+    check(grepl(v, code, fixed = TRUE), paste("code has", v))
+  }
+  reproduces(code, input, result)
+  log <- read.csv(file.path(out, "log.csv"), stringsAsFactors = FALSE)
+  same(unique(log$how), c("formula", "replace", "recode", "type", "sort",
+                          "undo", "redo", "edit"), "log of actions")
+  check(any(grepl("arrange(desc(value))", log$code, fixed = TRUE)), "log has the code")
+
+} else if (scenario == "rules") {
+  e <- input
+  e$ph[2] <- 7.5
+  e$sample[3] <- "S-03"
+  same(result, e, "Return anyway returns the data")
+
 } else if (scenario == "cancel") {
   same(result, input, "Cancel returns the original data")
   check(length(list.files(file.path(out, "drafts"), "rds$")) == 0,
@@ -152,7 +188,7 @@ if (scenario == "df") {
   same(result, e, "edits returned")
   log <- read.csv(file.path(out, "log.csv"), stringsAsFactors = FALSE)
   print(log[, -c(1, 2)])
-  same(names(log), c("data", "time", "user", "step", "how", "action", "row",
+  same(names(log), c("data", "time", "user", "step", "how", "code", "action", "row",
                      "column", "old", "new", "note"), "log columns")
   same(log$how, c("edit", "fill", "paste", "paste", "clear", "clear",
                   "undo", "undo", "edit"), "how each change was made")

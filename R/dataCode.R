@@ -61,6 +61,59 @@ data_code <- function(x, x_edit, name = "data") {
   # MATRICES ARE EDITED AS DATA FRAMES AND TURNED BACK INTO MATRICES
   was_matrix <- is.matrix(x)
 
+  # DETECT MEANINGFUL ROW NAMES
+  rowname_col <- data_code_rowname_col(list(x, x_edit))
+  pipes <- data_code_pipes(x, x_edit, rowname_col)
+  data_code_text(pipes, name, rowname_col, was_matrix)
+}
+
+#' Column that holds the row names while the code runs (NULL when the data
+#' has no meaningful row names)
+#' @noRd
+data_code_rowname_col <- function(data) {
+  data <- Filter(Negate(is.null), data)
+  if (!any(vapply(data, data_code_has_rownames, logical(1)))) {
+    return(NULL)
+  }
+  cols <- unlist(lapply(data, colnames))
+  rowname_col <- ".rownames"
+  while (rowname_col %in% cols) {
+    rowname_col <- paste0(".", rowname_col)
+  }
+  rowname_col
+}
+
+#' The whole pipeline: library, assignment, row names and matrices
+#' @noRd
+data_code_text <- function(pipes, name, rowname_col = NULL, was_matrix = FALSE) {
+  if (length(pipes) == 0) {
+    return("# No changes detected\n")
+  }
+  if (!is.null(rowname_col)) {
+    pipes <- c(paste0('tibble::rownames_to_column(var = "', rowname_col, '")'),
+               pipes,
+               paste0('tibble::column_to_rownames(var = "', rowname_col, '")'))
+  }
+  if (was_matrix) {
+    pipes <- c("as.data.frame()", pipes, "as.matrix()")
+  }
+  paste0(
+    "library(dplyr)\n\n",
+    name, " <- ", name, " %>%\n  ",
+    paste(pipes, collapse = " %>%\n  "),
+    "\n"
+  )
+}
+
+#' Pipeline steps that turn x into x_edit (without row name or matrix
+#' handling)
+#'
+#' @param rowname_col name of the column holding the row names while the code
+#'   runs, or NULL.
+#'
+#' @noRd
+data_code_pipes <- function(x, x_edit, rowname_col = NULL) {
+
   # ENSURE DATA.FRAMES
   x <- as.data.frame(x, stringsAsFactors = FALSE)
   x_edit <- as.data.frame(x_edit, stringsAsFactors = FALSE)
@@ -69,17 +122,7 @@ data_code <- function(x, x_edit, name = "data") {
   edit_cols <- colnames(x_edit)
   orig_rows <- as.character(rownames(x))
   edit_rows <- as.character(rownames(x_edit))
-
-  # DETECT MEANINGFUL ROW NAMES
-  has_rownames <- data_code_has_rownames(x) || data_code_has_rownames(x_edit)
-
-  # CHOOSE ROW NAME COLUMN NAME (avoid conflicts)
-  if (has_rownames) {
-    rowname_col <- ".rownames"
-    while (rowname_col %in% orig_cols || rowname_col %in% edit_cols) {
-      rowname_col <- paste0(".", rowname_col)
-    }
-  }
+  has_rownames <- !is.null(rowname_col)
 
   # DETECT COLUMN CHANGES
   col_changes <- data_code_columns(orig_cols, edit_cols)
@@ -94,13 +137,6 @@ data_code <- function(x, x_edit, name = "data") {
 
   # BUILD PIPE OPERATIONS
   pipes <- c()
-
-  # ROW NAMES TO COLUMN (tidyverse does not preserve row names)
-  if (has_rownames) {
-    pipes <- c(pipes, paste0(
-      'tibble::rownames_to_column(var = "', rowname_col, '")'
-    ))
-  }
 
   # COLUMN RENAMES
   if (length(col_changes$renames) > 0) {
@@ -245,14 +281,27 @@ data_code <- function(x, x_edit, name = "data") {
         data_code_quote(col), " = c(", val_str, ")"
       ))
     }
-    if (length(add_ops) == 1) {
+    added <- col_changes$added
+    at_end <- identical(utils::tail(edit_cols, length(added)), added)
+    if (at_end && length(add_ops) == 1) {
       pipes <- c(pipes, paste0("mutate(", add_ops, ")"))
-    } else {
+    } else if (at_end) {
       pipes <- c(pipes, paste0(
         "mutate(\n    ",
         paste(add_ops, collapse = ",\n    "),
         "\n  )"
       ))
+    } else {
+      # NEW COLUMNS GO WHERE THEY ARE IN THE EDITED DATA
+      for (k in seq_along(added)) {
+        pos <- match(added[k], edit_cols)
+        where <- if (pos == 1) {
+          ".before = 1"
+        } else {
+          paste0(".after = ", data_code_quote(edit_cols[pos - 1]))
+        }
+        pipes <- c(pipes, paste0("mutate(", add_ops[k], ", ", where, ")"))
+      }
     }
   }
 
@@ -305,36 +354,7 @@ data_code <- function(x, x_edit, name = "data") {
     }
   }
 
-  # COLUMN TO ROW NAMES (restore row names from column)
-  if (has_rownames) {
-    pipes <- c(pipes, paste0(
-      'tibble::column_to_rownames(var = "', rowname_col, '")'
-    ))
-  }
-
-  # BUILD FINAL CODE
-  # Check if there are actual changes (not just rowname wrapping)
-  actual_pipes <- if (has_rownames) {
-    pipes[!grepl("^tibble::(rownames_to_column|column_to_rownames)", pipes)]
-  } else {
-    pipes
-  }
-  if (was_matrix) {
-    pipes <- c("as.data.frame()", pipes, "as.matrix()")
-  }
-
-  if (length(actual_pipes) > 0) {
-    code <- paste0(
-      "library(dplyr)\n\n",
-      name, " <- ", name, " %>%\n  ",
-      paste(pipes, collapse = " %>%\n  "),
-      "\n"
-    )
-  } else {
-    code <- "# No changes detected\n"
-  }
-
-  return(code)
+  pipes
 }
 
 ## COLUMN MATCHING -------------------------------------------------------------

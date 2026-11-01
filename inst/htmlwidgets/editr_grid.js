@@ -331,7 +331,8 @@
     plus: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>',
     x: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>',
     external: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6"/><path d="M20 4 10 14"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>',
-    alert: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 21h20z"/><path d="M12 10v5M12 18h.01"/></svg>'
+    alert: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 21h20z"/><path d="M12 10v5M12 18h.01"/></svg>',
+    more: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Column menu"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>'
   };
 
   var BADGES = {numeric: "123", character: "abc", logical: "T/F",
@@ -506,8 +507,13 @@
           // (outside a slider's limits, not one of the options, ...)
           var bad = invalidReason(grid.colMap[cell.getField()], v);
           element.classList.toggle("editr-invalid", !!bad);
+          // cells that break a rule (see R/rules.R)
+          var problem = grid.problems[key];
+          element.classList.toggle("editr-problem", !!problem);
           if (bad) {
             element.title = "\u201c" + v + "\u201d " + bad;
+          } else if (problem) {
+            element.title = problem;
           } else if (element.title) {
             element.removeAttribute("title");
           }
@@ -794,6 +800,8 @@
           editor: c.readonly ? false : "input",
           formatter: makeFormatter(null),
           headerContextMenu: headerMenu,
+          headerMenu: c.frozen ? undefined : headerMenu,
+          headerMenuIcon: ICONS.more,
           cssClass: c.readonly ? "editr-readonly" : ""
         };
         if (grid.opts.filters !== false) addHeaderFilter(def, c);
@@ -1096,8 +1104,59 @@
           items.push({label: "Add row at end",
                       action: function () { addRowAtEnd(); }});
         }
+        var actions = actionItems(c);
+        if (actions.length) {
+          if (items.length) items.push({separator: true});
+          items = items.concat(actions);
+        }
         if (items.length) items.push({separator: true});
         return items.concat(historyItems());
+      }
+
+      // whole-column actions run in R and are recorded as one dplyr verb
+      function actionItems(c) {
+        var items = [];
+        if (grid.opts.actions === false || c.frozen) return items;
+        var ask = function (kind, extra) {
+          return function () { requestAction(kind, c.field, extra); };
+        };
+        if (grid.opts.col_edit || !c.readonly) {
+          items.push({label: "Formula\u2026", action: ask("formula")});
+        }
+        if (!c.readonly) {
+          items.push({label: "Find and replace\u2026", action: ask("replace")});
+          items.push({label: "Recode values\u2026", action: ask("recode")});
+          if (!grid.opts.db) {
+            items.push({label: "Change type", menu: [
+              {label: "Number", action: ask("type", {to: "numeric"})},
+              {label: "Whole number", action: ask("type", {to: "integer"})},
+              {label: "Text", action: ask("type", {to: "character"})},
+              {label: "TRUE / FALSE", action: ask("type", {to: "logical"})},
+              {label: "Date", action: ask("type", {to: "Date"})},
+              {label: "Factor", action: ask("type", {to: "factor"})}
+            ]});
+          }
+        }
+        if (!grid.opts.db) {
+          items.push({label: "Sort ascending", action: ask("sort", {desc: false})});
+          items.push({label: "Sort descending", action: ask("sort", {desc: true})});
+        }
+        items.push({label: "Rules\u2026", action: ask("rules")});
+        return items;
+      }
+
+      function requestAction(kind, cid, extra) {
+        if (!shinyOpen()) return;
+        // R must have every edit before it changes the whole column
+        if (grid.timer) {
+          clearTimeout(grid.timer);
+          flush();
+        }
+        var msg = {kind: kind, cid: cid, nonce: Math.random()};
+        Object.keys(extra || {}).forEach(function (k) { msg[k] = extra[k]; });
+        setTimeout(function () {
+          Shiny.setInputValue(el.id + "_action", msg, {priority: "event"});
+        }, 0);
       }
 
       /* ---------------------------------------------------------------- */
@@ -1693,8 +1752,16 @@
         var table = grid.table;
         var row = table.getRow(id);
         if (!row) return;
-        return table.scrollToRow(id, "center", false).then(function () {
-          return table.scrollToColumn(field, "middle", false).catch(function () {});
+        // Tabulator's scroll promises do not always settle (e.g. when the row
+        // is already on screen), so never wait for them for long
+        var briefly = function (p) {
+          return Promise.race([
+            Promise.resolve(p).catch(function () {}),
+            new Promise(function (r) { setTimeout(r, 250); })
+          ]);
+        };
+        return briefly(table.scrollToRow(id, "center", false)).then(function () {
+          return briefly(table.scrollToColumn(field, "middle", false));
         }).then(function () {
           var cell = row.getCell(field);
           if (!cell) return;
@@ -1802,6 +1869,13 @@
         return HTMLWidgets.dataframeToD3(cols);
       }
 
+      function problemMap(args) {
+        var out = {};
+        var keys = toArray(args && args.keys), msgs = toArray(args && args.messages);
+        keys.forEach(function (k, i) { out[k] = msgs[i] || "Breaks a rule"; });
+        return out;
+      }
+
       function reformatRows(ids) {
         ids.forEach(function (id) {
           var row = grid.table.getRow(id);
@@ -1839,6 +1913,14 @@
             selectCell(args.id, args.field || (realColumns()[0] || {getField: function () { return null; }}).getField());
           } else if (method === "set_title") {
             setTitle(args.field, args.title);
+          } else if (method === "set_problems") {
+            var nextP = problemMap(args);
+            var touchedP = {};
+            Object.keys(grid.problems).concat(Object.keys(nextP)).forEach(function (k) {
+              if (grid.problems[k] !== nextP[k]) touchedP[k.split("|")[0]] = true;
+            });
+            grid.problems = nextP;
+            reformatRows(Object.keys(touchedP).map(Number));
           } else if (method === "set_changed") {
             var next = {};
             toArray(args.keys).forEach(function (k) { next[k] = true; });
@@ -1868,6 +1950,7 @@
         grid.nextCol = opts.next_col || 1;
         grid.changed = {};
         toArray(opts.changed).forEach(function (k) { grid.changed[k] = true; });
+        grid.problems = problemMap(opts.problems);
         if (opts.track_color) {
           el.style.setProperty("--editr-track-color", opts.track_color);
         }

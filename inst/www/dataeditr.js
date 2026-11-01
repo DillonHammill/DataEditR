@@ -3,7 +3,7 @@
   "use strict";
 
   var DataEditR = window.DataEditR = window.DataEditR || {};
-  var TABS = ["changes", "history", "code"];
+  var TABS = ["changes", "history", "problems", "code"];
 
   // open the review panel on a tab; toggle = true closes it when that tab
   // is already showing

@@ -56,7 +56,7 @@ draft_save <- function(store, label = NULL,
   }
   dir <- draft_dir()
   dir.create(dir, recursive = TRUE, showWarnings = FALSE)
-  base <- store$draft_base %||% 0L
+  base <- store$base_txn %||% 0L
   n <- length(store$undo)
   steps <- if (n >= base) store$undo[seq_len(n - base) + base] else NULL
   log <- store_log_df(store)
@@ -71,6 +71,7 @@ draft_save <- function(store, label = NULL,
     auto_type = store$auto_type,
     log = log[, setdiff(names(log), "note"), drop = FALSE],
     notes = store$notes,
+    rule_specs = store$rule_specs,
     step = store$step
   )
   tmp <- tempfile(tmpdir = dir, fileext = ".tmp")
@@ -146,6 +147,7 @@ draft_restore <- function(store, draft) {
   store$auto_type <- union(store$auto_type, draft$auto_type)
   store$log <- if (NROW(draft$log) > 0) list(draft$log) else list()
   store$notes <- draft$notes %||% character(0)
+  store$rule_specs <- draft$rule_specs %||% list()
   store$step <- as.integer(draft$step %||% 0L)
   store$step_open <- FALSE
   store$changed <- changed_cells(store$state, store$original)

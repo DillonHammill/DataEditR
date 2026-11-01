@@ -580,18 +580,36 @@ review_ui <- function(changes, ns) {
 }
 
 #' Code that reproduces the edits so far
+#'
+#' Column actions are shown as their dplyr verbs (see code_with_actions());
+#' otherwise the code is worked out by comparing the data.
+#'
+#' @param start the data the code starts from (by default the data that was
+#'   opened; NULL creates the data).
+#' @param end the data the code gives (by default all data).
+#'
 #' @noRd
-editr_code <- function(store, cfg, name = "data") {
+editr_code <- function(store, cfg, name = "data", start, end = NULL) {
   if (!is.null(cfg$db)) {
     return(data_code_db(cfg$db, store, name = name))
   }
+  cfg$quiet <- TRUE
   original <- editr_store(store$original)
   original$auto_type <- store$auto_type
   original$hidden <- store$hidden
   original$factors <- store$factors
-  x <- editr_result(original, cfg)
-  x_edit <- editr_result(store, cfg)
-  data_code(x, x_edit, name = name)
+  if (missing(start)) {
+    start <- editr_result(original, cfg)
+  }
+  final <- editr_result(store, cfg)
+  if (is.null(end)) {
+    end <- final
+  }
+  code <- tryCatch(
+    code_with_actions(store, cfg, original, start, final, end, name),
+    error = function(e) NULL
+  )
+  code %||% data_code(start, end, name = name)
 }
 
 #' List of changes for the review panel
@@ -915,8 +933,10 @@ editr_result <- function(store, cfg, view = FALSE) {
   cids <- state$cids[cols]
   ids <- state$ids[rows]
 
+  meta <- store_meta(store)
+
   # AUTO-TYPED COLUMNS
-  for (i in which(cids %in% store$auto_type)) {
+  for (i in which(cids %in% meta$auto)) {
     if (is.character(data[[i]]) || is.logical(data[[i]])) {
       # CELLS THAT WERE NEVER FILLED IN ARE MISSING, LIKE CLEARED CELLS
       data[[i]] <- type.convert(data[[i]], as.is = !cfg$col_factor,
@@ -925,8 +945,8 @@ editr_result <- function(store, cfg, view = FALSE) {
   }
   # FACTORS IN THE DATA ARE RETURNED AS FACTORS: THEIR LEVELS FIRST, THEN NEW
   # VALUES IN THE ORDER THEY FIRST APPEAR
-  for (i in which(cids %in% names(store$factors))) {
-    f <- store$factors[[cids[i]]]
+  for (i in which(cids %in% names(meta$factors))) {
+    f <- meta$factors[[cids[i]]]
     v <- as.character(data[[i]])
     lev <- c(f$levels, setdiff(unique(v[!is.na(v)]), f$levels))
     data[[i]] <- factor(v, levels = lev, ordered = isTRUE(f$ordered))

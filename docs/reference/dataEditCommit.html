@@ -83,7 +83,9 @@ editor, with when it was made and by whom.</p>
 <span></span>
 <span><span class="fu">dataEditChanges</span><span class="op">(</span><span class="va">x</span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu">dataEditLog</span><span class="op">(</span><span class="va">x</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu">dataEditLog</span><span class="op">(</span><span class="va">x</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu">dataEditProblems</span><span class="op">(</span><span class="va">x</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -143,11 +145,18 @@ undo works with.</p></dd>
 <dt>how</dt>
 <dd><p>how the change was made: <code>"edit"</code>, <code>"paste"</code>,
 <code>"fill"</code>, <code>"clear"</code>, <code>"undo"</code>, <code>"redo"</code> or
-<code>"revert"</code> (from the review panel).</p></dd>
+<code>"revert"</code> (from the review panel), or the column action:
+<code>"formula"</code>, <code>"replace"</code>, <code>"recode"</code>, <code>"type"</code> or
+<code>"sort"</code>.</p></dd>
+
+<dt>code</dt>
+<dd><p>for column actions, the <code>dplyr</code> code of the action, e.g.
+<code>mutate(kpl = mpg * 0.425)</code>.</p></dd>
 
 <dt>action</dt>
 <dd><p><code>"edit"</code>, <code>"add row"</code>, <code>"remove row"</code>,
-<code>"add column"</code>, <code>"remove column"</code> or <code>"rename column"</code>.</p></dd>
+<code>"add column"</code>, <code>"remove column"</code>, <code>"rename column"</code>,
+<code>"change type"</code> or <code>"reorder rows"</code>.</p></dd>
 
 <dt>row</dt>
 <dd><p>the row name, the key of a database row or else the row number

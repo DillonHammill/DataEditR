@@ -268,6 +268,34 @@ class(df_edited$name)
 #> [1] "factor"
 ```
 
+### 3.12 Change whole columns
+
+Click the `⋮` button in a column's header (or right-click the header) for actions that change the whole column at once. Each action opens a dialog that previews the result before you apply it:
+
+* **Formula...**: add a new column, or replace the values of the column, with an R expression worked out for every row, e.g. `round(mpg * 0.425, 1)`, `paste(first, last)` or `case_when(ph < 7 ~ "acidic", ph > 7 ~ "basic", .default = "neutral")`. Formulas can use column names, numbers, text in quotes and common functions (arithmetic, `round()`, `ifelse()`, `paste()`, `substr()`, `as.Date()`, `case_when()`, `if_else()`, `lag()`, `row_number()`, ...), but not other R code, so they are safe to offer in shiny apps.
+* **Find and replace...**: replace text within cells (matching case or not, or with a regular expression), or replace whole cells. For numbers and dates whole cells are replaced; leave `Find` empty to fill missing values, or `Replace with` empty to clear the cells.
+* **Recode values...**: lists the values of the column, the most common first, with a box to type a new value for each.
+* **Change type**: number, whole number, text, `TRUE`/`FALSE`, date or factor. If some values cannot be converted (e.g. `"x"` to a date), you are told which ones before they become missing.
+* **Sort ascending** / **Sort descending**: put the rows in order of the column.
+
+```{r, echo = FALSE, fig.align = "center", out.width = "100%"}
+screenshot("column-actions.png")
+```
+
+```{r, echo = FALSE, fig.align = "center", out.width = "100%"}
+screenshot("formula.png")
+```
+
+Each action is recorded as a single `dplyr` verb, so the code that reproduces your edits (see [Exporting Code](#exporting-code)) says what you did, rather than listing every value that changed:
+
+```r
+samples <- samples %>%
+  mutate(ph_class = case_when(ph < 7 ~ "acidic", ph > 7 ~ "basic", .default = "neutral"), .after = ph) %>%
+  mutate(site = case_match(site, "North" ~ "north", .default = site))
+```
+
+The editor applies an action by running that same verb on your data, so the code always gives exactly the result you saw. Actions can be undone like any other change, and appear in the `History` tab with their code. Set `col_actions = FALSE` to remove them from the column menu.
+
 ## 4. Data Creation
 
 You can also use `data_edit()` to interactively create data.frames from scratch without any coding.
@@ -565,6 +593,34 @@ screenshot("col-types.gif")
 * **Web addresses** (`"url"`): addresses starting with `http://`, `https://` or `mailto:` get a button that opens them in a new tab; double-click the cell to edit the address.
 * **Colours** (`"colour"`): a swatch is shown for colours the browser understands, i.e. hex codes such as `"#1D4ED8"` and CSS colour names such as `"orange"` (some R colour names, such as `"grey50"`, are shown without a swatch).
 
+### 7.6 Validation rules
+
+Column inputs stop values that do not fit a single cell. Rules check the data as a whole: that values are filled in, unique or within limits, or that columns agree with each other. Supply them to `rules` as one-sided formulas that are `TRUE` for valid rows, named with the message to show:
+
+```{r, eval = FALSE}
+data_edit(samples,
+          rules = list(
+            "pH is between 0 and 14" = ~ ph >= 0 & ph <= 14,
+            "The end is after the start" = ~ end >= start,
+            "Every sample has an ID" = ~ !is.na(sample),
+            "Sample IDs are unique" = ~ !duplicated(sample)
+          ))
+```
+
+Rules are checked after every change. Cells that break a rule get a red corner and a tooltip with the message, the status bar counts the problems and the `Problems` tab lists them; click a row to go to it. Missing values pass a rule unless it says otherwise, so `end >= start` only checks rows where both dates are filled in.
+
+You can also add rules from a column's menu (`Rules...`): make the column required or unique, set the smallest and largest values of numbers and dates, give a pattern that text must match (a regular expression such as `S-[0-9]{2}`) or write a formula. The dialog shows how many rows break the rules before you save them.
+
+```{r, echo = FALSE, fig.align = "center", out.width = "100%"}
+screenshot("rules-dialog.png")
+```
+
+```{r, echo = FALSE, fig.align = "center", out.width = "100%"}
+screenshot("problems.png")
+```
+
+When rules are broken, `Done` asks whether to return the data anyway or keep editing. In shiny apps, `dataEditProblems()` returns the problems, for example to disable a *Save* button until they are fixed.
+
 ## 8. Customisation
 
 `data_edit()` has been designed to be simple, but does come with some customisation options including column stretching, addition of logos and/or titles, custom themes and the option to hide the menus.
@@ -677,17 +733,18 @@ screenshot("history.png")
 
 ### 9.4 Keep a change log
 
-Supply the name of a csv file to `log` to keep the history when you press `Done`. Each change becomes one row with the `data` that was edited, the `time`, the `user`, the `step` and `how` it was made, the `action` (`edit`, `add row`, `remove row`, `add column`, `remove column` or `rename column`), the `row` (its row name, or its number in the data you opened), the `column`, the `old` and `new` values and the `note`. New changes are added to the end of the file, so one file can keep the history of every editing session of a dataset or a project:
+Supply the name of a csv file to `log` to keep the history when you press `Done`. Each change becomes one row with the `data` that was edited, the `time`, the `user`, the `step` and `how` it was made (and the `code` of column actions), the `action` (`edit`, `add row`, `remove row`, `add column`, `remove column` or `rename column`), the `row` (its row name, or its number in the data you opened), the `column`, the `old` and `new` values and the `note`. New changes are added to the end of the file, so one file can keep the history of every editing session of a dataset or a project:
 
 ```{r, eval = FALSE}
 lab <- data_edit("lab_results.csv",
                  save_as = "lab_results.csv",
                  log = "lab_results_log.csv")
 
-read.csv("lab_results_log.csv")
-#>               data                     time user step  how action      row column old new                        note
-#> 1 lab_results.csv 2026-11-01 14:02:11+1100  ana    1 edit   edit        3     pH 7.9 7.4 Re-measured, meter recalibrated
-#> 2 lab_results.csv 2026-11-01 14:03:40+1100  ana    2 paste  edit       12   mass 1.2 1.25                            <NA>
+log <- read.csv("lab_results_log.csv")
+log[, c("time", "user", "how", "row", "column", "old", "new", "note")]
+#>                       time user   how row column old  new                            note
+#> 1 2026-11-01 14:02:11+1100  ana  edit   3     pH 7.9  7.4 Re-measured, meter recalibrated
+#> 2 2026-11-01 14:03:40+1100  ana paste  12   mass 1.2 1.25                            <NA>
 ```
 
 `log` can also be a function, which is called with the log as a data frame, for example to write it to a database. Nothing is written when `Cancel` is pressed. The user name is the name you are logged in with; set `options(DataEditR.user = "Your Name")` to record another name.
@@ -809,7 +866,7 @@ For reproducibility, it is possible to export the code required to generate the 
 
 ### 14.1 See the code as you edit
 
-Click `Code` in the toolbar to see the code that reproduces your edits so far. The code updates as you edit and can be copied with the `Copy` button.
+Click `Code` in the toolbar to see the code that reproduces your edits so far. The code updates as you edit and can be copied with the `Copy` button. Column actions such as formulas, find and replace, recoding, type changes and sorting (see [Change whole columns](#change-whole-columns)) appear as one `dplyr` verb each; other edits are listed as the values that changed.
 
 ```{r, echo = FALSE, fig.align = "center", out.width = "100%"}
 screenshot("code.png")

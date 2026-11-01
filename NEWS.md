@@ -53,6 +53,29 @@
   no longer converted to numbers. Dates stay dates, and matrices, tibbles and
   data.tables are returned with their original class.
 
+## Column actions and validation rules
+
+* A column's menu (the new `⋮` button in its header, or a right-click) has
+  actions that change the whole column: **Formula...** (a new column or new
+  values from an R expression such as `round(mpg * 0.425, 1)`), **Find and
+  replace...**, **Recode values...**, **Change type** and sorting. Each shows
+  a preview and is recorded as one `dplyr` verb (`mutate()`, `arrange()`), so
+  the generated code says what was done rather than listing every changed
+  value. The editor runs that same verb, so the code gives exactly the
+  result, and checks this before showing it. Formulas can only use columns
+  and common functions, so they are safe in shiny apps. Turn the actions off
+  with `col_actions = FALSE`.
+* `rules` checks the data as it is edited: formulas that are `TRUE` for valid
+  rows, named with their messages (e.g. `"End is after the start" = ~ end >=
+  start`). Cells that break a rule are marked, a new `Problems` tab lists
+  them, the status bar counts them and `Done` asks before returning data with
+  problems. Columns can be made required or unique, given limits or a
+  pattern, or a formula, from their menu (**Rules...**). `dataEditProblems()`
+  returns the problems in shiny apps.
+* Code for columns inserted between other columns now puts them in place
+  (`mutate(..., .after = )`).
+* The change log gains a `code` column with the verb of column actions.
+
 ## Change log, notes and drafts
 
 * Every change is recorded with the time, the user and how it was made

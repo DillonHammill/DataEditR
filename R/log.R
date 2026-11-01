@@ -26,8 +26,9 @@
 #' that change nothing leave no gap.
 #'
 #' @noRd
-store_step <- function(store, how = "edit") {
+store_step <- function(store, how = "edit", code = NULL) {
   store$step_how <- how
+  store$step_code <- code
   store$step_open <- TRUE
   invisible(store)
 }
@@ -48,6 +49,7 @@ store_log <- function(store, entries) {
     user = rep(store$user %||% "", n),
     step = rep(store$step, n),
     how = rep(store$step_how %||% "edit", n),
+    code = rep(store$step_code %||% NA_character_, n),
     stringsAsFactors = FALSE
   )
   store$log[[length(store$log) + 1]] <- cbind(head, entries)
@@ -82,6 +84,7 @@ empty_log <- function() {
     user = character(0),
     step = integer(0),
     how = character(0),
+    code = character(0),
     action = character(0),
     row = character(0),
     column = character(0),
@@ -213,6 +216,7 @@ log_entries <- function(op, before, after, label_cids = NULL) {
       log_frame("rename column", column = op$name, old = old, new = op$name)
     },
     insert_col = log_frame("add column", column = op$name),
+    reorder_rows = log_frame("reorder rows"),
     delete_col = log_frame("remove column", column = name_in(before, op$cid)),
     set_state = log_diff(before, after, label_cids),
     NULL
@@ -328,7 +332,10 @@ log_step_title <- function(entries) {
 #' @noRd
 log_step_tag <- function(entries) {
   how <- entries$how[1]
-  tags <- list(paste = c("Paste", "edited"), fill = c("Fill", "edited"),
+  tags <- list(formula = c("Formula", "edited"), replace = c("Replace", "edited"),
+               recode = c("Recode", "edited"), type = c("Type", "renamed"),
+               sort = c("Sort", "renamed"),
+               paste = c("Paste", "edited"), fill = c("Fill", "edited"),
                clear = c("Clear", "removed"), undo = c("Undo", "renamed"),
                redo = c("Redo", "renamed"), revert = c("Revert", "renamed"))
   if (how %in% names(tags)) {
@@ -367,6 +374,9 @@ log_entry_text <- function(entries) {
       `add column` = paste0("column ", esc(e$column), " added"),
       `remove column` = paste0("column ", esc(e$column), " removed"),
       `rename column` = paste0("column ", esc(e$old), " &rarr; ", esc(e$new)),
+      `change type` = paste0("column ", esc(e$column), " &middot; ", esc(e$old),
+                             " &rarr; ", esc(e$new)),
+      `reorder rows` = "rows put in a new order",
       esc(e$action)
     )
   }, character(1))
@@ -414,7 +424,11 @@ history_ui <- function(log, ns, limit = 100, details = 5) {
           tags$div(
             class = "editr-step-head",
             tags$span(class = paste0("editr-tag editr-tag-", tag[2]), tag[1]),
-            tags$span(class = "editr-step-title", log_step_title(e)),
+            if (!is.na(e$code[1])) {
+              tags$code(class = "editr-step-title editr-step-code", e$code[1])
+            } else {
+              tags$span(class = "editr-step-title", log_step_title(e))
+            },
             tags$time(
               class = "editr-step-time",
               datetime = format(time, "%Y-%m-%dT%H:%M:%S%z"),
