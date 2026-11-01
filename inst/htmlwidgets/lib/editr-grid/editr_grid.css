@@ -339,3 +339,21 @@ input.editr-rename {
   border-radius: 4px;
   outline: none;
 }
+
+/* dropdown (col_options) list editor - match the grid font */
+.tabulator-edit-list {
+  font-size: 13px;
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+}
+
+.tabulator-edit-list .tabulator-edit-list-item {
+  padding: 6px 10px;
+}
+
+.tabulator-edit-list .tabulator-edit-list-item.active,
+.tabulator-edit-list .tabulator-edit-list-item.focused {
+  background: #EFF5FF;
+  color: #1D4ED8;
+  outline: none;
+}

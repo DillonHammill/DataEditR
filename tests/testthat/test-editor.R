@@ -192,3 +192,84 @@ test_that("status counts match net changes", {
   expect_identical(cc$cells, 2L)
   expect_identical(cc$items, 3L)
 })
+
+test_that("empty and invalid inputs are handled when preparing", {
+  p <- prep(data.frame())
+  expect_identical(dim(result(p)), c(1L, 1L))
+  expect_warning(prep(data.frame(a = 1, a = 2, check.names = FALSE)),
+                 "must be unique")
+  expect_error(prep(mtcars, col_readonly = "nope"), "col_readonly")
+  expect_error(prep(mtcars, col_hide = "nope"), "col_hide")
+  expect_error(prep(mtcars, col_options = list(nope = "date")), "col_options")
+  p <- prep(data.frame(a = c("x", "y")), col_options = list(a = c(TRUE, FALSE)))
+  expect_identical(result(p)$a, c(NA, NA))
+})
+
+test_that("structural ops fall back to sensible behaviour", {
+  p <- prep(data.frame(a = 1:3))
+  # an unknown anchor appends the row
+  ops(p, list(type = "insert_rows", ids = list(4), anchor = 99))
+  expect_identical(p$store$state$ids, 1:4)
+  # nothing to delete
+  res <- ops(p, list(type = "delete_rows", ids = list(99)))
+  expect_false(res$changed)
+  # renaming an unknown column is ignored
+  res <- ops(p, list(type = "rename_col", cid = "c9", name = "x"))
+  expect_false(res$changed)
+  # a new column with an existing name is made unique
+  res <- ops(p, list(type = "insert_col", cid = "c2", name = "a"))
+  expect_identical(names(result(p)), c("a", "a.1"))
+  expect_identical(res$patches[[1]]$method, "set_title")
+  # clearing cells sends NULL values
+  ops(p, list(type = "update", cid = "c1", ids = list(1, 2)))
+  expect_identical(result(p)$a[1:2], c(NA_integer_, NA_integer_))
+  expect_null(DataEditR:::as_scalar(list()))
+  expect_null(DataEditR:::as_scalar(list(NULL)))
+  expect_identical(DataEditR:::as_value_list(c(1, 2), 2), list(1, 2))
+})
+
+test_that("row and column ops are refused when editing is off", {
+  p <- prep(mtcars[1:3, 1:2], row_edit = FALSE, col_edit = FALSE)
+  res <- ops(p, list(type = "delete_rows", ids = list(1)))
+  expect_false(res$changed)
+  expect_identical(res$patches[[1]]$method, "replace_data")
+  res <- ops(p, list(type = "delete_col", cid = "c2"))
+  expect_false(res$changed)
+  # the row names column can never be deleted
+  p <- prep(mtcars[1:3, 1:2])
+  res <- ops(p, list(type = "delete_col", cid = "c1"))
+  expect_false(res$changed)
+})
+
+test_that("grid patches only include cells on display", {
+  p <- prep(data.frame(a = 1:3, b = 4:6), col_hide = "b")
+  patch <- DataEditR:::cells_patch
+  expect_null(patch(p$store, list(cid = "c2", ids = 1)))
+  p$store$view_rows <- 1L
+  expect_null(patch(p$store, list(cid = "c1", ids = 2)))
+  expect_identical(patch(p$store, list(cid = "c1", ids = NULL))$ids, I(1L))
+})
+
+test_that("logical and cleared cells are echoed in grid format", {
+  p <- prep(data.frame(l = c(TRUE, FALSE), n = c(1, 2)))
+  res <- ops(p, op_update("c1", 1, "T"))
+  expect_identical(unlist(res$patches[[1]]$args$values), TRUE)
+  res <- ops(p, op_update("c1", 2, "true"))
+  expect_length(res$patches, 0)
+  res <- ops(p, list(type = "update", cid = "c2", ids = list(1),
+                     values = list(NULL)))
+  expect_length(res$patches, 0)
+  expect_true(is.na(result(p)$n[1]))
+})
+
+test_that("tracking keeps up with whole-column changes", {
+  p <- prep(data.frame(a = 1:2), track = TRUE)
+  p$store$changed <- NULL
+  DataEditR:::track_ops(p$store, list(list(type = "delete_rows", ids = 1)))
+  expect_identical(p$store$changed, character(0))
+  ops(p, op_update("c1", 1, "x"))
+  DataEditR:::track_ops(p$store, list(list(type = "set_col", cid = "c1"),
+                                       list(type = "update", cid = "c1",
+                                            ids = 99)))
+  expect_identical(p$store$changed, "1|c1")
+})

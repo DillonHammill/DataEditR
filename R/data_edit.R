@@ -51,6 +51,14 @@
 #' the meantime. Adding, removing and renaming columns is disabled for
 #' database tables.
 #'
+#' @section RStudio add-in:
+#' \code{data_edit()} is also available from the RStudio \emph{Addins} menu
+#' as \emph{Interactive Data Editor}. Highlight the name of a data frame,
+#' matrix or database table in the source editor or console and run the add-in
+#' to open it in the editor; with nothing highlighted an empty table is opened.
+#' The add-in can be bound to a keyboard shortcut through \emph{Tools > Modify
+#' Keyboard Shortcuts}.
+#'
 #' @param x a matrix, data.frame, data.table or the name of a csv file to edit.
 #'   Tibbles are also supported. An empty table can be created by specifying
 #'   the dimensions in a vector of the form \code{c(nrow, ncol)} or the names
@@ -137,10 +145,8 @@
 #'   edited rows are returned as a data.frame after the changes have been
 #'   committed.
 #'
-#' @importFrom rstudioapi getActiveDocumentContext
 #' @importFrom htmltools img span br div HTML tags tagList
-#' @importFrom shiny runGadget dialogViewer browserViewer paneViewer stopApp
-#'   reactiveVal isolate modalDialog showModal removeModal modalButton
+#' @importFrom shiny reactiveVal isolate modalDialog showModal removeModal modalButton
 #'   observeEvent observe reactive actionButton textInput fileInput
 #'   numericInput radioButtons checkboxInput downloadLink downloadHandler
 #'   showNotification req
@@ -199,23 +205,18 @@ data_edit <- function(x = NULL,
     if (length(nm) == 1 && make.names(nm) == nm) nm else "data"
   }, error = function(e) "data")
 
+  # RSTUDIO ADDIN - HIGHLIGHTED OBJECT NAME
+  if (is.null(x)) {
+    selection <- editr_addin_selection(envir)
+    if (!is.null(selection)) {
+      x <- selection$data
+      x_name <- selection$name
+    }
+  }
+
   # CANCEL
   if (missing(cancel)) {
     cancel <- x
-  }
-
-  # RSTUDIO ADDIN - HIGHLIGHTED OBJECT NAME
-  if (is.null(x) && Sys.getenv("RSTUDIO") == "1" &&
-      rstudioapi::isAvailable()) {
-    context <- tryCatch(
-      getActiveDocumentContext()$selection[[1]]$text,
-      error = function(e) ""
-    )
-    if (length(context) == 1 && nzchar(context) &&
-        exists(context, envir = envir)) {
-      x <- get(context, envir = envir)
-      x_name <- context
-    }
   }
 
   # CODE GENERATION - CAPTURE ORIGINAL DATA
@@ -509,7 +510,7 @@ data_edit <- function(x = NULL,
 
     # CANCEL
     observeEvent(input$cancel, {
-      stopApp(NULL)
+      editr_stop(NULL)
     })
 
     # FINISH - WRITE TO FILE & RETURN
@@ -525,7 +526,7 @@ data_edit <- function(x = NULL,
       if (!is.null(result) && save) {
         do.call(write_fun, c(list(result, save_as), write_args))
       }
-      stopApp(result)
+      editr_stop(result)
     }
 
     # DONE
@@ -586,21 +587,12 @@ data_edit <- function(x = NULL,
     })
   }
 
-  # VIEWER
-  if (is.function(viewer)) {
-    viewer_fun <- viewer
-  } else if (grepl("^d", viewer, ignore.case = TRUE)) {
-    viewer_fun <- dialogViewer("DataEditR",
-                               width = viewer_width,
-                               height = viewer_height)
-  } else if (grepl("^b", viewer, ignore.case = TRUE)) {
-    viewer_fun <- browserViewer()
-  } else {
-    viewer_fun <- paneViewer()
-  }
-
   # RUN APPLICATION
-  x_edit <- runGadget(ui, server, viewer = viewer_fun, stopOnCancel = FALSE)
+  x_edit <- editr_run_gadget(
+    ui,
+    server,
+    viewer = editr_viewer(viewer, viewer_width, viewer_height)
+  )
 
   # RETURN DATA
   if (is.null(x_edit)) {
@@ -655,4 +647,63 @@ editr_dims <- function(d) {
   k <- NCOL(d)
   paste0(n, if (n == 1) " row" else " rows", " &times; ", k,
          if (k == 1) " column" else " columns")
+}
+
+#' Viewer for the data editor gadget
+#'
+#' @param viewer \code{"dialog"}, \code{"browser"}, \code{"pane"} (first
+#'   letters are enough) or a function accepting the application URL.
+#' @noRd
+editr_viewer <- function(viewer = "dialog", width = 1200, height = 800) {
+  if (is.function(viewer)) {
+    return(viewer)
+  }
+  if (grepl("^d", viewer, ignore.case = TRUE)) {
+    shiny::dialogViewer("DataEditR", width = width, height = height)
+  } else if (grepl("^b", viewer, ignore.case = TRUE)) {
+    shiny::browserViewer()
+  } else {
+    shiny::paneViewer()
+  }
+}
+
+#' Run the data editor gadget and return what it stops with
+#' @noRd
+editr_run_gadget <- function(ui, server, viewer) {
+  shiny::runGadget(ui, server, viewer = viewer, stopOnCancel = FALSE)
+}
+
+#' Close the data editor gadget, returning value from runGadget()
+#' @noRd
+editr_stop <- function(value = NULL) {
+  shiny::stopApp(value)
+}
+
+#' Object highlighted in the RStudio source editor (RStudio add-in)
+#'
+#' When \code{data_edit()} is called without data from RStudio (e.g. through
+#' the \emph{Interactive Data Editor} add-in), the name of an object
+#' highlighted in the source editor or console is used as the data to edit.
+#'
+#' @return \code{NULL} or a list with the \code{name} and \code{data} of the
+#'   highlighted object.
+#' @noRd
+editr_addin_selection <- function(envir = parent.frame()) {
+  if (!identical(Sys.getenv("RSTUDIO"), "1") ||
+      !isTRUE(tryCatch(rstudioapi::isAvailable(), error = function(e) FALSE))) {
+    return(NULL)
+  }
+  text <- tryCatch(
+    rstudioapi::getActiveDocumentContext()$selection[[1]]$text,
+    error = function(e) ""
+  )
+  text <- trimws(paste(text, collapse = ""))
+  if (!nzchar(text) || !exists(text, envir = envir)) {
+    return(NULL)
+  }
+  obj <- get(text, envir = envir)
+  if (is.null(dim(obj)) && !is_db_input(obj)) {
+    return(NULL)
+  }
+  list(name = text, data = obj)
 }

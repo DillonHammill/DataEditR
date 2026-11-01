@@ -275,14 +275,40 @@ dataEditServer <- function(id,
 
     bump <- function(rv) rv(isolate(rv()) + 1)
 
+    # ROW / COLUMN VIEWS -------------------------------------------------------
+
+    apply_rows <- function(ed) {
+      if (is.null(ed) || is.null(rows_r)) return(invisible())
+      ids <- ed$store$state$ids
+      r <- rows_r()
+      # NULL - ALL ROWS, INTEGER(0) - NO MATCHING ROWS
+      ed$store$view_rows <- if (is.null(r)) {
+        NULL
+      } else {
+        r <- r[!is.na(r) & r >= 1 & r <= length(ids)]
+        ids[r]
+      }
+    }
+
+    apply_columns <- function(ed) {
+      if (is.null(ed) || is.null(columns_r)) return(invisible())
+      state <- ed$store$state
+      cols <- columns_r()
+      ed$store$view_cols <- if (length(cols) == 0) {
+        NULL
+      } else {
+        # ROW NAMES COLUMN IS ALWAYS SHOWN
+        state$cids[names(state$data) %in% cols |
+                     state$cids %in% ed$cfg$rownames_cid]
+      }
+    }
+
     # LOAD DATA ----------------------------------------------------------------
 
     observeEvent(data_r(), {
       x <- data_r()
-      if (is.null(x)) {
-        editor(NULL)
-      } else {
-        editor(editr_prepare(
+      ed <- if (!is.null(x)) {
+        editr_prepare(
           x,
           col_bind = col_bind,
           col_edit = col_edit,
@@ -298,44 +324,27 @@ dataEditServer <- function(id,
           read_args = read_args,
           track = track,
           quiet = quiet
-        ))
+        )
       }
+      isolate({
+        apply_rows(ed)
+        apply_columns(ed)
+      })
+      editor(ed)
       bump(data_tick)
       bump(view_tick)
     }, ignoreNULL = FALSE)
 
-    # ROW / COLUMN VIEWS -------------------------------------------------------
-
     if (!is.null(rows_r)) {
       observeEvent(rows_r(), {
-        ed <- isolate(editor())
-        if (is.null(ed)) return()
-        ids <- ed$store$state$ids
-        r <- rows_r()
-        # NULL - ALL ROWS, INTEGER(0) - NO MATCHING ROWS
-        ed$store$view_rows <- if (is.null(r)) {
-          NULL
-        } else {
-          r <- r[!is.na(r) & r >= 1 & r <= length(ids)]
-          ids[r]
-        }
+        apply_rows(isolate(editor()))
         bump(view_tick)
       }, ignoreNULL = FALSE, ignoreInit = TRUE)
     }
 
     if (!is.null(columns_r)) {
       observeEvent(columns_r(), {
-        ed <- isolate(editor())
-        if (is.null(ed)) return()
-        state <- ed$store$state
-        cols <- columns_r()
-        ed$store$view_cols <- if (length(cols) == 0) {
-          NULL
-        } else {
-          # ROW NAMES COLUMN IS ALWAYS SHOWN
-          state$cids[names(state$data) %in% cols |
-                       state$cids %in% ed$cfg$rownames_cid]
-        }
+        apply_columns(isolate(editor()))
         bump(view_tick)
       }, ignoreNULL = FALSE, ignoreInit = TRUE)
     }

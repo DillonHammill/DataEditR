@@ -60,9 +60,7 @@ db_table <- function(x,
   if (inherits(x, "editr_db_table")) {
     return(x)
   }
-  if (!requireNamespace("DBI", quietly = TRUE)) {
-    stop("Package 'DBI' is required to edit database tables.", call. = FALSE)
-  }
+  editr_require("DBI", "edit database tables")
   query <- NULL
   if (inherits(x, "DBIConnection")) {
     con <- x
@@ -71,9 +69,7 @@ db_table <- function(x,
            call. = FALSE)
     }
   } else if (inherits(x, "tbl_lazy")) {
-    if (!requireNamespace("dbplyr", quietly = TRUE)) {
-      stop("Package 'dbplyr' is required to edit lazy tables.", call. = FALSE)
-    }
+    editr_require("dbplyr", "edit lazy tables")
     con <- dbplyr::remote_con(x)
     query <- x
     if (is.null(table)) {
@@ -110,6 +106,15 @@ db_table <- function(x,
     ),
     class = "editr_db_table"
   )
+}
+
+#' Stop with a helpful message when a suggested package is missing
+#' @noRd
+editr_require <- function(pkg, what) {
+  if (!requireNamespace(pkg, quietly = TRUE)) {
+    stop("Package '", pkg, "' is required to ", what, ".", call. = FALSE)
+  }
+  invisible(TRUE)
 }
 
 #' @export
@@ -159,8 +164,16 @@ db_base_table <- function(x) {
     q <- q$x
   }
   ident <- q$x
+  if (inherits(ident, "sql")) {
+    stop(
+      "Cannot edit the result of an SQL query. Use ",
+      "`db_table(x, table = ..., key = ...)` to say which table to write to.",
+      call. = FALSE
+    )
+  }
+  # dbplyr < 2.4 - TABLE NAMES ARE CHARACTER IDENTIFIERS
   if (is.character(ident)) {
-    return(ident)
+    return(as.character(ident))
   }
   parts <- unclass(ident)
   table <- parts$table
@@ -411,7 +424,13 @@ db_table_code <- function(table) {
 #' @noRd
 db_params <- function(df) {
   lapply(unname(as.list(df)), function(x) {
-    if (inherits(x, "Date") || inherits(x, "POSIXct")) x else unclass(x)
+    if (inherits(x, "Date") || inherits(x, "POSIXct")) {
+      x
+    } else if (is.factor(x)) {
+      as.character(x)
+    } else {
+      unclass(x)
+    }
   })
 }
 

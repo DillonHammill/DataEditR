@@ -194,6 +194,16 @@ the meantime. Adding, removing and renaming columns is disabled for
 database tables.
 }
 
+\section{RStudio add-in}{
+
+\code{data_edit()} is also available from the RStudio \emph{Addins} menu
+as \emph{Interactive Data Editor}. Highlight the name of a data frame,
+matrix or database table in the source editor or console and run the add-in
+to open it in the editor; with nothing highlighted an empty table is opened.
+The add-in can be bound to a keyboard shortcut through \emph{Tools > Modify
+Keyboard Shortcuts}.
+}
+
 \examples{
 if(interactive()) {
 

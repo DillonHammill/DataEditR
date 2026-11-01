@@ -87,3 +87,65 @@ test_that("the visible view combines server views and grid filters", {
   expect_identical(v$b, c(7L, 9L))
   expect_identical(nrow(result(p)), 5L)
 })
+
+test_that("the review panel shows rows without links and long lists", {
+  p <- prep(data.frame(a = 1:6))
+  ops(p, list(type = "delete_rows", ids = list(1)),
+      op_update("c1", 2:6, as.character(12:16)))
+  ns <- function(id) paste0("ed-", id)
+  cl <- DataEditR:::change_items(p$store, p$cfg, limit = 2)
+  expect_length(cl$items, 2)
+  expect_identical(cl$total, 6L)
+  expect_match(tag_text(DataEditR:::review_ui(cl, ns)), "and 4 more",
+               fixed = TRUE)
+  html <- tag_text(DataEditR:::review_ui(
+    DataEditR:::change_items(p$store, p$cfg), ns
+  ))
+  expect_match(html, "DataEditR.send(&#39;ed-goto&#39;, &#39;2&#39;)",
+               fixed = TRUE)
+  expect_match(html, "DataEditR.send(&#39;ed-revert&#39;, &#39;drow:1&#39;)",
+               fixed = TRUE)
+  expect_match(html, '<span class="editr-change-title">Row 1</span>',
+               fixed = TRUE)
+  # limits apply to every kind of change
+  p <- prep(data.frame(a = 1:3))
+  ops(p, list(type = "insert_rows", ids = list(4, 5), anchor = 3,
+              below = TRUE))
+  expect_length(DataEditR:::change_items(p$store, p$cfg, limit = 1)$items, 1)
+  p <- prep(data.frame(a = 1:3))
+  ops(p, list(type = "delete_rows", ids = list(1, 2)))
+  expect_length(DataEditR:::change_items(p$store, p$cfg, limit = 1)$items, 1)
+  expect_match(tag_text(DataEditR:::review_ui(list(items = list()), ns)),
+               "No changes yet", fixed = TRUE)
+})
+
+test_that("reverting changes that no longer apply does nothing", {
+  p <- prep(data.frame(a = 1:3, b = c("x", "y", "z")))
+  rv <- function(key) DataEditR:::revert_ops(p$store, key)
+  expect_length(rv("urow:9"), 0)
+  expect_length(rv("irow:9"), 0)
+  expect_length(rv("drow:1"), 0)
+  expect_length(rv("acol:c9"), 0)
+  expect_length(rv("dcol:c1"), 0)
+  expect_length(rv("rcol:c9"), 0)
+  expect_length(rv("what:1"), 0)
+  expect_length(DataEditR:::server_ops(p$store, list(), p$cfg)$patches, 0)
+})
+
+test_that("reverts restore values after a column changed type", {
+  p <- prep(data.frame(a = c(1, 2, 3), b = c("x", "y", "z")))
+  # typing text turns the numeric column into text
+  ops(p, op_update("c1", 1, "one"))
+  expect_type(result(p)$a, "character")
+  ops(p, list(type = "delete_rows", ids = list(2)))
+  revert(p, "urow:1")
+  expect_identical(result(p)$a, c("1", "3"))
+  revert(p, "drow:2")
+  expect_identical(result(p)$a, c("1", "2", "3"))
+  # rows restored after a new column was added are padded with NA
+  ops(p, list(type = "delete_rows", ids = list(1)),
+      list(type = "insert_col", cid = "c3", name = "new", anchor = "c2",
+           right = TRUE))
+  revert(p, "drow:1")
+  expect_identical(result(p)$new, c(NA, NA, NA))
+})

@@ -94,7 +94,7 @@ data_bind_cols <- function(data = NULL,
         if (inherits(col_bind, "list")) {
           # NAMES
           if (is.null(names(col_bind))) {
-            names(col_bind) <- paste0("V", length(col_bind))
+            names(col_bind) <- paste0("V", seq_along(col_bind))
           }
           # LENGTHS
           ind <- which(!unlist(lapply(col_bind, length)) == nrow(data))

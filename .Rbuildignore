@@ -11,8 +11,8 @@
 ^doc$
 ^Meta$
 vignettes/DataEditR/
+^vignettes/images$
 man/figures/DataEditR/
 ^\.github$
 ^_pkgdown\.yml$
 ^tools$
-^PROTOTYPE\.md$

@@ -132,3 +132,147 @@ test_that("generated code works for schema-qualified tables", {
   suppressMessages(eval(parse(text = code), envir = env))
   expect_identical(read_cars(con)$mpg[1], 9)
 })
+
+test_that("db_table explains what cannot be edited", {
+  con <- make_db()
+  on.exit(DBI::dbDisconnect(con))
+  expect_error(db_table(mtcars), "lazy table or a DBI connection")
+  expect_error(db_table(con, table = "cars", key = "nope"),
+               "Key column\\(s\\) not found")
+  DBI::dbExecute(con, "CREATE TABLE owners (car INTEGER, name TEXT)")
+  joined <- dplyr::left_join(dplyr::tbl(con, "cars"),
+                             dplyr::tbl(con, "owners"),
+                             by = c("id" = "car"))
+  expect_error(db_table(joined), "combines tables")
+  expect_error(db_table(dplyr::tbl(con, dplyr::sql("SELECT * FROM cars"))),
+               "result of an SQL query")
+  # the table to write to can still be named explicitly
+  db <- db_table(joined, table = "cars", key = "id")
+  expect_identical(db$table, "cars")
+  expect_identical(db_table(db), db)
+  expect_output(print(db), "table: cars")
+  expect_error(DataEditR:::editr_require("notapackage123", "do this"),
+               "Package 'notapackage123' is required to do this")
+})
+
+test_that("base tables are found for every kind of table identifier", {
+  base <- DataEditR:::db_base_table
+  fake <- function(x) {
+    structure(list(lazy_query = structure(
+      list(x = x), class = c("lazy_base_remote_query", "lazy_query")
+    )), class = "tbl_lazy")
+  }
+  expect_identical(base(fake(structure("cars", class = "ident"))), "cars")
+  id <- base(fake(list(table = "cars", schema = "main", catalog = "db")))
+  expect_identical(DataEditR:::db_table_label(id), "db.main.cars")
+  expect_identical(DataEditR:::db_table_code(id),
+                   'dbplyr::in_catalog("db", "main", "cars")')
+  id <- base(fake(list(table = "cars", schema = "main", catalog = NA)))
+  expect_identical(DataEditR:::db_table_code(id),
+                   'dbplyr::in_schema("main", "cars")')
+  expect_identical(base(fake(list(table = "cars", schema = NA))), "cars")
+  expect_error(base(fake(list(table = NA_character_))), "Could not determine")
+  expect_identical(DataEditR:::db_table_code(DBI::Id(table = "cars")),
+                   '"cars"')
+})
+
+test_that("primary keys are looked up for other databases", {
+  queries <- character(0)
+  local_mocked_bindings(
+    dbGetQuery = function(con, sql, ...) {
+      queries <<- c(queries, sql)
+      if (inherits(con, "duckdb_connection")) {
+        res <- data.frame(x = I(list(c("a", "b"))))
+        if (grepl("'none'", sql)) res <- res[0, , drop = FALSE]
+        res
+      } else {
+        data.frame(column_name = "id")
+      }
+    },
+    dbQuoteString = function(conn, x, ...) paste0("'", x, "'"),
+    .package = "DBI"
+  )
+  key <- DataEditR:::db_primary_key
+  duck <- structure(list(), class = "duckdb_connection")
+  expect_identical(key(duck, "cars"), c("a", "b"))
+  expect_identical(key(duck, "none"), character(0))
+  pg <- structure(list(), class = "PqConnection")
+  expect_identical(key(pg, DBI::Id(schema = "public", table = "cars")), "id")
+  expect_match(queries[3], "tc.table_schema = 'public'", fixed = TRUE)
+  expect_identical(key(pg, "cars"), "id")
+  expect_false(grepl("tc.table_schema = '", queries[4], fixed = TRUE))
+  # null-safe comparisons differ between databases
+  eq <- DataEditR:::db_null_safe_eq
+  expect_identical(eq(structure(list(), class = "MariaDBConnection")), " <=> ")
+  expect_identical(eq(pg), " IS NOT DISTINCT FROM ")
+})
+
+test_that("limits and duplicated keys are handled when loading", {
+  con <- make_db()
+  on.exit(DBI::dbDisconnect(con))
+  p <- prep(db_table(con, table = "cars", key = "id", limit = 2))
+  expect_identical(nrow(result(p)), 2L)
+  DBI::dbExecute(con, "CREATE TABLE dups (a INTEGER, b TEXT)")
+  DBI::dbExecute(con, "INSERT INTO dups VALUES (1, 'x'), (1, 'y')")
+  expect_error(prep(db_table(con, table = "dups", key = "a")),
+               "do not uniquely identify")
+})
+
+test_that("rows with keys, removed rows and key edits are committed", {
+  con <- make_db()
+  on.exit(DBI::dbDisconnect(con))
+  p <- prep(dplyr::tbl(con, "cars"))
+  ops(p, list(type = "insert_rows", ids = list(7), anchor = 6, below = TRUE))
+  ops(p, op_update("c1", 7, "100"), op_update("c2", 7, "Keyed"),
+      op_update("c1", 1, "50"))
+  code <- DataEditR:::data_code_db(p$cfg$db, p$store, name = "cars")
+  expect_match(code, "key value(s) were edited", fixed = TRUE)
+  expect_match(code, "rows_append(cars, tibble::tibble(id = c(100)",
+               fixed = TRUE)
+  DataEditR:::db_commit(p$cfg$db, p$store)
+  expect_identical(read_cars(con)$model[read_cars(con)$id == 100], "Keyed")
+  # removing a row that changed in the database is a conflict
+  p <- prep(dplyr::tbl(con, "cars"))
+  removed <- result(p)$id[2]
+  ops(p, list(type = "delete_rows", ids = list(2)))
+  DBI::dbExecute(con, paste("UPDATE cars SET model = 'Changed' WHERE id =",
+                            removed))
+  expect_error(DataEditR:::db_commit(p$cfg$db, p$store), "to be deleted")
+  expect_identical(nrow(read_cars(con)), 7L)
+  expect_identical(DataEditR:::data_code_db(p$cfg$db,
+                                            prep(dplyr::tbl(con, "cars"))$store),
+                   "# No changes detected\n")
+})
+
+test_that("composite keys and dates are written and coded", {
+  con <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
+  on.exit(DBI::dbDisconnect(con))
+  DBI::dbExecute(con, "CREATE TABLE visits (
+    site TEXT, day TEXT, n INTEGER, PRIMARY KEY (site, day))")
+  DBI::dbExecute(con, "INSERT INTO visits VALUES ('a', '2020-01-01', 1),
+                 ('b', '2020-01-01', 2)")
+  p <- prep(dplyr::tbl(con, "visits"))
+  expect_identical(p$cfg$db$key, c("site", "day"))
+  ops(p, op_update("c3", 2, "5"))
+  code <- DataEditR:::data_code_db(p$cfg$db, p$store)
+  expect_match(code, 'by = c("site", "day")', fixed = TRUE)
+  DataEditR:::db_commit(p$cfg$db, p$store)
+  expect_identical(DBI::dbGetQuery(con, "SELECT n FROM visits")$n, c(1L, 5L))
+  params <- DataEditR:::db_params(data.frame(d = as.Date("2020-01-01"),
+                                             f = factor("x")))
+  expect_s3_class(params[[1]], "Date")
+  expect_identical(params[[2]], "x")
+})
+
+test_that("the module shows database code in the review panel", {
+  con <- make_db()
+  on.exit(DBI::dbDisconnect(con))
+  shiny::testServer(dataEditServer,
+                    args = list(data = dplyr::tbl(con, "cars"), quiet = TRUE,
+                                code_name = "cars"), {
+    session$flushReact()
+    session$setInputs(grid_ops = grid_batch(op_update("c3", 1, "1")))
+    session$setInputs(panel = "code")
+    expect_match(output$code, "rows_update(cars", fixed = TRUE)
+  })
+})

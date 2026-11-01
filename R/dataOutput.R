@@ -101,24 +101,18 @@ dataOutputServer <- function(id,
     
     # DISABLE/ENABLE SAVE
     observe({
-      # UPDATE REACTIVE VALUES
-      if (!is.reactive(data)) {
-        values$data <- data
-      } else {
-        values$data <- data()
-      }
-      # DISABLE/ENABLE BUTTON
-      if (is.null(values$data)) {
+      d <- if (is.reactive(data)) data() else data
+      if (is.null(d)) {
         disable("save")
       } else {
         enable("save")
         # FORMAT ROWNAMES - NUMERIC ROWNAMES ARE RETAINED (ROW INDICES)
-        if (!nzchar(trimws(colnames(values$data)[1]))) {
-          # WARNING - SETTING ROWNAMES ON TIBBLES
-          rownames(values$data) <- values$data[, 1]
-          values$data <- values$data[, -1]
+        if (!nzchar(trimws(colnames(d)[1]))) {
+          rownames(d) <- d[, 1, drop = TRUE]
+          d <- d[, -1, drop = FALSE]
         }
       }
+      values$data <- d
     })
     
     # SAVE DATA

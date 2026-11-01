@@ -43,6 +43,9 @@ editr_prepare <- function(x,
     col_names <- FALSE
   }
 
+  # MATRICES WITHOUT ROW NAMES ARE RETURNED WITHOUT ROW NAMES
+  matrix_rownames <- !is.matrix(x) || !is.null(rownames(x))
+
   # TEMPLATE / FILE / DIMENSIONS / COLUMN NAMES
   x <- data_template(x, read_fun = read_fun, read_args = read_args)
   data_class <- class(x)
@@ -183,6 +186,7 @@ editr_prepare <- function(x,
     stretch = isTRUE(col_stretch),
     col_factor = isTRUE(col_factor),
     data_class = data_class,
+    matrix_rownames = matrix_rownames,
     track = !is.null(track) && !isFALSE(track),
     track_color = if (isTRUE(track)) "#0275d8" else if (is.character(track)) track else NULL,
     quiet = quiet,
@@ -345,7 +349,7 @@ process_ops <- function(store, ops, cfg) {
       }
       anchor <- as_scalar(raw$anchor)
       right <- isTRUE(as_scalar(raw$right))
-      p <- match(anchor, state$cids)
+      p <- if (is.null(anchor)) NA_integer_ else match(anchor, state$cids)
       at <- if (is.na(p)) ncol(state$data) + 1L else if (right) p + 1L else p
       apply_one(list(type = "insert_col", cid = cid, name = name, at = at))
       store$auto_type <- union(store$auto_type, cid)
@@ -904,6 +908,9 @@ editr_result <- function(store, cfg, view = FALSE) {
   data_class <- cfg$data_class
   if ("matrix" %in% data_class) {
     data <- as.matrix(data)
+    if (isFALSE(cfg$matrix_rownames)) {
+      rownames(data) <- NULL
+    }
   } else if ("data.table" %in% data_class &&
              requireNamespace("data.table", quietly = TRUE)) {
     data <- data.table::as.data.table(data)

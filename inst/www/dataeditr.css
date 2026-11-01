@@ -78,11 +78,32 @@
 .editr-done-menu .shiny-options-group .form-check,
 .editr-done-menu .radio {
   margin: 0;
-  padding: 8px 10px 8px 34px;
+  padding: 0;
   border-radius: 6px;
 }
 
-.editr-done-menu .shiny-options-group .form-check:has(input:checked) {
+/* radio on the left of a two-line label (title + dimensions) */
+.editr-done-menu .radio label,
+.editr-done-menu .shiny-options-group .form-check label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  margin: 0;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.editr-done-menu .radio input[type="radio"],
+.editr-done-menu .shiny-options-group .form-check input[type="radio"] {
+  flex: none;
+  position: static;
+  float: none;
+  margin: 3px 0 0;
+}
+
+.editr-done-menu .shiny-options-group .form-check:has(input:checked),
+.editr-done-menu .radio:has(input:checked) {
   background: #EFF5FF;
 }
 
@@ -107,7 +128,20 @@
 .editr-done-menu .checkbox,
 .editr-done-menu .form-check:not(.shiny-options-group .form-check) {
   margin: 0;
-  padding: 8px 10px 8px 34px;
+  padding: 8px 10px;
+}
+
+.editr-done-menu .checkbox label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  cursor: pointer;
+}
+
+.editr-done-menu .checkbox input[type="checkbox"] {
+  position: static;
+  margin: 0;
 }
 
 /* toolbar --------------------------------------------------------------- */
@@ -198,8 +232,9 @@
 }
 
 .editr-find {
-  flex: 1 1 200px;
-  max-width: 320px;
+  flex: 1 1 160px;
+  min-width: 140px;
+  max-width: 300px;
   height: 36px;
   display: flex;
   align-items: center;

@@ -1,4 +1,4 @@
-# DataEditR 1.9.0.9000 (development version of 2.0.0)
+# DataEditR 2.0.0
 
 ## Tabulator grid replaces rhandsontable
 
@@ -88,8 +88,25 @@
 * `row_bind` adds typed empty rows, so numeric columns stay numeric.
 * `dataEditServer()` gains `rows` and `columns` arguments to display a subset
   of the data; `row_index` is no longer needed.
-* Add unit tests (testthat) for the editing engine, database backend and code
-  generation.
+* `dataEditServer()` applies `rows` and `columns` when the data is first
+  loaded (and when it is reloaded), not only when they change.
+* Matrices without row names are returned without row names.
+* `dataInputServer()` can load an uploaded file after an R object, and no
+  longer fails on data without columns.
+* `dataOutputServer()` no longer loops when the first column holds row names.
+* `dataFilterServer()` has been simplified: filters without levels are
+  ignored, "between" accepts its limits in any order, and "not between" or
+  "not contain" filters that match every row return no rows.
+* `col_bind` lists without names get unique column names (`V1`, `V2`, ...).
+* Database tables built from raw SQL queries give a clear error asking for
+  `db_table(x, table = , key = )`, and factor values are written as text.
+* The RStudio add-in returns the highlighted data when cancelled and accepts
+  any object with dimensions or a database table.
+* Test suite covers the gadget, the shiny modules (with `shiny::testServer()`)
+  and the database backend, with over 95% code coverage.
+* Documentation: new pkgdown articles on editing database tables, using the
+  modules in shiny apps and what is new in 2.0, a rewritten user guide with
+  new screenshots, and a new logo.
 
 # DataEditR 1.0.0
 
