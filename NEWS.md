@@ -27,8 +27,16 @@
 * New column types in `col_options`: `"datetime"`, `"time"`, `"textarea"`,
   `"url"`, `"colour"`, `"slider"`, `"rating"` and numbers within limits
   (`c(min = 0, max = 10, step = 0.5)`), alongside checkboxes, dropdowns,
-  `"date"` and `"password"`. Values that do not fit a column's input are
-  caught whether they are typed or pasted.
+  `"date"` and `"password"`. Slider limits and rating stars are set with
+  e.g. `c(type = "slider", min = 0, max = 1, step = 0.05)`. Values that do
+  not fit a column's input are caught whether they are typed or pasted, and
+  values already in the data that do not fit are marked.
+* Cells of templates and new columns that were never filled in are returned
+  as `NA` (they were empty strings), like cells that were cleared.
+* The generated code (`code`) starts from the data that was opened from the
+  Open menu, returns matrices as matrices and new tables as data frames,
+  and converts factor columns to text (or back to factors with
+  `col_factor = TRUE`) as `data_edit()` does.
 * Dates are only read from complete `YYYY-MM-DD` values (`as.Date()` read
   `15/03/2024` as the year 15); other formats are converted in the browser
   before they reach R.

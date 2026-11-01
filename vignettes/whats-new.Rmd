@@ -68,7 +68,7 @@ If you used earlier versions of **DataEditR**, this is where the controls of the
 * No logo is shown by default. Supply the path or URL of an image to `logo` to show one.
 * `col_options` no longer disables adding or removing columns.
 * `col_readonly` columns are locked in the grid (shown with a lock) rather than reverted after editing.
-* Only empty template columns and new columns are passed through `type.convert()` when the data is returned, so character columns such as `"001"` are no longer converted to numbers.
+* Only empty template columns and new columns are passed through `type.convert()` when the data is returned, so character columns such as `"001"` are no longer converted to numbers. Their cells that were never filled in are returned as `NA` rather than empty strings.
 * `"NA"` typed into a number, date or logical column is a missing value.
 * A filter that matches no rows shows an empty table rather than all rows.
 * Cancelling the RStudio add-in returns the highlighted data rather than `NULL`.

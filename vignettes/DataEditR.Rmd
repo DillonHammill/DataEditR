@@ -403,10 +403,26 @@ screenshot("export-menu.png")
 | `"url"` | web address with a button to open it | character |
 | `"colour"` (or `"color"`) | colour with a swatch | character |
 | `c(min = 0, max = 10, step = 0.5)` | number within limits (any of the three) | numeric |
-| `"slider"` | slider and bar for numbers from 0 to 100 | numeric |
-| `"rating"` | rating from 0 to 5 stars | numeric |
+| `"slider"` or `c(type = "slider", min = 0, max = 1, step = 0.05)` | slider and bar for numbers within limits (0 to 100 by default) | numeric |
+| `"rating"` or `c(type = "rating", stars = 10)` | star rating (5 stars by default) | numeric |
 
-The defaults of sliders and ratings can be changed with a list, e.g. `list(type = "slider", min = 0, max = 1, step = 0.05)` or `list(type = "rating", stars = 10)`. Columns are converted to the type their input needs when the data editor opens, and values that do not fit a column's input, whether typed or pasted, are caught before they are stored.
+Columns are converted to the type their input needs when the data editor opens, and values that do not fit a column's input, whether typed or pasted, are caught before they are stored. Values already in the data that do not fit (for example a value above the maximum of a slider, or a value that is not one of the options of a dropdown menu) are kept but marked with a red line, and hovering over them says why.
+
+The limits of sliders and numbers and the number of stars of ratings can be customised by giving the type together with its settings:
+
+```{r, eval = FALSE}
+data_edit(samples,
+          col_options = list(
+            # proportions from 0 to 1 in steps of 0.05
+            done = c(type = "slider", min = 0, max = 1, step = 0.05),
+            # a rating out of 10 stars
+            quality = c(type = "rating", stars = 10),
+            # numbers from 0 to 14 (type = "number" is optional here)
+            ph = c(min = 0, max = 14, step = 0.1)
+          ))
+```
+
+`list(type = "slider", min = 0, max = 1, step = 0.05)` works too. A slider without settings runs from 0 to 100 in steps of 1, and a rating has 5 stars.
 
 The animations in this section use the following data, with all four kinds of input and a read-only `mpg` column:
 
@@ -778,7 +794,7 @@ mtcars <- mtcars %>%
   tibble::column_to_rownames(var = ".rownames")
 ```
 
-For database tables the code uses `rows_update()`, `rows_append()` and `rows_delete()` to make the same changes to the database.
+For database tables the code uses `rows_update()`, `rows_append()` and `rows_delete()` to make the same changes to the database. If other data is opened from the `Open` menu, the code starts from that data instead (e.g. `iris <- iris %>% ...`), and a new table is created from scratch.
 
 ### 14.3 Save code to file
 

@@ -232,8 +232,9 @@ columns.</li>
 a lock) rather than reverted after editing.</li>
 <li>Only empty template columns and new columns are passed through
 <code><a href="https://rdrr.io/r/utils/type.convert.html" class="external-link">type.convert()</a></code> when the data is returned, so character
-columns such as <code>"001"</code> are no longer converted to
-numbers.</li>
+columns such as <code>"001"</code> are no longer converted to numbers.
+Their cells that were never filled in are returned as <code>NA</code>
+rather than empty strings.</li>
 <li>
 <code>"NA"</code> typed into a number, date or logical column is a
 missing value.</li>
