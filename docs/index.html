@@ -124,9 +124,11 @@
 <li>save edited data to file using any writing function (e.g. <code><a href="https://rdrr.io/r/utils/write.table.html" class="external-link">write.csv()</a></code>), or export all data or only what is on screen</li>
 <li>return appropriately formatted data as an R object for downstream use, keeping column types and the class of the data</li>
 <li>review panel listing every change with one-click revert, and live tidyverse-style code that reproduces your edits (<code><a href="reference/data_code.html">data_code()</a></code>)</li>
+<li>a history of every change with who made it and when, notes saying why, and a change log kept in a file (<code>log</code>)</li>
+<li>unsaved changes are kept as a draft and offered again if the editor is closed or R crashes</li>
 <li>support for custom themes through the <code>bslib</code> package</li>
 <li>customisable user interface (title, logo, menus)</li>
-<li>shiny modules to use the data editor in your own applications, with <code><a href="reference/dataEditCommit.html">dataEditCommit()</a></code> to save changes (including to databases) and <code><a href="reference/dataEditCommit.html">dataEditChanges()</a></code> to count unsaved changes</li>
+<li>shiny modules to use the data editor in your own applications, with <code><a href="reference/dataEditCommit.html">dataEditCommit()</a></code> to save changes (including to databases), <code><a href="reference/dataEditCommit.html">dataEditChanges()</a></code> to count unsaved changes and <code><a href="reference/dataEditCommit.html">dataEditLog()</a></code> for the change log</li>
 </ul>
 </div>
 <div class="section level4">

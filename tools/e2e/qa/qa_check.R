@@ -140,6 +140,51 @@ if (scenario == "df") {
 
 } else if (scenario == "cancel") {
   same(result, input, "Cancel returns the original data")
+  check(length(list.files(file.path(out, "drafts"), "rds$")) == 0,
+        "Cancel removed the draft")
+
+} else if (scenario == "log") {
+  e <- input
+  e$mpg[1] <- 30
+  e$cyl[3] <- 6
+  e$disp[4:5] <- c(100, 200)
+  e$mpg[5] <- 1
+  same(result, e, "edits returned")
+  log <- read.csv(file.path(out, "log.csv"), stringsAsFactors = FALSE)
+  print(log[, -c(1, 2)])
+  same(names(log), c("data", "time", "user", "step", "how", "action", "row",
+                     "column", "old", "new", "note"), "log columns")
+  same(log$how, c("edit", "fill", "paste", "paste", "clear", "clear",
+                  "undo", "undo", "edit"), "how each change was made")
+  same(log$step, c(1L, 2L, 3L, 3L, 4L, 4L, 5L, 5L, 6L), "steps")
+  same(log$row[c(1, 9)], c("Mazda RX4", "Hornet Sportabout"), "rows named by row name")
+  same(log$old[c(1, 2, 5)], c(21, 4, 160), "old values")
+  same(log$user, rep("qa", 9), "user")
+  same(log$note, c("source sheet said 30", rep(NA, 8)), "notes")
+  check(!anyNA(as.POSIXct(log$time, format = "%Y-%m-%d %H:%M:%S%z")), "times")
+  check(length(list.files(file.path(out, "drafts"), "rds$")) == 0,
+        "Done removed the draft")
+
+} else if (scenario == "recover_crash") {
+  drafts <- list.files(file.path(dirname(out), "drafts_recover"), "rds$",
+                       full.names = TRUE)
+  check(length(drafts) == 1, "a draft was left behind")
+  d <- readRDS(drafts[1])
+  same(d$changes, 2L, "the draft has both changes")
+  same(unname(d$notes), "first", "and the note")
+  check(!file.exists(file.path(out, "result.rds")), "nothing was returned")
+
+} else if (scenario == "recover") {
+  e <- input
+  e$mpg[c(1, 3)] <- c(30, 40)
+  e$cyl[2] <- 8
+  same(result, e, "restored and new edits returned")
+  log <- read.csv(file.path(out, "log.csv"), stringsAsFactors = FALSE)
+  same(log$how, c("edit", "edit", "undo", "redo", "edit"),
+       "log of both sessions")
+  same(log$note, c("first", NA, NA, NA, NA), "note kept")
+  check(length(list.files(file.path(dirname(out), "drafts_recover"), "rds$")) == 0,
+        "Done removed the draft")
 
 } else if (scenario == "cancel_value") {
   same(result, "cancelled", "Cancel returns the cancel value")

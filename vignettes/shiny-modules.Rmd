@@ -135,6 +135,8 @@ Pass the reactive returned by `dataEditServer()` to `dataEditCommit()` to save t
 
 `dataEditChanges()` returns the number of rows `updated`, `inserted` and `deleted`, the number of `columns` added, removed or renamed, the number of edited `cells` and the `total` number of changes. Like any reactive it updates as the data is edited.
 
+`dataEditCommit()` returns the same counts and the `log` of the changes it saved: one row per changed cell (or added, removed or renamed row and column) with the `time`, the `user`, `how` the change was made, the `row`, `column`, `old` and `new` values and the `note` the user added in the `History` tab. Write it next to the data to keep a record of who changed what. `dataEditLog()` returns the log of the whole session. The user is taken from `session$user` when the app runs on a server that signs users in (such as Posit Connect), and can be set with the `user` argument of `dataEditServer()`.
+
 ```{r}
 library(shiny)
 library(DataEditR)
@@ -176,6 +178,10 @@ server <- function(input, output, session) {
     if (inherits(res, "editr_conflict")) {
       showNotification(conditionMessage(res), type = "error", duration = NULL)
     } else {
+      # keep a record of who changed what next to the data
+      if (nrow(res$log) > 0) {
+        DBI::dbWriteTable(con, "cars_log", res$log, append = TRUE)
+      }
       showNotification("Changes saved")
     }
   })

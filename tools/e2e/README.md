@@ -26,10 +26,11 @@ returned data (and, for `db`, the SQLite file).
 
 `qa/run_qa.sh` runs end-to-end scenarios covering every feature: data frames,
 matrices, tibbles and data.tables, templates, files, binds, read-only, hidden
-and protected columns, factors, filtered and exported subsets, Cancel, every
-column type, the Open menu, the review panel, printed code, the simplified
-editor, database commits and conflicts, and shiny apps with
-`dataEditCommit()`/`dataEditChanges()`. Each scenario starts the app
+and protected columns, factors, filtered and exported subsets, Cancel, the
+change log and History tab, restoring a draft after R is killed mid-edit
+(`recover_crash` then `recover`), every column type, the Open menu, the review
+panel, printed code, the simplified editor, database commits and conflicts,
+and shiny apps with `dataEditCommit()`/`dataEditChanges()`. Each scenario starts the app
 (`qa_app.R`), drives it in headless Chrome (`qa.js`) and checks the returned
 data, written files and that the generated code reproduces the result
 (`qa_check.R`).

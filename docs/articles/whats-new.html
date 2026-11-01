@@ -129,6 +129,18 @@ added, removed or renamed cell, row and column with a button to revert
 it, and a <code>Code</code> tab with the code that reproduces your
 edits, updated as you edit.</li>
 <li>
+<strong>History and change log</strong>: a <code>History</code> tab
+lists every change with when it was made and by whom, and each step can
+be given a note saying why. <code>data_edit(log = "changes.csv")</code>
+keeps this record in a file, and <code><a href="../reference/dataEditCommit.html">dataEditCommit()</a></code> returns
+it in shiny apps.</li>
+<li>
+<strong>Unsaved changes are kept</strong>: changes are saved as a
+draft while you edit, so if the editor is closed without pressing
+<code>Done</code> (or R crashes) you are offered your changes the next
+time you open the same data. <code>Cancel</code> asks before changes are
+thrown away.</li>
+<li>
 <strong>Filters under the column headers</strong> (ranges for
 numbers, value lists and text search), shown as chips in the
 toolbar.</li>
@@ -244,6 +256,10 @@ factors.</li>
 <li>
 <code>"NA"</code> typed into a number, date or logical column is a
 missing value.</li>
+<li>
+<code>Cancel</code> asks for confirmation when there are changes,
+and <code><a href="../reference/data_edit.html">data_edit()</a></code> saves drafts of unsaved changes
+(<code>autosave = TRUE</code>).</li>
 <li>A filter that matches no rows shows an empty table rather than all
 rows.</li>
 <li>Cancelling the RStudio add-in returns the highlighted data rather

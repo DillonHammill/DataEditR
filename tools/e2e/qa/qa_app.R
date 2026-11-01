@@ -8,7 +8,10 @@ suppressMessages({
   library(DataEditR)
   library(shiny)
 })
-options(shiny.port = port, shiny.launch.browser = FALSE)
+options(shiny.port = port, shiny.launch.browser = FALSE,
+        DataEditR.drafts = file.path(out, "drafts"), DataEditR.user = "qa")
+# the browser script kills this process to simulate a crash
+writeLines(as.character(Sys.getpid()), file.path(out, "pid"))
 noview <- function(url) invisible(NULL)
 quietly <- function(...) data_edit(..., viewer = noview, quiet = TRUE)
 keep <- function(input, result) {
@@ -79,6 +82,20 @@ if (scenario == "df") {
   x <- mtcars
   dir.create(file.path(out, "saved"))
   keep(x, quietly(x, code = code_file, save_as = file.path(out, "saved", "cars.csv")))
+
+} else if (scenario == "log") {
+  x <- mtcars[1:5, 1:4]
+  keep(x, quietly(x, log = file.path(out, "log.csv")))
+
+} else if (scenario %in% c("recover_crash", "recover")) {
+  # both runs share the drafts; the first is killed while editing
+  options(DataEditR.drafts = file.path(dirname(out), "drafts_recover"))
+  if (scenario == "recover_crash") {
+    unlink(getOption("DataEditR.drafts"), recursive = TRUE)
+  }
+  x <- mtcars[1:5, 1:4]
+  saveRDS(x, file.path(out, "input.rds"))
+  keep(x, quietly(x, log = file.path(out, "log.csv")))
 
 } else if (scenario == "cancel") {
   x <- mtcars[1:3, 1:3]

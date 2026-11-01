@@ -3,7 +3,8 @@
 args <- commandArgs(trailingOnly = TRUE)
 scenario <- args[1]; port <- as.integer(args[2]); out <- args[3]
 suppressMessages(library(DataEditR))
-options(shiny.port = port, shiny.launch.browser = FALSE)
+options(shiny.port = port, shiny.launch.browser = FALSE,
+        DataEditR.drafts = file.path(out, "drafts"))
 noview <- function(url) invisible(NULL)
 
 if (scenario == "memory") {

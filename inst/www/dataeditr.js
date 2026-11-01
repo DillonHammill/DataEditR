@@ -3,7 +3,7 @@
   "use strict";
 
   var DataEditR = window.DataEditR = window.DataEditR || {};
-  var TABS = ["changes", "code"];
+  var TABS = ["changes", "history", "code"];
 
   // open the review panel on a tab; toggle = true closes it when that tab
   // is already showing
@@ -35,6 +35,41 @@
       Shiny.setInputValue(id, {value: value, nonce: Math.random()},
                           {priority: "event"});
     }
+  };
+
+  // edit the note of a step in the History tab: Enter or leaving the box
+  // saves it, Escape keeps the old note
+  DataEditR.note = function (prefix, step, button) {
+    var box = button.closest(".editr-step-note");
+    if (!box) return;
+    var current = box.getAttribute("data-note") || "";
+    var input = document.createElement("input");
+    input.type = "text";
+    input.className = "form-control form-control-sm editr-note-input";
+    input.value = current;
+    input.maxLength = 500;
+    input.placeholder = "Why was this changed?";
+    input.setAttribute("aria-label", "Note for step " + step);
+    box.innerHTML = "";
+    box.appendChild(input);
+    input.focus();
+    var done = false;
+    var save = function (keep) {
+      if (done) return;
+      done = true;
+      DataEditR.send(prefix + "note", {step: step, text: keep ? input.value : current});
+    };
+    input.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        save(true);
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
+        save(false);
+      }
+    });
+    input.addEventListener("blur", function () { save(true); });
   };
 
   DataEditR.copy = function (id, button) {

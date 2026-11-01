@@ -102,6 +102,8 @@ possible.</p>
 <span>  read_args <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  track <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  code_name <span class="op">=</span> <span class="st">"data"</span>,</span>
+<span>  autosave <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  user <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -258,6 +260,23 @@ border color. Set to <code>NULL</code> by default to disable highlighting.</p></
 <dd><p>name of the data used in the code shown in the review
 panel, set to <code>"data"</code> by default. Can also be a reactive expression
 returning the name.</p></dd>
+
+
+<dt>autosave</dt>
+<dd><p>logical indicating whether changes should be saved as a
+draft while editing, so that they can be restored if the app is closed
+before they are saved. When the same data is opened again by the same
+user, they are asked whether to restore the changes. Set to <code>FALSE</code>
+by default. Drafts are kept in <code>tools::R_user_dir("DataEditR",
+  "data")</code> (or the folder set with <code>options(DataEditR.drafts = )</code>) and
+are removed when the changes are committed or after 30 days.</p></dd>
+
+
+<dt>user</dt>
+<dd><p>name of the person editing, recorded in the change log (see
+<code><a href="dataEditCommit.html">dataEditLog</a>()</code>). By default the user signed in to the app
+(<code>session$user</code>), the <code>DataEditR.user</code> option or the system
+user name.</p></dd>
 
 
 <dt>...</dt>

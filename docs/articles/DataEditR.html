@@ -996,14 +996,83 @@ the highlight colour. For example, to use red:</p>
 <span>          track <span class="op">=</span> <span class="st">"red"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
-<h3 id="change-tracking-in-shiny-modules">9.3 Change tracking in shiny modules<a class="anchor" aria-label="anchor" href="#change-tracking-in-shiny-modules"></a>
+<h3 id="history-and-notes">9.3 History and notes<a class="anchor" aria-label="anchor" href="#history-and-notes"></a>
+</h3>
+<p>The <code>History</code> tab of the review panel lists every change
+in the order it was made, newest first: what was changed, by whom (hover
+over the time) and how, so a paste, a fill, a cleared range, an undo or
+a revert each show as one step. Undoing a change does not remove it from
+the history; it is added as a new step, so the history is a complete
+record of the session.</p>
+<p>Click <code>Add note</code> under a step to say why the change was
+made, for example where a corrected value came from. Press
+<code>Enter</code> to save the note or <code>Escape</code> to leave it
+as it was.</p>
+<p><img src="images/history.png" width="100%" style="display: block; margin: auto;"></p>
+</div>
+<div class="section level3">
+<h3 id="keep-a-change-log">9.4 Keep a change log<a class="anchor" aria-label="anchor" href="#keep-a-change-log"></a>
+</h3>
+<p>Supply the name of a csv file to <code>log</code> to keep the history
+when you press <code>Done</code>. Each change becomes one row with the
+<code>data</code> that was edited, the <code>time</code>, the
+<code>user</code>, the <code>step</code> and <code>how</code> it was
+made, the <code>action</code> (<code>edit</code>, <code>add row</code>,
+<code>remove row</code>, <code>add column</code>,
+<code>remove column</code> or <code>rename column</code>), the
+<code>row</code> (its row name, or its number in the data you opened),
+the <code>column</code>, the <code>old</code> and <code>new</code>
+values and the <code>note</code>. New changes are added to the end of
+the file, so one file can keep the history of every editing session of a
+dataset or a project:</p>
+<div class="sourceCode" id="cb36"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">lab</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="st">"lab_results.csv"</span>,</span>
+<span>                 save_as <span class="op">=</span> <span class="st">"lab_results.csv"</span>,</span>
+<span>                 log <span class="op">=</span> <span class="st">"lab_results_log.csv"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/read.table.html" class="external-link">read.csv</a></span><span class="op">(</span><span class="st">"lab_results_log.csv"</span><span class="op">)</span></span>
+<span><span class="co">#&gt;               data                     time user step  how action      row column old new                        note</span></span>
+<span><span class="co">#&gt; 1 lab_results.csv 2026-11-01 14:02:11+1100  ana    1 edit   edit        3     pH 7.9 7.4 Re-measured, meter recalibrated</span></span>
+<span><span class="co">#&gt; 2 lab_results.csv 2026-11-01 14:03:40+1100  ana    2 paste  edit       12   mass 1.2 1.25                            &lt;NA&gt;</span></span></code></pre></div>
+<p><code>log</code> can also be a function, which is called with the log
+as a data frame, for example to write it to a database. Nothing is
+written when <code>Cancel</code> is pressed. The user name is the name
+you are logged in with; set
+<code>options(DataEditR.user = "Your Name")</code> to record another
+name.</p>
+</div>
+<div class="section level3">
+<h3 id="unsaved-changes-are-kept">9.5 Unsaved changes are kept<a class="anchor" aria-label="anchor" href="#unsaved-changes-are-kept"></a>
+</h3>
+<p>While you edit, <code><a href="../reference/data_edit.html">data_edit()</a></code> saves your changes as a
+draft a moment after each change. If the editor is closed without
+pressing <code>Done</code> or <code>Cancel</code> (the window was closed
+by accident, R crashed or the computer restarted), open the same data
+again and you are offered your unsaved changes:</p>
+<p><img src="images/restore.png" width="100%" style="display: block; margin: auto;"></p>
+<p><code>Restore changes</code> brings back the data as you left it,
+with its history and notes, and each restored step can still be undone.
+<code>Discard changes</code> throws the draft away. Pressing
+<code>Cancel</code> asks before your changes are thrown away.</p>
+<p>Drafts are kept in
+<code>tools::R_user_dir("DataEditR", "data")</code> and are removed when
+you press <code>Done</code> or <code>Cancel</code>, when they are
+restored or discarded, and after 30 days. Use
+<code>options(DataEditR.drafts = "path/to/folder")</code> to keep them
+elsewhere, or <code>autosave = FALSE</code> to turn drafts off.</p>
+</div>
+<div class="section level3">
+<h3 id="change-tracking-in-shiny-modules">9.6 Change tracking in shiny modules<a class="anchor" aria-label="anchor" href="#change-tracking-in-shiny-modules"></a>
 </h3>
 <p>Change tracking is also available when the data editor is used in
 your own shiny applications through <code><a href="../reference/dataEdit.html">dataEditServer()</a></code>.
 <code><a href="../reference/dataEditCommit.html">dataEditChanges()</a></code> returns a summary of the changes that
-have not been saved yet, and <code><a href="../reference/dataEditCommit.html">dataEditCommit()</a></code> saves them,
-after which the highlights are cleared:</p>
-<div class="sourceCode" id="cb36"><pre class="downlit sourceCode r">
+have not been saved yet, <code><a href="../reference/dataEditCommit.html">dataEditLog()</a></code> returns the change
+log and <code><a href="../reference/dataEditCommit.html">dataEditCommit()</a></code> saves the changes (and returns the
+log of what it saved), after which the highlights are cleared. Set
+<code>autosave = TRUE</code> in <code><a href="../reference/dataEdit.html">dataEditServer()</a></code> to keep
+drafts for each user of the app:</p>
+<div class="sourceCode" id="cb37"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://shiny.posit.co/" class="external-link">shiny</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dillonhammill.github.io/DataEditR/">DataEditR</a></span><span class="op">)</span></span>
 <span></span>
@@ -1126,7 +1195,7 @@ Connect with <code>DBI</code>, pass a <code>dbplyr</code> lazy table
 loaded into the editor. Changes are staged while you edit and written to
 the database in a single transaction when you press <code>Done</code>
 and confirm the summary of changes.</p>
-<div class="sourceCode" id="cb37"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb38"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dplyr.tidyverse.org" class="external-link">dplyr</a></span><span class="op">)</span></span>
 <span><span class="va">con</span> <span class="op">&lt;-</span> <span class="fu">DBI</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/DBI/man/dbConnect.html" class="external-link">dbConnect</a></span><span class="op">(</span><span class="fu">RSQLite</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/RSQLite/man/SQLite.html" class="external-link">SQLite</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"cars.sqlite"</span><span class="op">)</span></span>
 <span></span>
@@ -1149,7 +1218,7 @@ googlesheets using <code>googlesheets4</code>. Simply authorise
 <code>googlesheets4</code>, create a new sheet, edit the data using
 <code><a href="../reference/data_edit.html">data_edit()</a></code> and write the edited data to the created
 sheet.</p>
-<div class="sourceCode" id="cb38"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb39"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://googlesheets4.tidyverse.org" class="external-link">googlesheets4</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Authorise</span></span>
@@ -1195,12 +1264,12 @@ code uses <code>dplyr</code> verbs such as <code><a href="https://rdrr.io/pkg/dp
 <code><a href="https://rdrr.io/pkg/tibble/man/add_row.html" class="external-link">tibble::add_row()</a></code> to replicate your edits. Copying and
 pasting this code into the console will recreate the edited version of
 your data.</p>
-<div class="sourceCode" id="cb39"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb40"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="va">mtcars</span>,</span>
 <span>          code <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
 <p>For example, renaming a column, modifying a cell value, removing a
 row and adding a new row might produce code like:</p>
-<div class="sourceCode" id="cb40"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb41"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dplyr.tidyverse.org" class="external-link">dplyr</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">mtcars</span> <span class="op">&lt;-</span> <span class="va">mtcars</span> <span class="op"><a href="https://rdrr.io/pkg/magrittr/man/pipe.html" class="external-link">%&gt;%</a></span></span>
@@ -1230,7 +1299,7 @@ create a new R script to store this code by providing a name for the R
 script to <code>code</code>. For example, the below code creates a new R
 script called <code>mtcars_edit.R</code> and inserts the code required
 to programmatically generate the final edited version of your data.</p>
-<div class="sourceCode" id="cb41"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb42"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="va">mtcars</span>,</span>
 <span>          code <span class="op">=</span> <span class="st">"mtcars_edit.R"</span><span class="op">)</span></span></code></pre></div>
 </div>
@@ -1240,7 +1309,7 @@ to programmatically generate the final edited version of your data.</p>
 <p>The <code><a href="../reference/data_code.html">data_code()</a></code> function can also be used outside of
 <code><a href="../reference/data_edit.html">data_edit()</a></code> to generate code from any pair of original and
 edited data frames:</p>
-<div class="sourceCode" id="cb42"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb43"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dillonhammill.github.io/DataEditR/">DataEditR</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Original data</span></span>
@@ -1272,7 +1341,7 @@ edited data frames:</p>
 <p>The data editor is also available as a shiny module, so you can add
 an editable table to your own shiny applications with
 <code><a href="../reference/dataEdit.html">dataEditUI()</a></code> and <code><a href="../reference/dataEdit.html">dataEditServer()</a></code>:</p>
-<div class="sourceCode" id="cb43"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb44"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://shiny.posit.co/" class="external-link">shiny</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dillonhammill.github.io/DataEditR/">DataEditR</a></span><span class="op">)</span></span>
 <span></span>

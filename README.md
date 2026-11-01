@@ -91,11 +91,16 @@ reproduces your edits.
   keeping column types and the class of the data
 - review panel listing every change with one-click revert, and live
   tidyverse-style code that reproduces your edits (`data_code()`)
+- a history of every change with who made it and when, notes saying why,
+  and a change log kept in a file (`log`)
+- unsaved changes are kept as a draft and offered again if the editor is
+  closed or R crashes
 - support for custom themes through the `bslib` package
 - customisable user interface (title, logo, menus)
 - shiny modules to use the data editor in your own applications, with
-  `dataEditCommit()` to save changes (including to databases) and
-  `dataEditChanges()` to count unsaved changes
+  `dataEditCommit()` to save changes (including to databases),
+  `dataEditChanges()` to count unsaved changes and `dataEditLog()` for
+  the change log
 
 #### Data editing features:
 

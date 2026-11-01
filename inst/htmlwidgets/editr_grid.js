@@ -447,9 +447,11 @@
       /* ops to R                                                         */
       /* ---------------------------------------------------------------- */
 
-      function emit(op) {
+      // label: what made the ops ("paste", "fill"), for the change log
+      function emit(op, label) {
         if (grid.suppress > 0) return;
         grid.queue.push(op);
+        if (typeof label === "string") grid.queueLabel = label;
         if (!grid.timer) grid.timer = setTimeout(flush, 0);
       }
 
@@ -476,10 +478,12 @@
       function flush() {
         grid.timer = null;
         var ops = coalesce(grid.queue);
+        var label = grid.queueLabel || null;
         grid.queue = [];
+        grid.queueLabel = null;
         if (!ops.length || !shinyOpen()) return;
         grid.seq += 1;
-        Shiny.setInputValue(el.id + "_ops", {seq: grid.seq, ops: ops},
+        Shiny.setInputValue(el.id + "_ops", {seq: grid.seq, ops: ops, label: label},
                             {priority: "event"});
       }
 
@@ -1020,7 +1024,7 @@
           grid.suppress -= 1;
         }
         ops.sort(function (a, b) { return a.cid < b.cid ? -1 : a.cid > b.cid ? 1 : 0; });
-        ops.forEach(emit);
+        ops.forEach(function (op) { emit(op, "fill"); });
       }
 
       function rowMenu(e, row) {
@@ -1458,9 +1462,9 @@
         });
         table.restoreRedraw();
         if (newIds.length) {
-          emit({type: "insert_rows", ids: newIds, anchor: null, below: true});
+          emit({type: "insert_rows", ids: newIds, anchor: null, below: true}, "paste");
         }
-        ops.forEach(emit);
+        ops.forEach(function (op) { emit(op, "paste"); });
         var done = newRows.length ? table.addData(newRows, false) : Promise.resolve();
         Promise.resolve(done).then(function () {
           var fields = cells.map(function (col) { return col.c.field; });

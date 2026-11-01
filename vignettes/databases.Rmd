@@ -165,6 +165,14 @@ After a successful commit `data_edit()` returns the edited rows as a data frame.
 cars_edited <- data_edit(tbl(con, "cars"))
 ```
 
+To keep a record of who changed which rows, and why, pass a function to `log` that writes the change log to a table in the same database. Rows are named by their key in the log, and the notes added in the `History` tab are included:
+
+```{r, eval = FALSE}
+data_edit(tbl(con, "cars"),
+          log = function(log) DBI::dbWriteTable(con, "cars_log", log,
+                                                append = TRUE))
+```
+
 ## 5. When someone else changes the data
 
 Databases are often shared, so the rows you are editing may be changed by someone else before you press `Done`. To make sure you never overwrite their changes without knowing, every update checks that the values you changed are still the values that were loaded, and every delete checks that the whole row is unchanged (optimistic concurrency). If any row was changed or removed in the meantime, the whole commit is rolled back, nothing is written and you are told how many rows conflicted. Close the editor, load the data again to see the latest values and redo your edits.
@@ -210,6 +218,8 @@ server <- function(input, output, session) {
     if (inherits(res, "editr_conflict")) {
       showNotification(conditionMessage(res), type = "error")
     } else {
+      # who changed what, next to the data
+      DBI::dbWriteTable(con, "cars_log", res$log, append = TRUE)
       showNotification(sprintf("%d updated, %d added, %d removed",
                                res$updated, res$inserted, res$deleted))
     }

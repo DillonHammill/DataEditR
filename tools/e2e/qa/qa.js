@@ -78,6 +78,36 @@ async function waitFile(file, ms = 8000) {
   return false;
 }
 
+async function openHistory(page) {
+  await page.click("#edit1-open_changes");
+  await sleep(400);
+  await page.click("#edit1-tab_history");
+  await L.settle(page, 900);
+}
+const historyOf = (page) => page.$$eval("#edit1-history .editr-step", (els) => els.map((e) => ({
+  tag: e.querySelector(".editr-tag").textContent.trim(),
+  title: e.querySelector(".editr-step-title").textContent.trim(),
+  note: (e.querySelector(".editr-note-text") || {}).textContent || "",
+})));
+// add a note to the n-th step shown (0 = newest); escape = cancel the edit
+async function addNote(page, n, text, escape = false) {
+  const btns = await page.$$("#edit1-history .editr-note-btn");
+  await btns[n].click();
+  await sleep(300);
+  await page.keyboard.type(text);
+  await page.keyboard.press(escape ? "Escape" : "Enter");
+  await L.settle(page, 900);
+}
+async function confirmCancel(page) {
+  await page.click("#cancel");
+  await page.waitForSelector("#shiny-modal .modal-dialog", { timeout: 5000 });
+  await sleep(700);
+  const msg = await page.$eval("#shiny-modal", (e) => e.textContent.replace(/\s+/g, " "));
+  check(/Discard your changes/.test(msg), "Cancel asks first: " + msg.trim().slice(0, 90));
+  await page.click("#cancel_discard");
+  await sleep(1500);
+}
+
 const scenarios = {
   async df(page) {
     const id7 = 7;
@@ -243,14 +273,90 @@ const scenarios = {
   async cancel(page) {
     await L.editCell(page, 1, "c2", "99");
     await L.rowMenu(page, 2, "c2", "Delete row");
+    // "Keep editing" closes the question and keeps the changes
     await page.click("#cancel");
+    await page.waitForSelector("#shiny-modal .modal-dialog", { timeout: 5000 });
+    await sleep(700);
+    await page.click('#shiny-modal button[data-dismiss="modal"], #shiny-modal button[data-bs-dismiss="modal"]');
+    await sleep(900);
+    check(Number((await L.gridData(page))[0].c2) === 99, "Keep editing keeps the changes");
     await sleep(1500);
+    check(fs.readdirSync(path.join(out, "drafts")).some((f) => f.endsWith(".rds")), "draft saved while editing");
+    await confirmCancel(page);
   },
 
   async cancel_value(page) {
     await L.editCell(page, 1, "c2", "99");
-    await page.click("#cancel");
-    await sleep(1500);
+    await confirmCancel(page);
+  },
+
+  async log(page) {
+    await L.editCell(page, 1, "c2", "30");
+    await L.selectCell(page, 1, "c3");
+    await L.selectCell(page, 3, "c3", true);
+    await L.key(page, "d", true);
+    await L.selectCell(page, 4, "c4");
+    await L.paste(page, "100\r\n200\r\n");
+    await L.selectCell(page, 1, "c4");
+    await L.selectCell(page, 2, "c4", true);
+    await L.key(page, "Delete");
+    await L.key(page, "z", true);
+    await openHistory(page);
+    let h = await historyOf(page);
+    check(JSON.stringify(h.map((x) => x.tag)) === JSON.stringify(["Undo", "Clear", "Paste", "Fill", "Edit"]),
+          "history tags: " + h.map((x) => x.tag).join(", "));
+    check(JSON.stringify(h.map((x) => x.title)) === JSON.stringify([
+      "Edited 2 cells in disp", "Cleared 2 cells in disp", "Pasted 2 cells in disp",
+      "Filled down 1 cell in cyl", "Edited mpg in row Mazda RX4"]), "history titles: " + h.map((x) => x.title).join(" | "));
+    await addNote(page, 4, "source sheet said 30");
+    await addNote(page, 2, "not saved", true);
+    h = await historyOf(page);
+    check(h[4].note === "source sheet said 30" && h[2].note === "", "note saved, escaped note discarded");
+    await page.screenshot({ path: path.join(out, "history.png") });
+    // a new edit shows up at the top
+    await L.editCell(page, 5, "c2", "1");
+    await L.settle(page, 600);
+    h = await historyOf(page);
+    check(h.length === 6 && h[0].title === "Edited mpg in row Hornet Sportabout", "new step on top: " + h[0].title);
+    await done(page);
+  },
+
+  async recover_crash(page) {
+    await L.editCell(page, 1, "c2", "30");
+    await L.editCell(page, 2, "c3", "8");
+    await openHistory(page);
+    await addNote(page, 1, "first");
+    await sleep(2500);
+    // R stops without warning while the page is open
+    process.kill(Number(fs.readFileSync(path.join(out, "pid"), "utf8")), "SIGKILL");
+    await sleep(1000);
+  },
+
+  async recover(page) {
+    await page.waitForSelector("#shiny-modal .modal-dialog", { timeout: 8000 });
+    await sleep(700);
+    const msg = await page.$eval("#shiny-modal", (e) => e.textContent.replace(/\s+/g, " "));
+    check(/Restore unsaved changes/.test(msg) && /2 unsaved changes/.test(msg),
+          "offers the draft: " + msg.trim().slice(0, 140));
+    await page.screenshot({ path: path.join(out, "restore.png") });
+    await page.click("#edit1-draft_restore");
+    await L.settle(page, 1500);
+    let d = await L.gridData(page);
+    check(Number(d[0].c2) === 30 && Number(d[1].c3) === 8, "edits restored");
+    const status = await page.$eval("#edit1-status", (e) => e.textContent);
+    check(/2 cells edited/.test(status), "status bar: " + status.trim());
+    await openHistory(page);
+    let h = await historyOf(page);
+    check(h.length === 2 && h[1].note === "first", "history and note restored");
+    // the restored steps can be undone and redone (toolbar buttons)
+    await page.click("#edit1-undo");
+    await L.settle(page, 900);
+    d = await L.gridData(page);
+    check(Number(d[1].c3) === 6, "undo after restoring");
+    await page.click("#edit1-redo");
+    await L.settle(page, 900);
+    await L.editCell(page, 3, "c2", "40");
+    await done(page);
   },
 
   async types(page) {
@@ -459,8 +565,7 @@ const scenarios = {
     check(/Commit failed/.test(msg) && /changed/.test(msg), "conflict reported: " + msg.replace(/\s+/g, " ").slice(0, 160));
     await page.click("#shiny-modal .modal-footer button");
     await sleep(600);
-    await page.click("#cancel");
-    await sleep(1500);
+    await confirmCancel(page);
   },
 
   async shiny(page) {

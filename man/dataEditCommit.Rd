@@ -3,22 +3,27 @@
 \name{dataEditCommit}
 \alias{dataEditCommit}
 \alias{dataEditChanges}
+\alias{dataEditLog}
 \title{Save the changes made in a data editor}
 \usage{
 dataEditCommit(x)
 
 dataEditChanges(x)
+
+dataEditLog(x)
 }
 \arguments{
 \item{x}{the reactive expression returned by \code{\link{dataEditServer}()}.}
 }
 \value{
 \code{dataEditCommit()} invisibly returns a list with the number of
-rows \code{updated}, \code{inserted} and \code{deleted} and the number of
-\code{columns} added, removed or renamed (\code{NULL} if no data is
-loaded). \code{dataEditChanges()} returns the same counts plus the number
-of edited \code{cells} and the \code{total} number of changes, and must be
-called in a reactive context (it updates as the data is edited).
+rows \code{updated}, \code{inserted} and \code{deleted}, the number of
+\code{columns} added, removed or renamed and the \code{log} entries of
+the changes that were saved (\code{NULL} if no data is loaded).
+\code{dataEditChanges()} returns the same counts plus the number of
+edited \code{cells} and the \code{total} number of changes.
+\code{dataEditLog()} returns the change log. Both must be called in a
+reactive context (they update as the data is edited).
 }
 \description{
 \code{dataEditCommit()} saves the changes made in a data editor created by
@@ -26,6 +31,8 @@ called in a reactive context (it updates as the data is edited).
 \emph{Save} button in your shiny application. \code{dataEditChanges()}
 returns a summary of the changes that have not been saved yet, which is
 useful to enable a \emph{Save} button or to ask the user to confirm.
+\code{dataEditLog()} returns the change log: every change made in the
+editor, with when it was made and by whom.
 }
 \details{
 For database tables (see \code{\link{db_table}()}) the staged changes are
@@ -44,6 +51,38 @@ review panel, change highlights and generated code start again from the
 committed data. Write the data returned by \code{dataEditServer()} wherever
 it needs to go in the same observer.
 }
+\section{Change log}{
+
+Every change made in the editor is recorded, one row per changed cell (or
+per row or column that was added, removed or renamed), in a data frame
+with the columns:
+\describe{
+\item{time}{when the change was made.}
+\item{user}{who made it (see the \code{user} argument of
+\code{\link{dataEditServer}()}).}
+\item{step}{number of the action the change belongs to. One action (typing
+a value, a paste, a fill, an undo, ...) is one step, the same unit that
+undo works with.}
+\item{how}{how the change was made: \code{"edit"}, \code{"paste"},
+\code{"fill"}, \code{"clear"}, \code{"undo"}, \code{"redo"} or
+\code{"revert"} (from the review panel).}
+\item{action}{\code{"edit"}, \code{"add row"}, \code{"remove row"},
+\code{"add column"}, \code{"remove column"} or \code{"rename column"}.}
+\item{row}{the row name, the key of a database row or else the row number
+in the data that was opened (new rows are numbered after the last row).}
+\item{column}{the name of the column.}
+\item{old, new}{the values before and after, as text. For a removed row
+\code{old} lists the values of the whole row.}
+\item{note}{the note added to the step in the \emph{History} tab, which
+users can use to say why a change was made.}
+}
+Undoing a change is recorded as a new step, so the log is a complete
+record of what happened. The log is kept for the whole session, including
+across commits; the entries saved by a commit are returned by
+\code{dataEditCommit()} so that they can be written next to the data (for
+example to a log table in the same database).
+}
+
 \examples{
 if (interactive() && requireNamespace("RSQLite", quietly = TRUE)) {
   library(shiny)
@@ -76,6 +115,10 @@ if (interactive() && requireNamespace("RSQLite", quietly = TRUE)) {
       if (inherits(res, "editr_conflict")) {
         showNotification(conditionMessage(res), type = "error")
       } else {
+        # keep a record of who changed what next to the data
+        if (nrow(res$log) > 0) {
+          DBI::dbWriteTable(con, "cars_log", res$log, append = TRUE)
+        }
         showNotification(paste(res$updated, "updated,", res$inserted,
                                "added and", res$deleted, "removed"))
       }

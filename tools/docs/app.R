@@ -6,7 +6,8 @@ suppressMessages({
   library(DataEditR)
   library(dplyr)
 })
-options(shiny.port = port, shiny.launch.browser = FALSE)
+options(shiny.port = port, shiny.launch.browser = FALSE,
+        DataEditR.drafts = file.path(out, "drafts"))
 noview <- function(url) invisible(NULL)
 logo <- knitr::image_uri(file.path(Sys.getenv("EDITR_REPO", "../.."), "man/figures/logo.png"))
 
@@ -73,6 +74,24 @@ res <- switch(
   },
   readme = data_edit(mtcars, viewer = noview, quiet = TRUE, track = TRUE,
                      save_as = file.path(out, "mtcars_edited.csv")),
+  restore = {
+    # the draft left by an editor that was closed without pressing Done
+    p <- DataEditR:::editr_prepare(mtcars, quiet = TRUE)
+    s <- p$store
+    s$user <- DataEditR:::editr_user()
+    s$draft_key <- DataEditR:::draft_key(s$original, s$user)
+    up <- function(cid, id, v) {
+      list(type = "update", cid = cid, ids = list(id), values = list(v))
+    }
+    DataEditR:::process_ops(s, list(up("c2", 1, "21.5")), p$cfg)
+    DataEditR:::process_ops(s, list(up("c5", 3, "95"), up("c5", 4, "112")),
+                            p$cfg, label = "paste")
+    DataEditR:::process_ops(s, list(list(type = "delete_rows", ids = list(5))),
+                            p$cfg)
+    DataEditR:::store_note(s, 1, "Checked against the 1974 Motor Trend table")
+    DataEditR:::draft_save(s, label = "mtcars")
+    data_edit(mtcars, viewer = noview, quiet = TRUE)
+  },
   stretch = data_edit(iris[1:20, ], viewer = noview, quiet = TRUE,
                       col_stretch = TRUE),
   db = {
