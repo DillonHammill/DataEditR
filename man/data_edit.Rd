@@ -80,7 +80,8 @@ fill the full width of the display, set to FALSE by default.}
 
 \item{col_factor}{logical indicating whether character columns should be
 converted to factors prior to returning the edited data, set to FALSE by
-default.}
+default. Factor columns in the data are always returned as factors with
+their levels; new values become new levels after the existing ones.}
 
 \item{col_names}{logical indicating whether column names can be edited or a
 vector of column names that cannot be edited, set to TRUE by default to

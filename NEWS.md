@@ -33,10 +33,13 @@
   values already in the data that do not fit are marked.
 * Cells of templates and new columns that were never filled in are returned
   as `NA` (they were empty strings), like cells that were cleared.
+* Factor columns are returned as factors (ordered factors stay ordered) with
+  their original levels, and new values are added as levels after them.
+  Earlier versions returned them as text unless `col_factor = TRUE`, which
+  now only converts character columns.
 * The generated code (`code`) starts from the data that was opened from the
   Open menu, returns matrices as matrices and new tables as data frames,
-  and converts factor columns to text (or back to factors with
-  `col_factor = TRUE`) as `data_edit()` does.
+  and recreates factors with the same levels as the returned data.
 * Dates are only read from complete `YYYY-MM-DD` values (`as.Date()` read
   `15/03/2024` as the year 15); other formats are converted in the browser
   before they reach R.

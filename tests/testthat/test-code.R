@@ -142,6 +142,18 @@ test_that("values and names are quoted for R code", {
   expect_true(DataEditR:::data_code_has_rownames(mtcars))
 })
 
+test_that("factor levels are kept in the code", {
+  x <- data.frame(g = factor(c("b", "a"), levels = c("b", "a")),
+                  o = factor(c("lo", "hi"), levels = c("lo", "hi"), ordered = TRUE))
+  y <- x
+  y$g <- factor(c("b", "c"), levels = c("b", "a", "c"))
+  y$o <- factor(c("mid", "hi"), levels = c("lo", "hi", "mid"), ordered = TRUE)
+  code <- data_code(x, y)
+  expect_match(code, 'g = factor(g, levels = c("b", "a", "c"))', fixed = TRUE)
+  expect_match(code, ', ordered = TRUE)', fixed = TRUE)
+  expect_identical(replay(x, y), y)
+})
+
 test_that("factor columns are turned into text and back in the code", {
   x <- data.frame(name = c("a", "b"), grp = factor(c("A", "B")))
   # returned as text (col_factor = FALSE)

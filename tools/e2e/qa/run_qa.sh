@@ -4,7 +4,7 @@
 # Usage: tools/e2e/qa/run_qa.sh [scenario ...]   (default: all)
 # Needs DataEditR installed and node with puppeteer-core (see ../README.md).
 cd "$(dirname "$0")"
-all="df matrix tibble datatable template text empty file binds factor subset
+all="df matrix tibble datatable template text empty file binds factor factor_keep subset
 cancel cancel_value types open open_new open_upload review console hide
 db db_conflict shiny shiny_db"
 scenarios=${*:-$all}

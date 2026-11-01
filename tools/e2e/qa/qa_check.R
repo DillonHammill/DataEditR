@@ -113,8 +113,18 @@ if (scenario == "df") {
   same(result, e, "bound row and column, hidden column kept, read-only unchanged")
 
 } else if (scenario == "factor") {
-  e <- data.frame(name = factor(c("a", "b", "c")), grp = factor(c("A", "C", "A")))
-  same(result, e, "col_factor returns factors")
+  # factors keep their levels (new values added after them); col_factor turns
+  # the text column into a factor too
+  e <- data.frame(name = factor(c("a", "b", "c")),
+                  grp = factor(c("A", "C", "A"), levels = c("A", "B", "C")))
+  same(result, e, "factors kept, col_factor converts text")
+  reproduces(code_text(), input, result)
+
+} else if (scenario == "factor_keep") {
+  e <- data.frame(id = 1:4,
+                  dose = factor(c("low", "medium", "low", "high"),
+                                levels = c("low", "high", "medium"), ordered = TRUE))
+  same(result, e, "ordered factor kept, new level added after the others")
   reproduces(code_text(), input, result)
 
 } else if (scenario == "subset") {
@@ -149,9 +159,7 @@ if (scenario == "df") {
   same(result$ok, c(TRUE, FALSE, TRUE), "checkbox pasted as yes")
 
 } else if (scenario == "open") {
-  # factors are edited and returned as text unless col_factor = TRUE
   e <- iris
-  e$Species <- as.character(e$Species)
   e[1, "Sepal.Length"] <- 9.9
   same(result, e, "edited iris opened from the Open menu")
   check(grepl("^iris <- iris %>%", strsplit(code_text(), "\n")[[1]][3]), "code starts from iris")

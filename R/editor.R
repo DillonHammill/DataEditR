@@ -84,9 +84,12 @@ editr_prepare <- function(x,
     stop("'col_options' must be named with valid column names.")
   }
 
-  # FACTORS -> CHARACTER
+  # FACTORS -> CHARACTER FOR EDITING (RETURNED AS FACTORS WITH THEIR LEVELS)
+  factors <- list()
   for (z in seq_along(x)) {
     if (is.factor(x[[z]])) {
+      factors[[names(x)[z]]] <- list(levels = levels(x[[z]]),
+                                     ordered = is.ordered(x[[z]]))
       x[[z]] <- as.character(x[[z]])
     }
   }
@@ -165,6 +168,11 @@ editr_prepare <- function(x,
 
   store <- editr_store(state)
   store$hidden <- name_to_cid(col_hide)
+  # FACTOR COLUMNS THAT ARE STILL TEXT (NOT TURNED INTO E.G. CHECKBOXES)
+  factors <- factors[vapply(names(factors), function(nm) {
+    nm %in% names(x) && is.character(x[[nm]])
+  }, logical(1))]
+  store$factors <- stats::setNames(factors, name_to_cid(names(factors)))
   store$auto_type <- cids[auto]
   store$changed <- character(0)
 
@@ -553,6 +561,7 @@ editr_code <- function(store, cfg, name = "data") {
   original <- editr_store(store$original)
   original$auto_type <- store$auto_type
   original$hidden <- store$hidden
+  original$factors <- store$factors
   x <- editr_result(original, cfg)
   x_edit <- editr_result(store, cfg)
   data_code(x, x_edit, name = name)
@@ -881,7 +890,15 @@ editr_result <- function(store, cfg, view = FALSE) {
                                 na.strings = c("NA", ""))
     }
   }
-  # FACTORS
+  # FACTORS IN THE DATA ARE RETURNED AS FACTORS: THEIR LEVELS FIRST, THEN NEW
+  # VALUES IN THE ORDER THEY FIRST APPEAR
+  for (i in which(cids %in% names(store$factors))) {
+    f <- store$factors[[cids[i]]]
+    v <- as.character(data[[i]])
+    lev <- c(f$levels, setdiff(unique(v[!is.na(v)]), f$levels))
+    data[[i]] <- factor(v, levels = lev, ordered = isTRUE(f$ordered))
+  }
+  # OTHER TEXT COLUMNS WITH col_factor = TRUE
   if (cfg$col_factor) {
     for (i in seq_along(data)) {
       if (is.character(data[[i]]) && !identical(cids[i], cfg$rownames_cid)) {

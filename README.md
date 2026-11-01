@@ -119,7 +119,8 @@ reproduces your edits.
   dates, date-times, times, text over several lines, passwords, web
   addresses, colours, numbers within limits, sliders and star ratings
 - read-only and hidden columns
-- support for factor columns (automatically converted for editing)
+- support for factor columns: edited as text and returned as factors
+  with their levels
 - control over which rows, columns and column names can be edited
 - manual column resizing and stretching columns to fill the available
   space

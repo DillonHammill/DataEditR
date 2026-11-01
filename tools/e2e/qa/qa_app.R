@@ -69,6 +69,12 @@ if (scenario == "df") {
                   grp = factor(c("A", "B", "A")), stringsAsFactors = FALSE)
   keep(x, quietly(x, col_factor = TRUE, code = code_file))
 
+} else if (scenario == "factor_keep") {
+  x <- data.frame(id = 1:3,
+                  dose = factor(c("low", "high", "low"), levels = c("low", "high"),
+                                ordered = TRUE))
+  keep(x, quietly(x, code = code_file))
+
 } else if (scenario == "subset") {
   x <- mtcars
   dir.create(file.path(out, "saved"))

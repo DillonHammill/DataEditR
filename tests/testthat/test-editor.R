@@ -6,11 +6,29 @@ test_that("unchanged data round-trips exactly", {
   }
 })
 
-test_that("factors return as character unless col_factor = TRUE", {
-  p <- prep(iris)
-  expect_type(result(p)$Species, "character")
-  p <- prep(iris, col_factor = TRUE)
-  expect_s3_class(result(p)$Species, "factor")
+test_that("factors are returned as factors with their levels", {
+  expect_identical(result(prep(iris))$Species, iris$Species)
+  # edited as text: new values become levels after the original ones
+  df <- data.frame(g = factor(c("b", "a", "b"), levels = c("b", "a")),
+                   o = factor(c("lo", "hi", "lo"), levels = c("lo", "hi"),
+                              ordered = TRUE),
+                   s = c("x", "y", "z"))
+  p <- prep(df)
+  expect_type(p$store$state$data$g, "character")
+  ops(p, op_update("c1", c(1, 3), list("c", NA)), op_update("c2", 2, "mid"))
+  res <- result(p)
+  expect_identical(res$g, factor(c("c", "a", NA), levels = c("b", "a", "c")))
+  expect_identical(res$o, factor(c("lo", "mid", "lo"), levels = c("lo", "hi", "mid"),
+                                 ordered = TRUE))
+  expect_type(res$s, "character")
+  # col_factor = TRUE also turns text columns into factors
+  res <- result(prep(df, col_factor = TRUE))
+  expect_identical(res$s, factor(c("x", "y", "z")))
+  expect_identical(res$g, df$g)
+  # a factor column given a checkbox is no longer a factor
+  lg <- data.frame(ok = factor(c("TRUE", "FALSE")))
+  expect_identical(result(prep(lg, col_options = list(ok = c(TRUE, FALSE))))$ok,
+                   c(TRUE, FALSE))
 })
 
 test_that("matrices, tibbles and data.tables keep their class", {

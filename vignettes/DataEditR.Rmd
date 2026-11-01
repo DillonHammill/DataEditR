@@ -245,17 +245,27 @@ data_edit(mtcars,
 
 ### 3.11 Factor columns
 
-`data_edit()` fully supports data frames with factor columns. Factor columns are converted to character for editing so that you can freely enter new values without encountering errors. When the editor is closed, character columns are converted to factors if `col_factor = TRUE` is set.
+`data_edit()` fully supports data frames with factor columns, including ordered factors. Factor columns are edited as text, so you can freely enter new values without encountering errors, and are returned as factors with their original levels in their original order. New values become new levels after the existing ones, and levels that are no longer used are kept, as R does when values of a factor are replaced.
 
 ```{r, eval = FALSE}
-# Create data with factor column
+# Create data with a factor column
 df <- data.frame(
   name = c("Alice", "Bob", "Charlie"),
   group = factor(c("A", "B", "A"))
 )
 
-# Edit - factor columns are handled automatically
+# Change Bob's group to "C" in the editor
+df_edited <- data_edit(df)
+levels(df_edited$group)
+#> [1] "A" "B" "C"
+```
+
+Character columns are returned as text. Set `col_factor = TRUE` to turn them into factors as well (their levels are sorted, as `factor()` does).
+
+```{r, eval = FALSE}
 df_edited <- data_edit(df, col_factor = TRUE)
+class(df_edited$name)
+#> [1] "factor"
 ```
 
 ## 4. Data Creation
@@ -351,7 +361,7 @@ str(mtcars_subset)
 
 ## 6. Data Saving
 
-`data_edit()` will automatically return the edited data with appropriate column classes as an R object for use within R. Matrices, tibbles and data.tables are returned with their original class, and the type of each column is kept: numbers stay numbers, dates stay dates and text that looks like a number (e.g. `"001"`) stays text. Character columns are not converted to factors by default, but this can be changed by setting `col_factor = TRUE`.
+`data_edit()` will automatically return the edited data with appropriate column classes as an R object for use within R. Matrices, tibbles and data.tables are returned with their original class, and the type of each column is kept: numbers stay numbers, dates stay dates and text that looks like a number (e.g. `"001"`) stays text. Factor columns are returned as factors with their levels, while character columns are not converted to factors unless `col_factor = TRUE` is set (see [Factor columns](#factor-columns)).
 
 ```{r, eval = FALSE}
 # Add character column

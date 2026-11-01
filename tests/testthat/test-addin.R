@@ -55,7 +55,5 @@ test_that("data supplied to data_edit() wins over the selection", {
   cars_df <- mtcars[1:3, 1:3]
   mock_rstudio("cars_df")
   mock_gadget(function(session) session$setInputs(done = 1))
-  expected <- iris[1:2, ]
-  expected$Species <- as.character(expected$Species)
-  expect_identical(data_edit(iris[1:2, ]), expected)
+  expect_identical(data_edit(iris[1:2, ]), iris[1:2, ])
 })

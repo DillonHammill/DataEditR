@@ -195,6 +195,15 @@ const scenarios = {
     await done(page);
   },
 
+  async factor_keep(page) {
+    await L.editCell(page, 2, "c2", "medium");
+    await L.rowMenu(page, 3, "c2", "Insert row below");
+    const id = await nextId(page);
+    await L.editCell(page, id, "c1", "4");
+    await L.editCell(page, id, "c2", "high");
+    await done(page);
+  },
+
   async subset(page) {
     const client = await page.target().createCDPSession();
     await client.send("Browser.setDownloadBehavior", { behavior: "allow", downloadPath: path.resolve(out) });

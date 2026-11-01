@@ -286,12 +286,23 @@ data_code <- function(x, x_edit, name = "data") {
     }
   }
 
-  # TEXT TO FACTORS
+  # TEXT TO FACTORS (WITH THE LEVELS OF THE EDITED DATA)
   if (length(to_factor) > 0) {
-    cols_q <- vapply(to_factor, data_code_quote, character(1))
-    pipes <- c(pipes, paste0(
-      "mutate(", paste0(cols_q, " = factor(", cols_q, ")", collapse = ", "), ")"
-    ))
+    ops <- vapply(to_factor, function(col) {
+      f <- x_edit[[col]]
+      col_q <- data_code_quote(col)
+      paste0(
+        col_q, " = factor(", col_q, ", levels = c(",
+        paste(vapply(levels(f), data_code_value, character(1)), collapse = ", "),
+        ")", if (is.ordered(f)) ", ordered = TRUE", ")"
+      )
+    }, character(1))
+    if (length(ops) == 1) {
+      pipes <- c(pipes, paste0("mutate(", ops, ")"))
+    } else {
+      pipes <- c(pipes, paste0("mutate(\n    ", paste(ops, collapse = ",\n    "),
+                               "\n  )"))
+    }
   }
 
   # COLUMN TO ROW NAMES (restore row names from column)

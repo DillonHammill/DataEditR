@@ -44,7 +44,7 @@ screenshot("editor.png")
 * **Filters under the column headers** (ranges for numbers, value lists and text search), shown as chips in the toolbar.
 * **Find** (`Ctrl+F`), a **status bar** with the sum, mean and count of the selected cells, and a sheet of **keyboard shortcuts** (`?`).
 * **Safer typing and pasting**: text in a number, date or `TRUE`/`FALSE` column, or a value outside a column's options or limits, makes the editor ask whether to store `NA`, convert the column to text or cancel, instead of silently converting the column.
-* **Types are preserved**: numbers, dates, logicals and text that looks like a number keep their type, and matrices, tibbles and data.tables are returned with their original class.
+* **Types are preserved**: numbers, dates, logicals, factors (with their levels) and text that looks like a number keep their type, and matrices, tibbles and data.tables are returned with their original class.
 * **Databases**: pass a `dbplyr` table (e.g. `data_edit(tbl(con, "cars"))`) to edit it in place. Changes are written in a single transaction after you confirm them, with checks for changes made by others. See `vignette("databases")`.
 * **Saving from shiny apps**: `dataEditCommit()` saves the changes made in a `dataEditServer()` editor (writing them to a database when the data is a database table) and `dataEditChanges()` counts the changes that have not been saved yet. See `vignette("shiny-modules")`.
 
@@ -69,6 +69,7 @@ If you used earlier versions of **DataEditR**, this is where the controls of the
 * `col_options` no longer disables adding or removing columns.
 * `col_readonly` columns are locked in the grid (shown with a lock) rather than reverted after editing.
 * Only empty template columns and new columns are passed through `type.convert()` when the data is returned, so character columns such as `"001"` are no longer converted to numbers. Their cells that were never filled in are returned as `NA` rather than empty strings.
+* Factor columns are returned as factors with their original levels (new values become new levels after them). Earlier versions returned them as text unless `col_factor = TRUE`; `col_factor = TRUE` now only turns character columns into factors.
 * `"NA"` typed into a number, date or logical column is a missing value.
 * A filter that matches no rows shows an empty table rather than all rows.
 * Cancelling the RStudio add-in returns the highlighted data rather than `NULL`.

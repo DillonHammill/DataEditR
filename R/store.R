@@ -471,6 +471,7 @@ editr_store <- function(state) {
   store$view_rows <- NULL # NULL = all rows, otherwise row ids
   store$view_cols <- NULL # NULL = all columns, otherwise cids
   store$hidden <- character(0) # cids never shown
+  store$factors <- list() # cid -> list(levels, ordered) of factor columns
   store
 }
 

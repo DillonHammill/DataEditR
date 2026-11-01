@@ -143,9 +143,10 @@ column’s options or limits, makes the editor ask whether to store
 <code>NA</code>, convert the column to text or cancel, instead of
 silently converting the column.</li>
 <li>
-<strong>Types are preserved</strong>: numbers, dates, logicals and
-text that looks like a number keep their type, and matrices, tibbles and
-data.tables are returned with their original class.</li>
+<strong>Types are preserved</strong>: numbers, dates, logicals,
+factors (with their levels) and text that looks like a number keep their
+type, and matrices, tibbles and data.tables are returned with their
+original class.</li>
 <li>
 <strong>Databases</strong>: pass a <code>dbplyr</code> table
 (e.g. <code>data_edit(tbl(con, "cars"))</code>) to edit it in place.
@@ -235,6 +236,11 @@ a lock) rather than reverted after editing.</li>
 columns such as <code>"001"</code> are no longer converted to numbers.
 Their cells that were never filled in are returned as <code>NA</code>
 rather than empty strings.</li>
+<li>Factor columns are returned as factors with their original levels
+(new values become new levels after them). Earlier versions returned
+them as text unless <code>col_factor = TRUE</code>;
+<code>col_factor = TRUE</code> now only turns character columns into
+factors.</li>
 <li>
 <code>"NA"</code> typed into a number, date or logical column is a
 missing value.</li>
