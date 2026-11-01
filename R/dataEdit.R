@@ -486,6 +486,7 @@ dataEditServer <- function(id,
             grid_summaries(store, cfg, summary_cache)
           },
           db = !is.null(cfg$db),
+          comments = comments_grid(store),
           db_rows = if (!is.null(cfg$db)) {
             list(loaded = nrow(store$state$data), total = cfg$db$total,
                  filtered = !is.null(cfg$db$filter), readonly = isTRUE(cfg$db$readonly))
@@ -918,6 +919,20 @@ dataEditServer <- function(id,
       }
     })
 
+    # COMMENTS ON CELLS --------------------------------------------------------
+
+    observeEvent(input$grid_comment, {
+      ed <- editor()
+      cm <- input$grid_comment
+      if (is.null(ed) || !is.list(cm)) return()
+      id <- suppressWarnings(as.integer(as_scalar(cm$id)))
+      cid <- as.character(as_scalar(cm$field) %||% "")
+      if (length(id) != 1 || is.na(id)) return()
+      store_comment(ed$store, id, cid, as_scalar(cm$text) %||% "")
+      grid_send(session, "grid", "set_comments", comments_grid(ed$store))
+      bump(notes_tick)
+    })
+
     # DATABASE ROWS ------------------------------------------------------------
 
     # LOAD OTHER ROWS OF A DATABASE TABLE: THOSE MATCHING A FILTER, IN AN ORDER
@@ -1079,19 +1094,23 @@ dataEditServer <- function(id,
 
     # RETURN -------------------------------------------------------------------
 
+    # COMMENTS ON CELLS ARE RETURNED AS attr(x, "comments")
     result <- reactive({
       data_tick()
+      notes_tick()
       ed <- editor()
       if (is.null(ed)) return(NULL)
-      editr_result(ed$store, ed$cfg)
+      with_comments(editr_result(ed$store, ed$cfg), ed$store, ed$cfg)
     })
     attr(result, "view") <- reactive({
       data_tick()
       view_tick()
       client_tick()
+      notes_tick()
       ed <- editor()
       if (is.null(ed)) return(NULL)
-      editr_result(ed$store, ed$cfg, view = TRUE)
+      with_comments(editr_result(ed$store, ed$cfg, view = TRUE), ed$store,
+                    ed$cfg, view = TRUE)
     })
     attr(result, "editor") <- reactive({
       data_tick()

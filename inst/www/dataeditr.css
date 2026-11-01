@@ -1041,3 +1041,11 @@ button.editr-change-title:hover {
 .editr-load-row .form-group {
   margin-bottom: 0;
 }
+
+/* record form: the comment of a field */
+.editr-form-comment {
+  margin-top: 2px;
+  color: #92400E;
+  font-size: 12px;
+  white-space: pre-wrap;
+}

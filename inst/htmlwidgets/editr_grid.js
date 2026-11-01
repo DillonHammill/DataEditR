@@ -531,6 +531,7 @@
         changed: {},
         widths: {}, // columns the user resized
         pinned: {}, // new rows stay visible whatever the filters say
+        comments: {}, // "id|field" -> {text, user, time}
         opts: {},
         ui: {},
         find: {query: "", matches: [], index: -1},
@@ -606,10 +607,15 @@
           // cells that break a rule (see R/rules.R)
           var problem = grid.problems[key];
           element.classList.toggle("editr-problem", !!problem);
-          if (bad) {
-            element.title = "\u201c" + v + "\u201d " + bad;
-          } else if (problem) {
-            element.title = problem;
+          // comments on cells (see R/comments.R)
+          var comment = grid.comments[key];
+          element.classList.toggle("editr-commented", !!comment);
+          var tips = [];
+          if (bad) tips.push("\u201c" + v + "\u201d " + bad);
+          else if (problem) tips.push(problem);
+          if (comment) tips.push("\ud83d\udcac " + comment.text);
+          if (tips.length) {
+            element.title = tips.join("\n");
           } else if (element.title) {
             element.removeAttribute("title");
           }
@@ -1393,8 +1399,22 @@
       }
 
       function rowMenu(e, row) {
-        var items = [{label: "Fill down  (Ctrl+D)", action: fillDown},
-                     {separator: true}];
+        var items = [];
+        var cellEl = e && e.target && e.target.closest ? e.target.closest(".tabulator-cell") : null;
+        var field = cellEl ? cellEl.getAttribute("tabulator-field") : null;
+        if (field && grid.colMap[field] && grid.opts.comments !== false) {
+          var cell = row.getCell(field);
+          var has = !!grid.comments[row.getIndex() + "|" + field];
+          items.push({label: (has ? "Edit comment\u2026" : "Add comment\u2026") + "  (Shift+F2)",
+                      action: function () { openComment(cell); }});
+          if (has) {
+            items.push({label: "Delete comment", action: function () {
+              setComment(row.getIndex(), field, "");
+            }});
+          }
+        }
+        items.push({label: "Fill down  (Ctrl+D)", action: fillDown});
+        items.push({separator: true});
         if (grid.opts.row_edit) {
           items.push({label: "Insert row above",
                       action: function (e, r) { insertRow(r, false); }});
@@ -1412,6 +1432,95 @@
           items.push({separator: true});
         }
         return items.concat(historyItems());
+      }
+
+      /* comments on cells ---------------------------------------------- */
+
+      function commentSet(args) {
+        var out = {};
+        var keys = toArray(args && args.keys);
+        var texts = toArray(args && args.texts);
+        var users = toArray(args && args.users);
+        var times = toArray(args && args.times);
+        keys.forEach(function (k, i) {
+          out[k] = {text: String(texts[i]), user: users[i] || "", time: times[i] || ""};
+        });
+        return out;
+      }
+
+      function openComment(cell) {
+        if (!cell) return;
+        var id = cell.getRow().getIndex();
+        var field = cell.getField();
+        var c = grid.colMap[field];
+        if (!c) return;
+        var cur = grid.comments[id + "|" + field];
+        var box = document.createElement("div");
+        box.className = "editr-popup editr-comment-box";
+        box.setAttribute("role", "dialog");
+        box.setAttribute("aria-label", "Comment on " + c.title);
+        var meta = cur && (cur.user || cur.time) ?
+          [cur.user, cur.time].filter(function (x) { return x; }).join(" \u00b7 ") : "";
+        box.innerHTML = '<div class="editr-comment-title">Comment on ' + escapeHTML(c.title) +
+          '</div>' + (meta ? '<div class="editr-comment-meta">' + escapeHTML(meta) + '</div>' : '') +
+          '<textarea class="form-control form-control-sm" rows="3" aria-label="Comment"' +
+          ' placeholder="Why the value is what it is, what to check\u2026"></textarea>' +
+          '<div class="editr-comment-actions">' +
+          (cur ? '<button type="button" class="btn btn-link btn-sm editr-comment-delete" data-act="delete">Delete</button>' : '') +
+          '<span class="editr-spacer"></span>' +
+          '<button type="button" class="btn btn-outline-secondary btn-sm" data-act="cancel">Cancel</button>' +
+          '<button type="button" class="btn btn-primary btn-sm" data-act="save">Save</button></div>';
+        var ta = box.querySelector("textarea");
+        ta.value = cur ? cur.text : "";
+        var finish = function (act) {
+          if (act === "save") setComment(id, field, ta.value.trim());
+          else if (act === "delete") setComment(id, field, "");
+          closePopup();
+        };
+        box.addEventListener("click", function (e) {
+          var a = e.target.closest && e.target.closest("[data-act]");
+          if (a) finish(a.getAttribute("data-act"));
+        });
+        ta.addEventListener("keydown", function (e) {
+          e.stopPropagation();
+          if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+            e.preventDefault();
+            finish("save");
+          } else if (e.key === "Escape") {
+            e.preventDefault();
+            finish("cancel");
+          }
+        });
+        var popup = openPopup(cell.getElement(), box);
+        if (popup) popup.kind = "comment";
+        setTimeout(function () { ta.focus(); }, 0);
+      }
+
+      // R keeps the comments (with who wrote them and when) and sends them
+      // back with set_comments
+      function setComment(id, field, text) {
+        var key = id + "|" + field;
+        if (text) {
+          var cur = grid.comments[key];
+          grid.comments[key] = {text: text, user: cur ? cur.user : "", time: cur ? cur.time : ""};
+        } else {
+          delete grid.comments[key];
+        }
+        reformatRows([id]);
+        if (formVisible()) refreshForm();
+        if (shinyOpen()) {
+          Shiny.setInputValue(el.id + "_comment",
+                              {id: id, field: field, text: text, nonce: Math.random()},
+                              {priority: "event"});
+        }
+      }
+
+      function activeCell() {
+        var ranges = grid.table && grid.table.getRanges ? grid.table.getRanges() : [];
+        if (!ranges.length) return null;
+        var cells = ranges[0].getCells();
+        var first = Array.isArray(cells[0]) ? cells[0][0] : cells[0];
+        return first || null;
       }
 
       function insertColumn(column, right) {
@@ -2518,6 +2627,14 @@
           var problem = grid.problems[key];
           var msg = wrap.querySelector(".editr-form-msg");
           msg.textContent = bad ? "\u201c" + v + "\u201d " + bad : (problem || "");
+          var note = wrap.querySelector(".editr-form-comment");
+          var comment = grid.comments[key];
+          if (!note && comment) {
+            note = document.createElement("div");
+            note.className = "editr-form-comment";
+            wrap.appendChild(note);
+          }
+          if (note) note.textContent = comment ? "\ud83d\udcac " + comment.text : "";
           wrap.classList.toggle("editr-form-bad", !!(bad || problem));
           wrap.classList.toggle("editr-form-changed", !!grid.changed[key]);
         });
@@ -2609,6 +2726,16 @@
           } else if (method === "set_summary") {
             grid.summary = args.summary || {};
             fillSummaries();
+          } else if (method === "set_comments") {
+            var before = grid.comments;
+            grid.comments = commentSet(args);
+            var touchedC = {};
+            Object.keys(before).concat(Object.keys(grid.comments)).forEach(function (k) {
+              var a = before[k], b = grid.comments[k];
+              if (!a || !b || a.text !== b.text) touchedC[k.split("|")[0]] = true;
+            });
+            reformatRows(Object.keys(touchedC).map(Number));
+            if (formVisible()) refreshForm();
           } else if (method === "set_problems") {
             var nextP = problemMap(args);
             var touchedP = {};
@@ -2648,6 +2775,7 @@
         grid.changed = {};
         toArray(opts.changed).forEach(function (k) { grid.changed[k] = true; });
         grid.problems = problemMap(opts.problems);
+        grid.comments = commentSet(opts.comments);
         grid.summary = opts.summary_data || {};
         grid.picks = {};
         var pref = null;
@@ -2841,6 +2969,19 @@
       el.addEventListener("dragstart", function (e) {
         if (e.target && e.target.closest && e.target.closest(".tabulator-editing")) {
           e.preventDefault();
+        }
+      }, true);
+
+      // Shift+F2 comments on the selected cell (as in spreadsheets)
+      el.addEventListener("keydown", function (e) {
+        if (e.key !== "F2" || !e.shiftKey || grid.opts.comments === false) return;
+        var t = e.target;
+        if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA")) return;
+        var cell = activeCell();
+        if (cell && grid.colMap[cell.getField()]) {
+          e.preventDefault();
+          e.stopPropagation();
+          openComment(cell);
         }
       }, true);
 

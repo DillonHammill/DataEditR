@@ -643,3 +643,45 @@ input.editr-rename {
   color: #52606D;
   font-size: 12px;
 }
+
+/* comments on cells: an amber corner (top left; problems use the top right) */
+.editr_grid .tabulator .tabulator-cell.editr-commented {
+  background-image: linear-gradient(135deg, #D97706 7px, transparent 7px);
+}
+
+.editr_grid .tabulator .tabulator-cell.editr-commented.editr-problem {
+  background-image: linear-gradient(135deg, #D97706 7px, transparent 7px),
+    linear-gradient(225deg, #DC2626 7px, transparent 7px);
+}
+
+.editr-comment-box {
+  width: 280px;
+  padding: 10px;
+}
+
+.editr-comment-title {
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.editr-comment-meta {
+  color: #7B8794;
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.editr-comment-box textarea {
+  margin: 6px 0 8px;
+  resize: vertical;
+}
+
+.editr-comment-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.editr-comment-actions .editr-comment-delete {
+  color: #B91C1C;
+  padding-left: 0;
+}

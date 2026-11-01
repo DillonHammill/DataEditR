@@ -121,6 +121,7 @@ editr_shortcuts <- function(id) {
     c("Fill down", "Ctrl D"),
     c("Find in data", "Ctrl F"),
     c("Rename column", "Double-click column name"),
+    c("Comment on a cell", "Shift F2"),
     c("Row and column menu", "Right-click"),
     c("Show this list", "?")
   )

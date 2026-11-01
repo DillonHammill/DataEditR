@@ -71,6 +71,7 @@ draft_save <- function(store, label = NULL,
     auto_type = store$auto_type,
     log = log[, setdiff(names(log), "note"), drop = FALSE],
     notes = store$notes,
+    comments = store$comments,
     rule_specs = store$rule_specs,
     step = store$step
   )
@@ -147,6 +148,7 @@ draft_restore <- function(store, draft) {
   store$auto_type <- union(store$auto_type, draft$auto_type)
   store$log <- if (NROW(draft$log) > 0) list(draft$log) else list()
   store$notes <- draft$notes %||% character(0)
+  if (!is.null(draft$comments)) store$comments <- draft$comments
   store$rule_specs <- draft$rule_specs %||% list()
   store$step <- as.integer(draft$step %||% 0L)
   store$step_open <- FALSE
@@ -162,7 +164,8 @@ draft_sync <- function(store, label = NULL) {
       isTRUE(store$draft_pending)) {
     return(invisible(FALSE))
   }
-  n <- change_counts(store)$items
+  # CHANGED VALUES, AND CHANGED COMMENTS ON CELLS
+  n <- change_counts(store)$items + comments_changed(store)
   if (n == 0) {
     draft_delete(store$draft_key)
     return(invisible(FALSE))
