@@ -19,9 +19,74 @@ test_that("Cancel returns the original data or the cancel value", {
   mock_gadget(function(session) {
     edit_mpg(session)
     session$setInputs(cancel = 1)
+    # changes are only thrown away once confirmed
+    expect_false(gadget$stopped)
+    session$setInputs(cancel_discard = 1)
   })
   expect_identical(data_edit(mtcars), mtcars)
+  expect_true(gadget$stopped)
   expect_identical(data_edit(mtcars, cancel = "nothing"), "nothing")
+  # without changes Cancel closes at once
+  mock_gadget(function(session) session$setInputs(cancel = 1))
+  expect_identical(data_edit(mtcars), mtcars)
+  expect_true(gadget$stopped)
+})
+
+test_that("the change log is added to a file or passed to a function", {
+  file <- withr::local_tempfile(fileext = ".csv")
+  mock_gadget(function(session) {
+    edit_mpg(session, "1")
+    session$setInputs(`edit1-note` = list(value = list(step = 1,
+                                                       text = "typo, \"x\"")))
+    session$setInputs(done = 1)
+  })
+  withr::local_options(DataEditR.user = "ana")
+  data_edit(mtcars, log = file)
+  data_edit(mtcars[1:3, ], log = file)
+  log <- read.csv(file, stringsAsFactors = FALSE)
+  expect_named(log, c("data", "time", "user", "step", "how", "action", "row",
+                      "column", "old", "new", "note"))
+  expect_identical(log$data, c("mtcars", "mtcars[1:3, ]"))
+  expect_identical(log$user, c("ana", "ana"))
+  expect_identical(log$row, c("Mazda RX4", "Mazda RX4"))
+  expect_identical(log$old, c(21L, 21L))
+  expect_identical(log$note, rep("typo, \"x\"", 2))
+  expect_false(anyNA(as.POSIXct(log$time, format = "%Y-%m-%d %H:%M:%S%z")))
+  got <- NULL
+  data_edit(mtcars, log = function(x) got <<- x)
+  expect_s3_class(got$time, "POSIXct")
+  expect_identical(got$new, "1")
+  # nothing is written without changes or when cancelled
+  mock_gadget(function(session) session$setInputs(done = 1))
+  data_edit(mtcars, log = file)
+  mock_gadget(function(session) {
+    edit_mpg(session)
+    session$setInputs(cancel = 1, cancel_discard = 1)
+  })
+  data_edit(mtcars, log = file)
+  expect_identical(nrow(read.csv(file)), 2L)
+  expect_error(data_edit(mtcars, log = 1), "csv file or a function")
+})
+
+test_that("closing the editor without Done keeps a draft to restore", {
+  dir <- withr::local_tempdir()
+  withr::local_options(DataEditR.drafts = dir)
+  # the window is closed after an edit
+  mock_gadget(function(session) edit_mpg(session, "5"))
+  expect_identical(data_edit(mtcars), mtcars)
+  expect_length(list.files(dir, pattern = "rds$"), 1)
+  # opening the same data again offers the changes
+  mock_gadget(function(session) {
+    session$setInputs(`edit1-draft_restore` = 1)
+    session$setInputs(done = 1)
+  })
+  expect_identical(data_edit(mtcars)$mpg[1], 5)
+  # Done removed the draft
+  expect_length(list.files(dir, pattern = "rds$"), 0)
+  # without autosave nothing is kept
+  mock_gadget(function(session) edit_mpg(session, "5"))
+  data_edit(mtcars, autosave = FALSE)
+  expect_length(list.files(dir, pattern = "rds$"), 0)
 })
 
 test_that("code is printed or written to a file", {

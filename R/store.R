@@ -472,27 +472,56 @@ editr_store <- function(state) {
   store$view_cols <- NULL # NULL = all columns, otherwise cids
   store$hidden <- character(0) # cids never shown
   store$factors <- list() # cid -> list(levels, ordered) of factor columns
+  # CHANGE LOG (see R/log.R)
+  store$log <- list() # data frames of entries
+  store$notes <- character(0) # step -> note
+  store$step <- 0L
+  store$step_how <- "edit"
+  store$step_open <- FALSE
+  store$logging <- TRUE
+  store$user <- ""
+  store$label_cids <- NULL # columns that name rows in the log
   store
 }
 
-#' Apply a batch of ops as a single undoable transaction
+#' Apply ops to the state one by one, logging each
 #'
-#' @return list of inverse ops (in application order), invisibly.
+#' @return list of op / inverse pairs.
 #'
 #' @noRd
-store_apply <- function(store, ops, record = TRUE) {
-  if (length(ops) == 0) {
-    return(invisible(list()))
-  }
+store_run <- function(store, ops) {
   state <- store$state
   done <- list()
   for (op in ops) {
     res <- apply_op(state, op)
+    if (isTRUE(store$logging)) {
+      store_log(store, log_entries(op, state, res$state, store$label_cids))
+    }
     state <- res$state
     done[[length(done) + 1]] <- list(op = op, inverse = res$inverse)
   }
   store$state <- state
   store_track_view(store, ops)
+  done
+}
+
+#' Apply a batch of ops as a single undoable transaction
+#'
+#' @param how how the change was made, for the log. A new step of the log is
+#'   started unless \code{how} is \code{NULL} (ops of a step that is already
+#'   open).
+#'
+#' @return list of inverse ops (in application order), invisibly.
+#'
+#' @noRd
+store_apply <- function(store, ops, record = TRUE, how = if (record) "edit") {
+  if (length(ops) == 0) {
+    return(invisible(list()))
+  }
+  if (!is.null(how)) {
+    store_step(store, how)
+  }
+  done <- store_run(store, ops)
   if (record) {
     store$undo[[length(store$undo) + 1]] <- done
     store$redo <- list()
@@ -513,15 +542,8 @@ store_undo <- function(store) {
   txn <- store$undo[[n]]
   store$undo[[n]] <- NULL
   inverses <- rev(lapply(txn, `[[`, "inverse"))
-  state <- store$state
-  redo <- list()
-  for (op in inverses) {
-    res <- apply_op(state, op)
-    state <- res$state
-    redo[[length(redo) + 1]] <- list(op = op, inverse = res$inverse)
-  }
-  store$state <- state
-  store_track_view(store, inverses)
+  store_step(store, "undo")
+  redo <- store_run(store, inverses)
   store$redo[[length(store$redo) + 1]] <- redo
   inverses
 }
@@ -537,15 +559,8 @@ store_redo <- function(store) {
   txn <- store$redo[[n]]
   store$redo[[n]] <- NULL
   ops <- rev(lapply(txn, `[[`, "inverse"))
-  state <- store$state
-  undo <- list()
-  for (op in ops) {
-    res <- apply_op(state, op)
-    state <- res$state
-    undo[[length(undo) + 1]] <- list(op = op, inverse = res$inverse)
-  }
-  store$state <- state
-  store_track_view(store, ops)
+  store_step(store, "redo")
+  undo <- store_run(store, ops)
   store$undo[[length(store$undo) + 1]] <- undo
   ops
 }

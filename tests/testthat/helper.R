@@ -71,3 +71,6 @@ mock_grid_send <- function(env = parent.frame()) {
 tag_text <- function(x) {
   paste(as.character(htmltools::renderTags(x)$html), collapse = "\n")
 }
+
+# Drafts are kept in a temporary folder while testing
+options(DataEditR.drafts = file.path(tempdir(), "DataEditR-drafts"))

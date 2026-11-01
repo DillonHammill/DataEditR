@@ -75,6 +75,16 @@
 <li>Column types are preserved: only empty template/new columns are passed through <code><a href="https://rdrr.io/r/utils/type.convert.html" class="external-link">type.convert()</a></code> on return, so character columns such as <code>"001"</code> are no longer converted to numbers. Dates stay dates, and matrices, tibbles and data.tables are returned with their original class.</li>
 </ul></div>
 <div class="section level3">
+<h3 id="change-log-notes-and-drafts-2-0-0">Change log, notes and drafts<a class="anchor" aria-label="anchor" href="#change-log-notes-and-drafts-2-0-0"></a></h3>
+<ul><li>Every change is recorded with the time, the user and how it was made (typed, pasted, filled, cleared, undone, redone or reverted). The new <code>History</code> tab of the review panel lists the changes step by step, and each step can be given a note saying why it was made.</li>
+<li>
+<code>data_edit(log = "changes.csv")</code> adds the change log to a csv file when <code>Done</code> is pressed (or passes it to a function), so one file can keep the history of many editing sessions.</li>
+<li>Changes are saved as a draft while editing (<code>autosave = TRUE</code>). If the editor is closed without pressing <code>Done</code> or <code>Cancel</code>, opening the same data again offers to restore the changes with their history. Drafts are kept in <code>tools::R_user_dir("DataEditR", "data")</code> and removed after 30 days.</li>
+<li>
+<code>Cancel</code> asks before changes are thrown away.</li>
+<li>In shiny apps, <code><a href="../reference/dataEditCommit.html">dataEditLog()</a></code> returns the change log, <code><a href="../reference/dataEditCommit.html">dataEditCommit()</a></code> returns the log of the changes it saved, and <code><a href="../reference/dataEdit.html">dataEditServer()</a></code> gains <code>autosave</code> and <code>user</code> arguments.</li>
+</ul></div>
+<div class="section level3">
 <h3 id="new-editor-layout-2-0-0">New editor layout<a class="anchor" aria-label="anchor" href="#new-editor-layout-2-0-0"></a></h3>
 <ul><li>One toolbar replaces the old input row, icon buttons and undo/redo line: Open, Undo/Redo, Columns, filter chips, Find in data, Review changes, Code, Export and a keyboard shortcuts sheet (press <code>?</code>).</li>
 <li>Filter rows by typing in the boxes under each column header: min/max for numbers, a multi-select list for columns with few distinct values and “contains” for text. Active filters appear as chips in the toolbar. This replaces the filter dialog inside <code><a href="../reference/data_edit.html">data_edit()</a></code> (the <code>dataFilter</code> module is still exported).</li>

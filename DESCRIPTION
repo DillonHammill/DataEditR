@@ -31,6 +31,7 @@ Imports:
   rstudioapi,
   htmltools,
   stats,
+  tools,
   utils
 License: GPL-2
 Copyright: See the file COPYRIGHTS for the copyright holders and licences

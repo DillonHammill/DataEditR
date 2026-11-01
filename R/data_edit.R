@@ -51,6 +51,20 @@
 #' the meantime. Adding, removing and renaming columns is disabled for
 #' database tables.
 #'
+#' @section Change log and notes:
+#' Every change is recorded with the time and the user name. The
+#' \emph{History} tab of the review panel lists the changes step by step and
+#' each step can be given a note, for example to say why a value was
+#' corrected. Supply \code{log} to keep this record in a file.
+#'
+#' @section Drafts:
+#' With \code{autosave = TRUE} the changes are saved as a draft a moment after
+#' each edit. Drafts are kept in \code{tools::R_user_dir("DataEditR",
+#' "data")}; set \code{options(DataEditR.drafts = )} to use another folder.
+#' A draft is removed when \emph{Done} or \emph{Cancel} is pressed, when it
+#' is restored or discarded, and after 30 days. Pressing \emph{Cancel} asks
+#' for confirmation before changes are discarded.
+#'
 #' @section RStudio add-in:
 #' \code{data_edit()} is also available from the RStudio \emph{Addins} menu
 #' as \emph{Interactive Data Editor}. Highlight the name of a data frame,
@@ -160,6 +174,18 @@
 #'   edited or added to the original data with a default blue border, or a valid
 #'   CSS color (e.g. \code{"#FF0000"} or \code{"red"}) to use a custom border
 #'   color. Set to \code{NULL} by default to disable highlighting.
+#' @param log name of a csv file to which the change log (who changed what
+#'   and when, see \code{\link{dataEditLog}()}) is added when \emph{Done} is
+#'   pressed, with a first column \code{data} naming the data that was
+#'   edited. The file is created if it does not exist, so the same file can
+#'   keep the history of many editing sessions. A function can be supplied
+#'   instead; it is called with the log as a data frame (for example to write
+#'   it to a database). Set to \code{NULL} by default to not keep the log.
+#' @param autosave logical indicating whether changes should be saved as a
+#'   draft while editing, set to \code{TRUE} by default. If the editor is
+#'   closed without pressing \emph{Done} or \emph{Cancel} (the window was
+#'   closed, R crashed, ...), opening the same data again offers to restore
+#'   the changes. See the \emph{Drafts} section.
 #' @param ... not in use.
 #'
 #' @return the edited data as a matrix or data.frame. For database tables the
@@ -213,6 +239,8 @@ data_edit <- function(x = NULL,
                       code = FALSE,
                       cancel,
                       track = NULL,
+                      log = NULL,
+                      autosave = TRUE,
                       ...) {
 
   # DATA ENVIRONMENT -----------------------------------------------------------
@@ -221,10 +249,11 @@ data_edit <- function(x = NULL,
   envir <- parent.frame()
 
   # CODE GENERATION - CAPTURE NAME EARLY (before x is modified)
-  x_name <- tryCatch({
-    nm <- deparse(substitute(x))
-    if (length(nm) == 1 && make.names(nm) == nm) nm else "data"
-  }, error = function(e) "data")
+  x_text <- tryCatch(
+    paste(trimws(deparse(substitute(x), width.cutoff = 500L)), collapse = " "),
+    error = function(e) "data"
+  )
+  x_name <- if (make.names(x_text) == x_text) x_text else "data"
 
   # RSTUDIO ADDIN - HIGHLIGHTED OBJECT NAME
   if (is.null(x)) {
@@ -271,6 +300,25 @@ data_edit <- function(x = NULL,
   session_info$code <- NULL
   session_info$original <- x_original
   session_info$name <- x_name
+  # WHAT THE CHANGE LOG CALLS THE DATA
+  session_info$label <- if (is.character(x) && length(x) == 1 &&
+                            file.exists(x)) {
+    x
+  } else if (is_db_input(initial)) {
+    db_table_label(initial$table)
+  } else if (is.null(x) || is.null(dim(x))) {
+    "New table"
+  } else if (!identical(x_name, "data")) {
+    x_name
+  } else {
+    x_text
+  }
+
+  # CHANGE LOG
+  if (!is.null(log) && !is.function(log) &&
+      !(is.character(log) && length(log) == 1 && nzchar(log))) {
+    stop("'log' must be the name of a csv file or a function.", call. = FALSE)
+  }
 
   # USER INTERFACE -------------------------------------------------------------
 
@@ -435,7 +483,8 @@ data_edit <- function(x = NULL,
       read_args = read_args,
       quiet = quiet,
       track = track,
-      code_name = code_name
+      code_name = code_name,
+      autosave = autosave
     )
     data_active <- attr(data_update, "view")
     editor <- attr(data_update, "editor")
@@ -486,6 +535,7 @@ data_edit <- function(x = NULL,
       }
       data_source(obj)
       set_text("dataset_name", name)
+      session_info$label <- name
       # THE CODE NOW STARTS FROM THE OPENED DATA (A NEW TABLE IS CREATED)
       session_info$original <- if (!is_db_input(obj) && !identical(code, "")) obj
       session_info$name <- if (identical(code, "")) "data" else code
@@ -540,10 +590,35 @@ data_edit <- function(x = NULL,
     output$export_all <- export_handler(FALSE)
     output$export_view <- export_handler(TRUE)
 
-    # CANCEL
+    # CANCEL - ASK BEFORE CHANGES ARE THROWN AWAY
     observeEvent(input$cancel, {
-      editr_stop(NULL)
+      ch <- isolate(dataEditChanges(data_update))
+      n <- if (is.null(ch)) 0 else ch$total
+      if (n == 0) {
+        cancel_now()
+        return()
+      }
+      showModal(modalDialog(
+        title = "Discard your changes?",
+        tags$p(paste0(
+          "Your ", n, " change", if (n != 1) "s", " will be lost and ",
+          "the data you opened is returned unchanged."
+        )),
+        footer = tagList(
+          modalButton("Keep editing"),
+          actionButton("cancel_discard", "Discard changes",
+                       class = "btn-danger")
+        ),
+        easyClose = TRUE
+      ))
     })
+    observeEvent(input$cancel_discard, {
+      cancel_now()
+    })
+    cancel_now <- function() {
+      attr(data_update, "close_draft")()
+      editr_stop(NULL)
+    }
 
     # FINISH - WRITE TO FILE & RETURN
     result_now <- function() {
@@ -558,6 +633,11 @@ data_edit <- function(x = NULL,
       if (!is.null(result) && save) {
         do.call(write_fun, c(list(result, save_as), write_args))
       }
+      if (!is.null(log)) {
+        editr_write_log(isolate(dataEditLog(data_update)), log,
+                        session_info$label)
+      }
+      attr(data_update, "close_draft")()
       editr_stop(result)
     }
 
@@ -650,6 +730,29 @@ data_edit <- function(x = NULL,
     }
   }
   x_edit
+}
+
+#' Add the change log to a csv file (or pass it to a function)
+#' @noRd
+editr_write_log <- function(entries, log, data_name = "data") {
+  if (is.null(entries) || nrow(entries) == 0) {
+    return(invisible(FALSE))
+  }
+  entries <- cbind(
+    data.frame(data = rep(as.character(data_name), nrow(entries)),
+               stringsAsFactors = FALSE),
+    entries
+  )
+  if (is.function(log)) {
+    log(entries)
+    return(invisible(TRUE))
+  }
+  entries$time <- format(entries$time, "%Y-%m-%d %H:%M:%S%z")
+  append <- file.exists(log) && isTRUE(file.size(log) > 0)
+  utils::write.table(entries, log, sep = ",", row.names = FALSE,
+                     col.names = !append, append = append, qmethod = "double",
+                     fileEncoding = "UTF-8")
+  invisible(TRUE)
 }
 
 #' Resolve what data_edit() was given into something to edit

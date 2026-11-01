@@ -53,6 +53,24 @@
   no longer converted to numbers. Dates stay dates, and matrices, tibbles and
   data.tables are returned with their original class.
 
+## Change log, notes and drafts
+
+* Every change is recorded with the time, the user and how it was made
+  (typed, pasted, filled, cleared, undone, redone or reverted). The new
+  `History` tab of the review panel lists the changes step by step, and each
+  step can be given a note saying why it was made.
+* `data_edit(log = "changes.csv")` adds the change log to a csv file when
+  `Done` is pressed (or passes it to a function), so one file can keep the
+  history of many editing sessions.
+* Changes are saved as a draft while editing (`autosave = TRUE`). If the
+  editor is closed without pressing `Done` or `Cancel`, opening the same data
+  again offers to restore the changes with their history. Drafts are kept in
+  `tools::R_user_dir("DataEditR", "data")` and removed after 30 days.
+* `Cancel` asks before changes are thrown away.
+* In shiny apps, `dataEditLog()` returns the change log, `dataEditCommit()`
+  returns the log of the changes it saved, and `dataEditServer()` gains
+  `autosave` and `user` arguments.
+
 ## New editor layout
 
 * One toolbar replaces the old input row, icon buttons and undo/redo line:

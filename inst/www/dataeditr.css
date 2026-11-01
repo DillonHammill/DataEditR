@@ -542,6 +542,79 @@ button.editr-change-title:hover {
   font-size: 12px;
 }
 
+.editr-history {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.editr-step {
+  padding: 10px 12px;
+  border: 1px solid #E3E6EA;
+  border-radius: 8px;
+  background: #FFFFFF;
+}
+
+.editr-step-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.editr-step-title {
+  flex: 1;
+  min-width: 0;
+  color: #1F2933;
+  font-weight: 500;
+}
+
+.editr-step-time {
+  flex: none;
+  color: #52606D;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.editr-step .editr-change-detail {
+  margin: 4px 0 0 74px;
+  font-size: 12px;
+}
+
+.editr-step-note {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 4px 0 0 74px;
+  min-height: 26px;
+}
+
+.editr-note-text {
+  flex: 1;
+  min-width: 0;
+  color: #1F2933;
+  font-style: italic;
+  overflow-wrap: anywhere;
+}
+
+.editr-note-btn {
+  flex: none;
+  margin-left: -6px;
+  font-size: 12px;
+}
+
+.editr-note-text + .editr-note-btn {
+  margin-left: 0;
+}
+
+.editr-note-input {
+  flex: 1;
+  height: 28px;
+  font-size: 13px;
+}
+
 .editr-empty {
   padding: 24px 8px;
   color: #52606D;

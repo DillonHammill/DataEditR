@@ -106,6 +106,8 @@ database.</p>
 <span>  code <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  <span class="va">cancel</span>,</span>
 <span>  track <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  log <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  autosave <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -297,6 +299,24 @@ CSS color (e.g. <code>"#FF0000"</code> or <code>"red"</code>) to use a custom bo
 color. Set to <code>NULL</code> by default to disable highlighting.</p></dd>
 
 
+<dt>log</dt>
+<dd><p>name of a csv file to which the change log (who changed what
+and when, see <code><a href="dataEditCommit.html">dataEditLog</a>()</code>) is added when <em>Done</em> is
+pressed, with a first column <code>data</code> naming the data that was
+edited. The file is created if it does not exist, so the same file can
+keep the history of many editing sessions. A function can be supplied
+instead; it is called with the log as a data frame (for example to write
+it to a database). Set to <code>NULL</code> by default to not keep the log.</p></dd>
+
+
+<dt>autosave</dt>
+<dd><p>logical indicating whether changes should be saved as a
+draft while editing, set to <code>TRUE</code> by default. If the editor is
+closed without pressing <em>Done</em> or <em>Cancel</em> (the window was
+closed, R crashed, ...), opening the same data again offers to restore
+the changes. See the <em>Drafts</em> section.</p></dd>
+
+
 <dt>...</dt>
 <dd><p>not in use.</p></dd>
 
@@ -343,6 +363,26 @@ asked to confirm before anything is written. Writes happen in a single
 transaction and are rolled back if any row was changed by someone else in
 the meantime. Adding, removing and renaming columns is disabled for
 database tables.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="change-log-and-notes">Change log and notes<a class="anchor" aria-label="anchor" href="#change-log-and-notes"></a></h2>
+    
+
+<p>Every change is recorded with the time and the user name. The
+<em>History</em> tab of the review panel lists the changes step by step and
+each step can be given a note, for example to say why a value was
+corrected. Supply <code>log</code> to keep this record in a file.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="drafts">Drafts<a class="anchor" aria-label="anchor" href="#drafts"></a></h2>
+    
+
+<p>With <code>autosave = TRUE</code> the changes are saved as a draft a moment after
+each edit. Drafts are kept in <code>tools::R_user_dir("DataEditR",
+"data")</code>; set <code>options(DataEditR.drafts = )</code> to use another folder.
+A draft is removed when <em>Done</em> or <em>Cancel</em> is pressed, when it
+is restored or discarded, and after 30 days. Pressing <em>Cancel</em> asks
+for confirmation before changes are discarded.</p>
     </div>
     <div class="section level2">
     <h2 id="rstudio-add-in">RStudio add-in<a class="anchor" aria-label="anchor" href="#rstudio-add-in"></a></h2>

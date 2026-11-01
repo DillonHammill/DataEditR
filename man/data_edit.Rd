@@ -34,6 +34,8 @@ data_edit(
   code = FALSE,
   cancel,
   track = NULL,
+  log = NULL,
+  autosave = TRUE,
   ...
 )
 }
@@ -168,6 +170,20 @@ edited or added to the original data with a default blue border, or a valid
 CSS color (e.g. \code{"#FF0000"} or \code{"red"}) to use a custom border
 color. Set to \code{NULL} by default to disable highlighting.}
 
+\item{log}{name of a csv file to which the change log (who changed what
+and when, see \code{\link{dataEditLog}()}) is added when \emph{Done} is
+pressed, with a first column \code{data} naming the data that was
+edited. The file is created if it does not exist, so the same file can
+keep the history of many editing sessions. A function can be supplied
+instead; it is called with the log as a data frame (for example to write
+it to a database). Set to \code{NULL} by default to not keep the log.}
+
+\item{autosave}{logical indicating whether changes should be saved as a
+draft while editing, set to \code{TRUE} by default. If the editor is
+closed without pressing \emph{Done} or \emph{Cancel} (the window was
+closed, R crashed, ...), opening the same data again offers to restore
+the changes. See the \emph{Drafts} section.}
+
 \item{...}{not in use.}
 }
 \value{
@@ -213,6 +229,24 @@ asked to confirm before anything is written. Writes happen in a single
 transaction and are rolled back if any row was changed by someone else in
 the meantime. Adding, removing and renaming columns is disabled for
 database tables.
+}
+
+\section{Change log and notes}{
+
+Every change is recorded with the time and the user name. The
+\emph{History} tab of the review panel lists the changes step by step and
+each step can be given a note, for example to say why a value was
+corrected. Supply \code{log} to keep this record in a file.
+}
+
+\section{Drafts}{
+
+With \code{autosave = TRUE} the changes are saved as a draft a moment after
+each edit. Drafts are kept in \code{tools::R_user_dir("DataEditR",
+"data")}; set \code{options(DataEditR.drafts = )} to use another folder.
+A draft is removed when \emph{Done} or \emph{Cancel} is pressed, when it
+is restored or discarded, and after 30 days. Pressing \emph{Cancel} asks
+for confirmation before changes are discarded.
 }
 
 \section{RStudio add-in}{

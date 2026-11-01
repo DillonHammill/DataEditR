@@ -56,8 +56,9 @@ reference:
 - title: Shiny modules
   desc: >
     Add the data editor to your own shiny applications with the `dataEdit`
-    module. Save the changes (e.g. to a database) with `dataEditCommit()` and
-    count unsaved changes with `dataEditChanges()`.
+    module. Save the changes (e.g. to a database) with `dataEditCommit()`,
+    count unsaved changes with `dataEditChanges()` and get the change log
+    with `dataEditLog()`.
   contents:
   - dataEdit
   - dataEditCommit

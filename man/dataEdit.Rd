@@ -35,6 +35,8 @@ dataEditServer(
   read_args = NULL,
   track = NULL,
   code_name = "data",
+  autosave = FALSE,
+  user = NULL,
   ...
 )
 }
@@ -147,6 +149,19 @@ border color. Set to \code{NULL} by default to disable highlighting.}
 \item{code_name}{name of the data used in the code shown in the review
 panel, set to \code{"data"} by default. Can also be a reactive expression
 returning the name.}
+
+\item{autosave}{logical indicating whether changes should be saved as a
+draft while editing, so that they can be restored if the app is closed
+before they are saved. When the same data is opened again by the same
+user, they are asked whether to restore the changes. Set to \code{FALSE}
+by default. Drafts are kept in \code{tools::R_user_dir("DataEditR",
+  "data")} (or the folder set with \code{options(DataEditR.drafts = )}) and
+are removed when the changes are committed or after 30 days.}
+
+\item{user}{name of the person editing, recorded in the change log (see
+\code{\link{dataEditLog}()}). By default the user signed in to the app
+(\code{session$user}), the \code{DataEditR.user} option or the system
+user name.}
 
 \item{...}{not in use.}
 }

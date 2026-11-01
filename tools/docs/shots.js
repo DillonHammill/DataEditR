@@ -449,6 +449,26 @@ const scenarios = {
     await shot(page, "track");
     await done(page);
   },
+  async restore(page) {
+    await page.waitForSelector("#shiny-modal .modal-dialog");
+    await sleep(900);
+    await shot(page, "restore");
+    await page.click("#edit1-draft_restore");
+    await settle(page, 1200);
+    await edit(page, 2, "c3", "8");
+    await page.click("#edit1-open_changes");
+    await settle(page, 800);
+    await page.click("#edit1-tab_history");
+    await settle(page, 1000);
+    await page.click("#edit1-history .editr-note-btn");
+    await sleep(300);
+    await page.keyboard.type("Typo in the lab sheet");
+    await page.keyboard.press("Enter");
+    await settle(page, 900);
+    await shot(page, "history");
+    await page.click("#done");
+    await sleep(1000);
+  },
   async db(page) {
     await shot(page, "db-editor");
     await edit(page, 1, "c3", "21.5");

@@ -3,11 +3,15 @@
 dataEditServer(), for example when the user presses a
 Save button in your shiny application. dataEditChanges()
 returns a summary of the changes that have not been saved yet, which is
-useful to enable a Save button or to ask the user to confirm."><title>Save the changes made in a data editor — dataEditCommit • DataEditR</title><!-- favicons --><link rel="icon" type="image/png" sizes="16x16" href="../favicon-16x16.png"><link rel="icon" type="image/png" sizes="32x32" href="../favicon-32x32.png"><link rel="apple-touch-icon" type="image/png" sizes="180x180" href="../apple-touch-icon.png"><link rel="apple-touch-icon" type="image/png" sizes="120x120" href="../apple-touch-icon-120x120.png"><link rel="apple-touch-icon" type="image/png" sizes="76x76" href="../apple-touch-icon-76x76.png"><link rel="apple-touch-icon" type="image/png" sizes="60x60" href="../apple-touch-icon-60x60.png"><script src="../deps/jquery-3.6.1/jquery-3.6.1.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"><link href="../deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet"><script src="../deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><!-- Font Awesome icons --><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/css/all.min.css" integrity="sha256-mmgLkCYLUQbXn0B1SRqzHar6dCnv9oZFPEC1g1cwlkk=" crossorigin="anonymous"><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/css/v4-shims.min.css" integrity="sha256-wZjR52fzng1pJHwx4aV2AO3yyTOXrcDW7jBpJtTwVxw=" crossorigin="anonymous"><!-- bootstrap-toc --><script src="https://cdn.jsdelivr.net/gh/afeld/bootstrap-toc@v1.0.1/dist/bootstrap-toc.min.js" integrity="sha256-4veVQbu7//Lk5TSmc7YV48MxtMy98e26cf5MrgZYnwo=" crossorigin="anonymous"></script><!-- headroom.js --><script src="https://cdnjs.cloudflare.com/ajax/libs/headroom/0.11.0/headroom.min.js" integrity="sha256-AsUX4SJE1+yuDu5+mAVzJbuYNPHj/WroHuZ8Ir/CkE0=" crossorigin="anonymous"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/headroom/0.11.0/jQuery.headroom.min.js" integrity="sha256-ZX/yNShbjqsohH1k95liqY9Gd8uOiE1S4vZc+9KQ1K4=" crossorigin="anonymous"></script><!-- clipboard.js --><script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.6/clipboard.min.js" integrity="sha256-inc5kl9MA1hkeYUt+EC3BhlIgyp/2jDIyBLS6k3UxPI=" crossorigin="anonymous"></script><!-- search --><script src="https://cdnjs.cloudflare.com/ajax/libs/fuse.js/6.4.6/fuse.js" integrity="sha512-zv6Ywkjyktsohkbp9bb45V6tEMoWhzFzXis+LrMehmJZZSys19Yxf1dopHx7WzIKxr5tK2dVcYmaCk2uqdjF4A==" crossorigin="anonymous"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/autocomplete.js/0.38.0/autocomplete.jquery.min.js" integrity="sha512-GU9ayf+66Xx2TmpxqJpliWbT5PiGYxpaG8rfnBEk1LL8l1KGkRShhngwdXK1UgqhAzWpZHSiYPc09/NwDQIGyg==" crossorigin="anonymous"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/mark.js/8.11.1/mark.min.js" integrity="sha512-5CYOlHXGh6QpOFA/TeTylKLWfB3ftPsde7AnmhuitiTX4K5SqCLBeKro6sPS8ilsz1Q4NRx3v8Ko2IBiszzdww==" crossorigin="anonymous"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Save the changes made in a data editor — dataEditCommit"><meta property="og:description" content="dataEditCommit() saves the changes made in a data editor created by
+useful to enable a Save button or to ask the user to confirm.
+dataEditLog() returns the change log: every change made in the
+editor, with when it was made and by whom."><title>Save the changes made in a data editor — dataEditCommit • DataEditR</title><!-- favicons --><link rel="icon" type="image/png" sizes="16x16" href="../favicon-16x16.png"><link rel="icon" type="image/png" sizes="32x32" href="../favicon-32x32.png"><link rel="apple-touch-icon" type="image/png" sizes="180x180" href="../apple-touch-icon.png"><link rel="apple-touch-icon" type="image/png" sizes="120x120" href="../apple-touch-icon-120x120.png"><link rel="apple-touch-icon" type="image/png" sizes="76x76" href="../apple-touch-icon-76x76.png"><link rel="apple-touch-icon" type="image/png" sizes="60x60" href="../apple-touch-icon-60x60.png"><script src="../deps/jquery-3.6.1/jquery-3.6.1.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"><link href="../deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet"><script src="../deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><!-- Font Awesome icons --><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/css/all.min.css" integrity="sha256-mmgLkCYLUQbXn0B1SRqzHar6dCnv9oZFPEC1g1cwlkk=" crossorigin="anonymous"><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/css/v4-shims.min.css" integrity="sha256-wZjR52fzng1pJHwx4aV2AO3yyTOXrcDW7jBpJtTwVxw=" crossorigin="anonymous"><!-- bootstrap-toc --><script src="https://cdn.jsdelivr.net/gh/afeld/bootstrap-toc@v1.0.1/dist/bootstrap-toc.min.js" integrity="sha256-4veVQbu7//Lk5TSmc7YV48MxtMy98e26cf5MrgZYnwo=" crossorigin="anonymous"></script><!-- headroom.js --><script src="https://cdnjs.cloudflare.com/ajax/libs/headroom/0.11.0/headroom.min.js" integrity="sha256-AsUX4SJE1+yuDu5+mAVzJbuYNPHj/WroHuZ8Ir/CkE0=" crossorigin="anonymous"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/headroom/0.11.0/jQuery.headroom.min.js" integrity="sha256-ZX/yNShbjqsohH1k95liqY9Gd8uOiE1S4vZc+9KQ1K4=" crossorigin="anonymous"></script><!-- clipboard.js --><script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.6/clipboard.min.js" integrity="sha256-inc5kl9MA1hkeYUt+EC3BhlIgyp/2jDIyBLS6k3UxPI=" crossorigin="anonymous"></script><!-- search --><script src="https://cdnjs.cloudflare.com/ajax/libs/fuse.js/6.4.6/fuse.js" integrity="sha512-zv6Ywkjyktsohkbp9bb45V6tEMoWhzFzXis+LrMehmJZZSys19Yxf1dopHx7WzIKxr5tK2dVcYmaCk2uqdjF4A==" crossorigin="anonymous"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/autocomplete.js/0.38.0/autocomplete.jquery.min.js" integrity="sha512-GU9ayf+66Xx2TmpxqJpliWbT5PiGYxpaG8rfnBEk1LL8l1KGkRShhngwdXK1UgqhAzWpZHSiYPc09/NwDQIGyg==" crossorigin="anonymous"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/mark.js/8.11.1/mark.min.js" integrity="sha512-5CYOlHXGh6QpOFA/TeTylKLWfB3ftPsde7AnmhuitiTX4K5SqCLBeKro6sPS8ilsz1Q4NRx3v8Ko2IBiszzdww==" crossorigin="anonymous"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Save the changes made in a data editor — dataEditCommit"><meta property="og:description" content="dataEditCommit() saves the changes made in a data editor created by
 dataEditServer(), for example when the user presses a
 Save button in your shiny application. dataEditChanges()
 returns a summary of the changes that have not been saved yet, which is
-useful to enable a Save button or to ask the user to confirm."><meta property="og:image" content="https://dillonhammill.github.io/DataEditR/logo.svg"><!-- mathjax --><script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js" integrity="sha256-nvJJv9wWKEm88qvoQl9ekL2J+k/RWIsaSScxxlsrv8k=" crossorigin="anonymous"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/config/TeX-AMS-MML_HTMLorMML.js" integrity="sha256-84DKXVJXs0/F8OTMzX4UR909+jtl4G7SPypPavF+GfA=" crossorigin="anonymous"></script><!--[if lt IE 9]>
+useful to enable a Save button or to ask the user to confirm.
+dataEditLog() returns the change log: every change made in the
+editor, with when it was made and by whom."><meta property="og:image" content="https://dillonhammill.github.io/DataEditR/logo.svg"><!-- mathjax --><script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js" integrity="sha256-nvJJv9wWKEm88qvoQl9ekL2J+k/RWIsaSScxxlsrv8k=" crossorigin="anonymous"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/config/TeX-AMS-MML_HTMLorMML.js" integrity="sha256-84DKXVJXs0/F8OTMzX4UR909+jtl4G7SPypPavF+GfA=" crossorigin="anonymous"></script><!--[if lt IE 9]>
 <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
 <![endif]--></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -68,14 +72,18 @@ useful to enable a Save button or to ask the user to confirm."><meta property="o
 <code><a href="dataEdit.html">dataEditServer</a>()</code>, for example when the user presses a
 <em>Save</em> button in your shiny application. <code>dataEditChanges()</code>
 returns a summary of the changes that have not been saved yet, which is
-useful to enable a <em>Save</em> button or to ask the user to confirm.</p>
+useful to enable a <em>Save</em> button or to ask the user to confirm.
+<code>dataEditLog()</code> returns the change log: every change made in the
+editor, with when it was made and by whom.</p>
     </div>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">dataEditCommit</span><span class="op">(</span><span class="va">x</span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu">dataEditChanges</span><span class="op">(</span><span class="va">x</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu">dataEditChanges</span><span class="op">(</span><span class="va">x</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu">dataEditLog</span><span class="op">(</span><span class="va">x</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -89,11 +97,13 @@ useful to enable a <em>Save</em> button or to ask the user to confirm.</p>
     
 
 <p><code>dataEditCommit()</code> invisibly returns a list with the number of
-rows <code>updated</code>, <code>inserted</code> and <code>deleted</code> and the number of
-<code>columns</code> added, removed or renamed (<code>NULL</code> if no data is
-loaded). <code>dataEditChanges()</code> returns the same counts plus the number
-of edited <code>cells</code> and the <code>total</code> number of changes, and must be
-called in a reactive context (it updates as the data is edited).</p>
+rows <code>updated</code>, <code>inserted</code> and <code>deleted</code>, the number of
+<code>columns</code> added, removed or renamed and the <code>log</code> entries of
+the changes that were saved (<code>NULL</code> if no data is loaded).
+<code>dataEditChanges()</code> returns the same counts plus the number of
+edited <code>cells</code> and the <code>total</code> number of changes.
+<code>dataEditLog()</code> returns the change log. Both must be called in a
+reactive context (they update as the data is edited).</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
@@ -111,6 +121,55 @@ written; the current data simply becomes the new starting point, so the
 review panel, change highlights and generated code start again from the
 committed data. Write the data returned by <code><a href="dataEdit.html">dataEditServer()</a></code> wherever
 it needs to go in the same observer.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="change-log">Change log<a class="anchor" aria-label="anchor" href="#change-log"></a></h2>
+    
+
+<p>Every change made in the editor is recorded, one row per changed cell (or
+per row or column that was added, removed or renamed), in a data frame
+with the columns:</p><dl><dt>time</dt>
+<dd><p>when the change was made.</p></dd>
+
+<dt>user</dt>
+<dd><p>who made it (see the <code>user</code> argument of
+<code><a href="dataEdit.html">dataEditServer</a>()</code>).</p></dd>
+
+<dt>step</dt>
+<dd><p>number of the action the change belongs to. One action (typing
+a value, a paste, a fill, an undo, ...) is one step, the same unit that
+undo works with.</p></dd>
+
+<dt>how</dt>
+<dd><p>how the change was made: <code>"edit"</code>, <code>"paste"</code>,
+<code>"fill"</code>, <code>"clear"</code>, <code>"undo"</code>, <code>"redo"</code> or
+<code>"revert"</code> (from the review panel).</p></dd>
+
+<dt>action</dt>
+<dd><p><code>"edit"</code>, <code>"add row"</code>, <code>"remove row"</code>,
+<code>"add column"</code>, <code>"remove column"</code> or <code>"rename column"</code>.</p></dd>
+
+<dt>row</dt>
+<dd><p>the row name, the key of a database row or else the row number
+in the data that was opened (new rows are numbered after the last row).</p></dd>
+
+<dt>column</dt>
+<dd><p>the name of the column.</p></dd>
+
+<dt>old, new</dt>
+<dd><p>the values before and after, as text. For a removed row
+<code>old</code> lists the values of the whole row.</p></dd>
+
+<dt>note</dt>
+<dd><p>the note added to the step in the <em>History</em> tab, which
+users can use to say why a change was made.</p></dd>
+
+
+</dl><p>Undoing a change is recorded as a new step, so the log is a complete
+record of what happened. The log is kept for the whole session, including
+across commits; the entries saved by a commit are returned by
+<code>dataEditCommit()</code> so that they can be written next to the data (for
+example to a log table in the same database).</p>
     </div>
     <div class="section level2">
     <h2 id="author">Author<a class="anchor" aria-label="anchor" href="#author"></a></h2>
@@ -150,6 +209,10 @@ it needs to go in the same observer.</p>
 <span class="r-in"><span>      <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/class.html" class="external-link">inherits</a></span><span class="op">(</span><span class="va">res</span>, <span class="st">"editr_conflict"</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span></span>
 <span class="r-in"><span>        <span class="fu"><a href="https://rdrr.io/pkg/shiny/man/showNotification.html" class="external-link">showNotification</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/conditions.html" class="external-link">conditionMessage</a></span><span class="op">(</span><span class="va">res</span><span class="op">)</span>, type <span class="op">=</span> <span class="st">"error"</span><span class="op">)</span></span></span>
 <span class="r-in"><span>      <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span></span></span>
+<span class="r-in"><span>        <span class="co"># keep a record of who changed what next to the data</span></span></span>
+<span class="r-in"><span>        <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">res</span><span class="op">$</span><span class="va">log</span><span class="op">)</span> <span class="op">&gt;</span> <span class="fl">0</span><span class="op">)</span> <span class="op">{</span></span></span>
+<span class="r-in"><span>          <span class="fu">DBI</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/DBI/man/dbWriteTable.html" class="external-link">dbWriteTable</a></span><span class="op">(</span><span class="va">con</span>, <span class="st">"cars_log"</span>, <span class="va">res</span><span class="op">$</span><span class="va">log</span>, append <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
+<span class="r-in"><span>        <span class="op">}</span></span></span>
 <span class="r-in"><span>        <span class="fu"><a href="https://rdrr.io/pkg/shiny/man/showNotification.html" class="external-link">showNotification</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="va">res</span><span class="op">$</span><span class="va">updated</span>, <span class="st">"updated,"</span>, <span class="va">res</span><span class="op">$</span><span class="va">inserted</span>,</span></span>
 <span class="r-in"><span>                               <span class="st">"added and"</span>, <span class="va">res</span><span class="op">$</span><span class="va">deleted</span>, <span class="st">"removed"</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span>      <span class="op">}</span></span></span>

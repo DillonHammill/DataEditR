@@ -21,6 +21,17 @@
 #' @param code_name name of the data used in the code shown in the review
 #'   panel, set to \code{"data"} by default. Can also be a reactive expression
 #'   returning the name.
+#' @param autosave logical indicating whether changes should be saved as a
+#'   draft while editing, so that they can be restored if the app is closed
+#'   before they are saved. When the same data is opened again by the same
+#'   user, they are asked whether to restore the changes. Set to \code{FALSE}
+#'   by default. Drafts are kept in \code{tools::R_user_dir("DataEditR",
+#'   "data")} (or the folder set with \code{options(DataEditR.drafts = )}) and
+#'   are removed when the changes are committed or after 30 days.
+#' @param user name of the person editing, recorded in the change log (see
+#'   \code{\link{dataEditLog}()}). By default the user signed in to the app
+#'   (\code{session$user}), the \code{DataEditR.user} option or the system
+#'   user name.
 #' @param data a reactive expression containing an array (e.g. data.frame,
 #'   matrix or data.table), a database table (see \code{\link{db_table}}) or a
 #'   vector indicating the dimensions of the array (e.g. c(10,10)) or column
@@ -212,6 +223,9 @@ dataEditUI <- function(id,
                       id = ns("tab_changes"), `aria-selected` = "false",
                       onclick = js_panel("changes", FALSE), "Changes"),
           tags$button(type = "button", class = "editr-tab", role = "tab",
+                      id = ns("tab_history"), `aria-selected` = "false",
+                      onclick = js_panel("history", FALSE), "History"),
+          tags$button(type = "button", class = "editr-tab", role = "tab",
                       id = ns("tab_code"), `aria-selected` = "false",
                       onclick = js_panel("code", FALSE), "Code"),
           span(class = "editr-spacer"),
@@ -222,6 +236,8 @@ dataEditUI <- function(id,
         ),
         div(class = "editr-pane", id = ns("pane_changes"), role = "tabpanel",
             hidden = NA, shiny::uiOutput(ns("changes"))),
+        div(class = "editr-pane", id = ns("pane_history"), role = "tabpanel",
+            hidden = NA, shiny::uiOutput(ns("history"))),
         div(
           class = "editr-pane", id = ns("pane_code"), role = "tabpanel",
           hidden = NA,
@@ -278,6 +294,8 @@ dataEditServer <- function(id,
                            read_args = NULL,
                            track = NULL,
                            code_name = "data",
+                           autosave = FALSE,
+                           user = NULL,
                            ...) {
 
   data_r <- if (is.reactive(data)) data else reactive(data)
@@ -294,7 +312,12 @@ dataEditServer <- function(id,
     data_tick <- reactiveVal(0) # data changed
     view_tick <- reactiveVal(0) # grid needs a full render
     client_tick <- reactiveVal(0) # grid filters / visible columns changed
+    notes_tick <- reactiveVal(0) # notes in the change log changed
     ns <- session$ns
+    user_name <- editr_user(user, session)
+    # DRAFTS BELONG TO THE USER AND TO THIS EDITOR OF THE APP
+    draft_owner <- paste0(user_name, "|", ns(""))
+    draft_waiting <- NULL # draft offered for restoring
 
     bump <- function(rv) rv(isolate(rv()) + 1)
 
@@ -348,11 +371,28 @@ dataEditServer <- function(id,
       )
     }
 
-    load_editor <- function(ed) {
+    draft_label <- function() {
+      isolate(if (is.function(code_name)) code_name() else code_name)
+    }
+
+    load_editor <- function(ed, recover = TRUE) {
       isolate({
         apply_rows(ed)
         apply_columns(ed)
       })
+      if (!is.null(ed)) {
+        ed$store$user <- user_name
+        if (isTRUE(autosave)) {
+          ed$store$draft_key <- draft_key(ed$store$original, draft_owner)
+          draft <- if (recover) draft_read(ed$store$draft_key)
+          if (!is.null(draft) && isTRUE(draft$changes > 0)) {
+            # NOTHING IS SAVED OVER THE DRAFT UNTIL THE USER DECIDES
+            ed$store$draft_pending <- TRUE
+            draft_waiting <<- draft
+            showModal(draft_modal(draft, ns))
+          }
+        }
+      }
       editor(ed)
       bump(data_tick)
       bump(view_tick)
@@ -423,10 +463,10 @@ dataEditServer <- function(id,
 
     # EDITS FROM THE GRID ------------------------------------------------------
 
-    handle_ops <- function(ops) {
+    handle_ops <- function(ops, label = NULL) {
       ed <- editor()
       if (is.null(ed) || length(ops) == 0) return()
-      res <- process_ops(ed$store, ops, ed$cfg)
+      res <- process_ops(ed$store, ops, ed$cfg, label = label)
       for (p in res$patches) {
         grid_send(session, "grid", p$method, p$args)
       }
@@ -441,7 +481,7 @@ dataEditServer <- function(id,
     }
 
     observeEvent(input$grid_ops, {
-      handle_ops(input$grid_ops$ops)
+      handle_ops(input$grid_ops$ops, input$grid_ops$label)
     })
 
     observeEvent(input$undo, {
@@ -497,9 +537,27 @@ dataEditServer <- function(id,
       editr_code(ed$store, ed$cfg, name)
     })
 
+    output$history <- shiny::renderUI({
+      shiny::req(identical(input$panel, "history"))
+      data_tick()
+      notes_tick()
+      ed <- editor()
+      shiny::req(ed)
+      history_ui(store_log_df(ed$store), ns)
+    })
+
     # PANES START HIDDEN - KEEP THEIR OUTPUTS LIVE (they req() the open tab)
     shiny::outputOptions(output, "changes", suspendWhenHidden = FALSE)
+    shiny::outputOptions(output, "history", suspendWhenHidden = FALSE)
     shiny::outputOptions(output, "code", suspendWhenHidden = FALSE)
+
+    observeEvent(input$note, {
+      ed <- editor()
+      v <- input$note$value
+      if (is.null(ed) || is.null(v$step)) return()
+      store_note(ed$store, v$step, v$text)
+      bump(notes_tick)
+    })
 
     observeEvent(input$revert, {
       ed <- editor()
@@ -520,6 +578,61 @@ dataEditServer <- function(id,
       }
     })
 
+    # DRAFTS -------------------------------------------------------------------
+
+    observeEvent(input$draft_restore, {
+      ed <- editor()
+      draft <- draft_waiting
+      draft_waiting <<- NULL
+      shiny::removeModal()
+      if (is.null(ed) || is.null(draft)) return()
+      ed$store$draft_pending <- FALSE
+      if (draft_restore(ed$store, draft)) {
+        n <- draft$changes
+        showNotification(paste0("Restored ", n, " unsaved change",
+                                if (n != 1) "s", "."), type = "message")
+      } else {
+        draft_delete(ed$store$draft_key)
+        showNotification("The unsaved changes do not fit this data and could not be restored.",
+                         type = "error")
+      }
+      bump(data_tick)
+      bump(view_tick)
+      bump(notes_tick)
+    })
+
+    observeEvent(input$draft_discard, {
+      ed <- editor()
+      draft_waiting <<- NULL
+      shiny::removeModal()
+      if (is.null(ed)) return()
+      ed$store$draft_pending <- FALSE
+      draft_delete(ed$store$draft_key)
+    })
+
+    if (isTRUE(autosave)) {
+      draft_prune()
+      draft_due <- shiny::debounce(reactive(c(data_tick(), notes_tick())), 1000)
+      observeEvent(draft_due(), {
+        ed <- editor()
+        if (!is.null(ed)) draft_sync(ed$store, draft_label())
+      }, ignoreInit = TRUE)
+      # CHANGES MADE JUST BEFORE THE WINDOW IS CLOSED
+      session$onSessionEnded(function() {
+        ed <- isolate(editor())
+        if (!is.null(ed)) draft_sync(ed$store, draft_label())
+      })
+    }
+
+    close_draft <- function() {
+      ed <- isolate(editor())
+      if (!is.null(ed)) {
+        draft_delete(ed$store$draft_key)
+        ed$store$draft_closed <- TRUE
+      }
+      invisible()
+    }
+
     # COMMIT -------------------------------------------------------------------
 
     # DATABASES - WRITE THE STAGED CHANGES AND LOAD THE ROWS AGAIN
@@ -530,20 +643,39 @@ dataEditServer <- function(id,
         return(invisible(NULL))
       }
       ch <- editr_changes(ed)
+      store <- ed$store
+      log <- store_log_df(store)
+      log <- log[log$step > (store$committed_step %||% 0L), , drop = FALSE]
+      rownames(log) <- NULL
       if (!is.null(ed$cfg$db)) {
-        db_commit(ed$cfg$db, ed$store)
+        db_commit(ed$cfg$db, store)
+        draft_delete(store$draft_key)
         reloaded <- suppressMessages(prepare(ed$cfg$db))
-        load_editor(reloaded)
+        # THE CHANGE LOG CARRIES ON
+        new <- reloaded$store
+        new$log <- store$log
+        new$notes <- store$notes
+        new$step <- store$step
+        new$committed_step <- store$step
+        load_editor(reloaded, recover = FALSE)
       } else {
-        store <- ed$store
         store$original <- store$state
         store$changed <- character(0)
+        store$committed_step <- store$step
+        if (isTRUE(autosave)) {
+          # THE DRAFT NOW STARTS FROM THE COMMITTED DATA
+          draft_delete(store$draft_key)
+          store$draft_key <- draft_key(store$original, draft_owner)
+          store$draft_base <- length(store$undo)
+        }
         if (isTRUE(ed$cfg$track)) {
           grid_send(session, "grid", "set_changed", list(keys = I(character(0))))
         }
         bump(data_tick)
       }
-      invisible(ch[c("updated", "inserted", "deleted", "columns")])
+      out <- ch[c("updated", "inserted", "deleted", "columns")]
+      out$log <- log
+      invisible(out)
     }
 
     # RETURN -------------------------------------------------------------------
@@ -572,7 +704,15 @@ dataEditServer <- function(id,
       if (is.null(ed)) return(NULL)
       editr_changes(ed)
     })
+    attr(result, "log") <- reactive({
+      data_tick()
+      notes_tick()
+      ed <- editor()
+      if (is.null(ed)) return(NULL)
+      store_log_df(ed$store)
+    })
     attr(result, "commit") <- commit
+    attr(result, "close_draft") <- close_draft
     result
   })
 }
@@ -584,6 +724,8 @@ dataEditServer <- function(id,
 #' \emph{Save} button in your shiny application. \code{dataEditChanges()}
 #' returns a summary of the changes that have not been saved yet, which is
 #' useful to enable a \emph{Save} button or to ask the user to confirm.
+#' \code{dataEditLog()} returns the change log: every change made in the
+#' editor, with when it was made and by whom.
 #'
 #' For database tables (see \code{\link{db_table}()}) the staged changes are
 #' written to the database in a single transaction: edited rows are updated,
@@ -603,12 +745,44 @@ dataEditServer <- function(id,
 #'
 #' @param x the reactive expression returned by \code{\link{dataEditServer}()}.
 #'
+#' @section Change log:
+#' Every change made in the editor is recorded, one row per changed cell (or
+#' per row or column that was added, removed or renamed), in a data frame
+#' with the columns:
+#' \describe{
+#' \item{time}{when the change was made.}
+#' \item{user}{who made it (see the \code{user} argument of
+#' \code{\link{dataEditServer}()}).}
+#' \item{step}{number of the action the change belongs to. One action (typing
+#' a value, a paste, a fill, an undo, ...) is one step, the same unit that
+#' undo works with.}
+#' \item{how}{how the change was made: \code{"edit"}, \code{"paste"},
+#' \code{"fill"}, \code{"clear"}, \code{"undo"}, \code{"redo"} or
+#' \code{"revert"} (from the review panel).}
+#' \item{action}{\code{"edit"}, \code{"add row"}, \code{"remove row"},
+#' \code{"add column"}, \code{"remove column"} or \code{"rename column"}.}
+#' \item{row}{the row name, the key of a database row or else the row number
+#' in the data that was opened (new rows are numbered after the last row).}
+#' \item{column}{the name of the column.}
+#' \item{old, new}{the values before and after, as text. For a removed row
+#' \code{old} lists the values of the whole row.}
+#' \item{note}{the note added to the step in the \emph{History} tab, which
+#' users can use to say why a change was made.}
+#' }
+#' Undoing a change is recorded as a new step, so the log is a complete
+#' record of what happened. The log is kept for the whole session, including
+#' across commits; the entries saved by a commit are returned by
+#' \code{dataEditCommit()} so that they can be written next to the data (for
+#' example to a log table in the same database).
+#'
 #' @return \code{dataEditCommit()} invisibly returns a list with the number of
-#'   rows \code{updated}, \code{inserted} and \code{deleted} and the number of
-#'   \code{columns} added, removed or renamed (\code{NULL} if no data is
-#'   loaded). \code{dataEditChanges()} returns the same counts plus the number
-#'   of edited \code{cells} and the \code{total} number of changes, and must be
-#'   called in a reactive context (it updates as the data is edited).
+#'   rows \code{updated}, \code{inserted} and \code{deleted}, the number of
+#'   \code{columns} added, removed or renamed and the \code{log} entries of
+#'   the changes that were saved (\code{NULL} if no data is loaded).
+#'   \code{dataEditChanges()} returns the same counts plus the number of
+#'   edited \code{cells} and the \code{total} number of changes.
+#'   \code{dataEditLog()} returns the change log. Both must be called in a
+#'   reactive context (they update as the data is edited).
 #'
 #' @author Dillon Hammill, \email{dillon.hammill21@gmail.com}
 #'
@@ -644,6 +818,10 @@ dataEditServer <- function(id,
 #'       if (inherits(res, "editr_conflict")) {
 #'         showNotification(conditionMessage(res), type = "error")
 #'       } else {
+#'         # keep a record of who changed what next to the data
+#'         if (nrow(res$log) > 0) {
+#'           DBI::dbWriteTable(con, "cars_log", res$log, append = TRUE)
+#'         }
 #'         showNotification(paste(res$updated, "updated,", res$inserted,
 #'                                "added and", res$deleted, "removed"))
 #'       }
@@ -672,4 +850,15 @@ dataEditChanges <- function(x) {
          call. = FALSE)
   }
   changes()
+}
+
+#' @rdname dataEditCommit
+#' @export
+dataEditLog <- function(x) {
+  log <- attr(x, "log")
+  if (!is.function(log)) {
+    stop("'x' must be the reactive returned by dataEditServer().",
+         call. = FALSE)
+  }
+  log()
 }

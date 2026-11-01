@@ -175,6 +175,8 @@ editr_prepare <- function(x,
   store$factors <- stats::setNames(factors, name_to_cid(names(factors)))
   store$auto_type <- cids[auto]
   store$changed <- character(0)
+  # ROWS ARE NAMED IN THE CHANGE LOG BY THEIR KEY OR ROW NAME
+  store$label_cids <- if (!is.null(db)) name_to_cid(db$key) else rownames_cid
 
   cfg <- list(
     col_edit = isTRUE(col_edit),
@@ -204,17 +206,20 @@ editr_prepare <- function(x,
 #' @param store editor store (modified in place).
 #' @param ops list of ops as received from the browser.
 #' @param cfg editor configuration.
+#' @param label what the grid says the ops are (\code{"paste"} or
+#'   \code{"fill"}), for the change log.
 #'
 #' @return list with \code{patches} to send to the grid, \code{messages} for
 #'   the user and \code{changed} (logical, whether data changed).
 #'
 #' @noRd
-process_ops <- function(store, ops, cfg) {
+process_ops <- function(store, ops, cfg, label = NULL) {
   patches <- list()
   messages <- character(0)
   txn <- list()
   rerender <- FALSE
   changed <- FALSE
+  how <- ops_how(ops, label)
 
   add_patch <- function(method, args) {
     patches[[length(patches) + 1]] <<- list(method = method, args = args)
@@ -229,6 +234,8 @@ process_ops <- function(store, ops, cfg) {
   }
 
   apply_one <- function(op) {
+    # ALL CHANGES OF A BATCH ARE ONE STEP OF THE LOG (AND ONE UNDO)
+    if (length(txn) == 0) store_step(store, how)
     done <- store_apply(store, list(op), record = FALSE)
     txn[[length(txn) + 1]] <<- done[[1]]
     track_ops(store, list(op))
@@ -386,6 +393,26 @@ process_ops <- function(store, ops, cfg) {
   list(patches = patches, messages = messages, changed = changed)
 }
 
+#' How a batch of ops from the grid was made, for the change log
+#' @noRd
+ops_how <- function(ops, label = NULL) {
+  label <- as_scalar(label)
+  if (!is.null(label) && label %in% c("paste", "fill")) {
+    return(label)
+  }
+  types <- vapply(ops, function(o) as.character(as_scalar(o$type) %||% ""),
+                  character(1))
+  if (length(ops) > 0 && all(types == "update")) {
+    values <- unlist(lapply(ops, function(o) {
+      lapply(o$values, function(v) if (length(v) == 0) NA else v[[1]])
+    }))
+    if (length(values) > 1 && all(is.na(values) | values %in% "")) {
+      return("clear")
+    }
+  }
+  "edit"
+}
+
 ## PATCH HELPERS ---------------------------------------------------------------
 
 #' @noRd
@@ -473,7 +500,7 @@ server_ops <- function(store, ops, cfg) {
   if (length(ops) == 0) {
     return(list(patches = list(), changed = FALSE))
   }
-  done <- store_apply(store, ops, record = TRUE)
+  done <- store_apply(store, ops, record = TRUE, how = "revert")
   track_ops(store, ops)
   structural <- vapply(ops, function(o) {
     !o$type %in% c("update", "set_col")
@@ -814,8 +841,14 @@ change_counts <- function(store) {
   original <- store$original
   ids <- state$ids
   orig <- original$ids
-  added <- sum(!ids %in% orig)
-  removed <- sum(!orig %in% ids)
+  if (identical(ids, orig)) {
+    # NO ROWS ADDED OR REMOVED (FAST ON LARGE DATA)
+    added <- 0L
+    removed <- 0L
+  } else {
+    added <- sum(!ids %in% orig)
+    removed <- sum(!orig %in% ids)
+  }
   keys <- store$changed
   cells <- 0L
   edited <- 0L

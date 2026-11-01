@@ -665,9 +665,48 @@ data_edit(mtcars,
           track = "red")
 ```
 
-### 9.3 Change tracking in shiny modules
+### 9.3 History and notes
 
-Change tracking is also available when the data editor is used in your own shiny applications through `dataEditServer()`. `dataEditChanges()` returns a summary of the changes that have not been saved yet, and `dataEditCommit()` saves them, after which the highlights are cleared:
+The `History` tab of the review panel lists every change in the order it was made, newest first: what was changed, by whom (hover over the time) and how, so a paste, a fill, a cleared range, an undo or a revert each show as one step. Undoing a change does not remove it from the history; it is added as a new step, so the history is a complete record of the session.
+
+Click `Add note` under a step to say why the change was made, for example where a corrected value came from. Press `Enter` to save the note or `Escape` to leave it as it was.
+
+```{r, echo = FALSE, fig.align = "center", out.width = "100%"}
+screenshot("history.png")
+```
+
+### 9.4 Keep a change log
+
+Supply the name of a csv file to `log` to keep the history when you press `Done`. Each change becomes one row with the `data` that was edited, the `time`, the `user`, the `step` and `how` it was made, the `action` (`edit`, `add row`, `remove row`, `add column`, `remove column` or `rename column`), the `row` (its row name, or its number in the data you opened), the `column`, the `old` and `new` values and the `note`. New changes are added to the end of the file, so one file can keep the history of every editing session of a dataset or a project:
+
+```{r, eval = FALSE}
+lab <- data_edit("lab_results.csv",
+                 save_as = "lab_results.csv",
+                 log = "lab_results_log.csv")
+
+read.csv("lab_results_log.csv")
+#>               data                     time user step  how action      row column old new                        note
+#> 1 lab_results.csv 2026-11-01 14:02:11+1100  ana    1 edit   edit        3     pH 7.9 7.4 Re-measured, meter recalibrated
+#> 2 lab_results.csv 2026-11-01 14:03:40+1100  ana    2 paste  edit       12   mass 1.2 1.25                            <NA>
+```
+
+`log` can also be a function, which is called with the log as a data frame, for example to write it to a database. Nothing is written when `Cancel` is pressed. The user name is the name you are logged in with; set `options(DataEditR.user = "Your Name")` to record another name.
+
+### 9.5 Unsaved changes are kept
+
+While you edit, `data_edit()` saves your changes as a draft a moment after each change. If the editor is closed without pressing `Done` or `Cancel` (the window was closed by accident, R crashed or the computer restarted), open the same data again and you are offered your unsaved changes:
+
+```{r, echo = FALSE, fig.align = "center", out.width = "100%"}
+screenshot("restore.png")
+```
+
+`Restore changes` brings back the data as you left it, with its history and notes, and each restored step can still be undone. `Discard changes` throws the draft away. Pressing `Cancel` asks before your changes are thrown away.
+
+Drafts are kept in `tools::R_user_dir("DataEditR", "data")` and are removed when you press `Done` or `Cancel`, when they are restored or discarded, and after 30 days. Use `options(DataEditR.drafts = "path/to/folder")` to keep them elsewhere, or `autosave = FALSE` to turn drafts off.
+
+### 9.6 Change tracking in shiny modules
+
+Change tracking is also available when the data editor is used in your own shiny applications through `dataEditServer()`. `dataEditChanges()` returns a summary of the changes that have not been saved yet, `dataEditLog()` returns the change log and `dataEditCommit()` saves the changes (and returns the log of what it saved), after which the highlights are cleared. Set `autosave = TRUE` in `dataEditServer()` to keep drafts for each user of the app:
 
 ```{r, eval = FALSE}
 library(shiny)

@@ -243,6 +243,14 @@ rows as a data frame. Press <code>Cancel</code> to close the editor
 without writing anything.</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">cars_edited</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/pkg/dplyr/man/tbl.html" class="external-link">tbl</a></span><span class="op">(</span><span class="va">con</span>, <span class="st">"cars"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p>To keep a record of who changed which rows, and why, pass a function
+to <code>log</code> that writes the change log to a table in the same
+database. Rows are named by their key in the log, and the notes added in
+the <code>History</code> tab are included:</p>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/pkg/dplyr/man/tbl.html" class="external-link">tbl</a></span><span class="op">(</span><span class="va">con</span>, <span class="st">"cars"</span><span class="op">)</span>,</span>
+<span>          log <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">log</span><span class="op">)</span> <span class="fu">DBI</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/DBI/man/dbWriteTable.html" class="external-link">dbWriteTable</a></span><span class="op">(</span><span class="va">con</span>, <span class="st">"cars_log"</span>, <span class="va">log</span>,</span>
+<span>                                                append <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="when-someone-else-changes-the-data">5. When someone else changes the data<a class="anchor" aria-label="anchor" href="#when-someone-else-changes-the-data"></a>
@@ -258,7 +266,7 @@ many rows conflicted. Close the editor, load the data again to see the
 latest values and redo your edits.</p>
 <p>If you would rather overwrite rows regardless of changes made by
 others, turn the check off with <code>check = FALSE</code>:</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="fu"><a href="../reference/db_table.html">db_table</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/pkg/dplyr/man/tbl.html" class="external-link">tbl</a></span><span class="op">(</span><span class="va">con</span>, <span class="st">"cars"</span><span class="op">)</span>, check <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
@@ -269,10 +277,10 @@ get the <code>dplyr</code> code that makes the same changes to the
 database with <code><a href="https://rdrr.io/pkg/dplyr/man/rows.html" class="external-link">rows_delete()</a></code>, <code><a href="https://rdrr.io/pkg/dplyr/man/rows.html" class="external-link">rows_update()</a></code> and
 <code><a href="https://rdrr.io/pkg/dplyr/man/rows.html" class="external-link">rows_append()</a></code>. The <code>Code</code> tab in the editor
 shows the same code as you edit.</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">cars</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/dplyr/man/tbl.html" class="external-link">tbl</a></span><span class="op">(</span><span class="va">con</span>, <span class="st">"cars"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="va">cars</span>, code <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dplyr.tidyverse.org" class="external-link">dplyr</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">cars</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/dplyr/man/tbl.html" class="external-link">tbl</a></span><span class="op">(</span><span class="va">con</span>, <span class="st">"cars"</span><span class="op">)</span></span>
@@ -296,7 +304,7 @@ changes in a single transaction, raises an error of class
 reads the rows back from the database afterwards.
 <code><a href="../reference/dataEditCommit.html">dataEditChanges()</a></code> summarises what will be written, e.g. to
 enable a <em>Save</em> button or ask for confirmation.</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">server</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">input</span>, <span class="va">output</span>, <span class="va">session</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="va">cars</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dataEdit.html">dataEditServer</a></span><span class="op">(</span><span class="st">"cars"</span>, data <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/dplyr/man/tbl.html" class="external-link">tbl</a></span><span class="op">(</span><span class="va">con</span>, <span class="st">"cars"</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
@@ -305,6 +313,8 @@ enable a <em>Save</em> button or ask for confirmation.</p>
 <span>    <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/class.html" class="external-link">inherits</a></span><span class="op">(</span><span class="va">res</span>, <span class="st">"editr_conflict"</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
 <span>      <span class="fu"><a href="https://rdrr.io/pkg/shiny/man/showNotification.html" class="external-link">showNotification</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/conditions.html" class="external-link">conditionMessage</a></span><span class="op">(</span><span class="va">res</span><span class="op">)</span>, type <span class="op">=</span> <span class="st">"error"</span><span class="op">)</span></span>
 <span>    <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span></span>
+<span>      <span class="co"># who changed what, next to the data</span></span>
+<span>      <span class="fu">DBI</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/DBI/man/dbWriteTable.html" class="external-link">dbWriteTable</a></span><span class="op">(</span><span class="va">con</span>, <span class="st">"cars_log"</span>, <span class="va">res</span><span class="op">$</span><span class="va">log</span>, append <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span>      <span class="fu"><a href="https://rdrr.io/pkg/shiny/man/showNotification.html" class="external-link">showNotification</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span><span class="st">"%d updated, %d added, %d removed"</span>,</span>
 <span>                               <span class="va">res</span><span class="op">$</span><span class="va">updated</span>, <span class="va">res</span><span class="op">$</span><span class="va">inserted</span>, <span class="va">res</span><span class="op">$</span><span class="va">deleted</span><span class="op">)</span><span class="op">)</span></span>
 <span>    <span class="op">}</span></span>
