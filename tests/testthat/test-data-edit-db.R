@@ -85,3 +85,29 @@ test_that("the header describes the kind of data", {
     expect_identical(data_edit(x), x)
   }
 })
+
+test_that("data_edit() returns committed rows with generated keys", {
+  con <- make_cars_db()
+  on.exit(DBI::dbDisconnect(con))
+  mock_gadget(function(session) {
+    session$setInputs(`edit1-grid_ops` = grid_batch(
+      list(type = "insert_rows", ids = list(5), anchor = 4, below = TRUE)
+    ))
+    session$setInputs(`edit1-grid_ops` = grid_batch(op_update("c2", 5, "Mini")))
+    session$setInputs(done = 1, db_commit = 1)
+  })
+  res <- data_edit(dplyr::tbl(con, "cars"), quiet = TRUE)
+  expect_identical(res$id, 1:5)
+  expect_identical(res$model[5], "Mini")
+  # only what was on screen (as loaded before the commit)
+  mock_gadget(function(session) {
+    session$setInputs(`edit1-grid_ops` = grid_batch(op_update("c3", 1, "1")))
+    session$setInputs(`edit1-grid_view` = list(rows = list(1, 2),
+                                               cols = list("c1", "c3")))
+    session$setInputs(return_what = "view")
+    session$setInputs(done = 1, db_commit = 1)
+  })
+  res <- data_edit(dplyr::tbl(con, "cars"), quiet = TRUE)
+  expect_identical(res, data.frame(id = 1:2, mpg = c(1, 21)))
+  expect_identical(DBI::dbGetQuery(con, "SELECT mpg FROM cars")$mpg[1], 1)
+})

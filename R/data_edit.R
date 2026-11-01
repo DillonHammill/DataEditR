@@ -572,7 +572,10 @@ data_edit <- function(x = NULL,
       } else {
         NULL
       }
-      res <- tryCatch(db_commit(db, ed$store), error = function(e) e)
+      # ON-SCREEN ROWS REFER TO THE ROWS BEFORE THE DATABASE IS READ AGAIN
+      on_screen <- !hide && identical(input$return_what, "view")
+      view <- if (on_screen) data_active() else NULL
+      res <- tryCatch(dataEditCommit(data_update), error = function(e) e)
       if (inherits(res, "error")) {
         showModal(modalDialog(
           title = "Commit failed",
@@ -583,7 +586,8 @@ data_edit <- function(x = NULL,
       }
       removeModal()
       session_info$code <- code_text
-      finish(result_now())
+      # ALL DATA IS READ BACK FROM THE DATABASE (INCLUDES GENERATED KEYS)
+      finish(if (on_screen) view else data_update())
     })
   }
 

@@ -681,7 +681,7 @@ server <- function(input, output, session) {
 shinyApp(ui, server)
 ```
 
-See `vignette("shiny-modules", package = "DataEditR")` for the options of the module and how it works with the other modules in **DataEditR**.
+Call `dataEditCommit(edited)` (for example when a *Save* button is pressed) to save the changes; for database tables this writes them to the database. See `vignette("shiny-modules", package = "DataEditR")` for the options of the module, saving changes and how it works with the other modules in **DataEditR**.
 
 ## Summary
 

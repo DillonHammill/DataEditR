@@ -85,10 +85,7 @@ server <- function(input, output, session) {
 }
 ```
 
-The reactive also carries two attributes:
-
-* `attr(cars, "view")` is a reactive returning only the rows and columns on screen (after header filters, hidden columns and the `rows`/`columns` arguments below);
-* `attr(cars, "editor")` is a reactive returning the internal state of the editor (used by `data_edit()` to commit database changes).
+The reactive also carries a `"view"` attribute: `attr(cars, "view")` is a reactive returning only the rows and columns on screen (after header filters, hidden columns and the `rows`/`columns` arguments below).
 
 ### 1.4 Showing part of the data
 
@@ -109,6 +106,75 @@ server <- function(input, output, session) {
     columns = c("mpg", "cyl", "hp", "wt")
   )
 }
+```
+
+### 1.5 Saving changes
+
+Pass the reactive returned by `dataEditServer()` to `dataEditCommit()` to save the changes, typically when the user presses a *Save* button, and to `dataEditChanges()` for a summary of the changes that have not been saved yet:
+
+* for **database tables** the changes are written to the database in a single transaction, exactly as `data_edit()` does when you press *Done*. The rows are then read back from the database, so new rows show the keys the database generated and the editor starts afresh;
+* for **data in your R session** nothing is written, but the current data becomes the new starting point: the review panel, change highlights and the code in the `Code` tab start again from the saved data. Write the data wherever it needs to go in the same observer.
+
+`dataEditChanges()` returns the number of rows `updated`, `inserted` and `deleted`, the number of `columns` added, removed or renamed, the number of edited `cells` and the `total` number of changes. Like any reactive it updates as the data is edited.
+
+```{r}
+library(shiny)
+library(DataEditR)
+
+con <- DBI::dbConnect(RSQLite::SQLite(), "cars.sqlite")
+
+ui <- bslib::page_fluid(
+  shinyjs::useShinyjs(),
+  dataEditUI(
+    "cars",
+    toolbar_right = actionButton("save", "Save", class = "btn-primary")
+  )
+)
+
+server <- function(input, output, session) {
+  cars <- dataEditServer("cars", data = dplyr::tbl(con, "cars"))
+
+  # only enable the button when there is something to save
+  observe({
+    ch <- dataEditChanges(cars)
+    shinyjs::toggleState("save", !is.null(ch) && ch$total > 0)
+  })
+
+  # ask before writing to the database
+  observeEvent(input$save, {
+    ch <- dataEditChanges(cars)
+    showModal(modalDialog(
+      title = "Save changes?",
+      sprintf("%d row(s) updated, %d added and %d removed.",
+              ch$updated, ch$inserted, ch$deleted),
+      footer = tagList(modalButton("Keep editing"),
+                       actionButton("confirm", "Save", class = "btn-primary"))
+    ))
+  })
+
+  observeEvent(input$confirm, {
+    removeModal()
+    res <- tryCatch(dataEditCommit(cars), editr_conflict = function(e) e)
+    if (inherits(res, "editr_conflict")) {
+      showNotification(conditionMessage(res), type = "error", duration = NULL)
+    } else {
+      showNotification("Changes saved")
+    }
+  })
+}
+
+shinyApp(ui, server)
+```
+
+If a row was changed or removed by someone else since it was loaded, `dataEditCommit()` rolls back the whole transaction, writes nothing and raises an error of class `"editr_conflict"`. The changes stay in the editor, so the user can review them and try again. Other errors (e.g. a lost connection) are raised as usual; wrap the call in `tryCatch()` to show them to the user.
+
+For data frames, save the edited data in the same observer:
+
+```{r}
+observeEvent(input$save, {
+  write.csv(cars(), "cars.csv", row.names = FALSE)
+  dataEditCommit(cars)
+})
 ```
 
 ## 2. The other modules

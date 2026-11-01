@@ -74,6 +74,15 @@
   changes are disabled.
 * `code = TRUE` generates `rows_update()`, `rows_append()` and `rows_delete()`
   code for database edits.
+* New `dataEditCommit()` saves the changes made in a `dataEditServer()`
+  editor, so shiny applications can write database edits (in a single
+  transaction, rolled back with an `editr_conflict` error if rows changed in
+  the meantime) and read the rows back with the keys the database generated.
+  For other data the current data becomes the new starting point for the
+  review panel and change tracking. `dataEditChanges()` returns a summary of
+  the changes that have not been saved yet.
+* `data_edit()` returns database rows as read back after the commit, so new
+  rows include their generated keys.
 
 ## Other changes
 
@@ -106,7 +115,7 @@
   and the database backend, with over 95% code coverage.
 * Documentation: new pkgdown articles on editing database tables, using the
   modules in shiny apps and what is new in 2.0, a rewritten user guide with
-  new screenshots, and a new logo.
+  new screenshots, and a new logo with the package name typed into a table.
 
 # DataEditR 1.0.0
 

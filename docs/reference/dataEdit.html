@@ -250,10 +250,12 @@ panel, set to <code>"data"</code> by default.</p></dd>
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     
 
-<p>reactive expression containing the edited data. The reactive also
-carries the attributes <code>"view"</code> (a reactive returning only the rows
-and columns on display) and <code>"editor"</code> (a reactive returning the
-internal editor state, used by <code><a href="data_edit.html">data_edit()</a></code> for database commits).</p>
+<p>reactive expression containing the edited data. Pass it to
+<code><a href="dataEditCommit.html">dataEditCommit</a>()</code> to save the changes (e.g. write them to a
+database) and to <code><a href="dataEditCommit.html">dataEditChanges</a>()</code> for a summary of the
+changes that have not been saved yet. The reactive also carries the
+attribute <code>"view"</code>, a reactive returning only the rows and columns on
+display.</p>
     </div>
     <div class="section level2">
     <h2 id="author">Author<a class="anchor" aria-label="anchor" href="#author"></a></h2>

@@ -130,10 +130,12 @@ panel, set to \code{"data"} by default.}
 \item{...}{not in use.}
 }
 \value{
-reactive expression containing the edited data. The reactive also
-carries the attributes \code{"view"} (a reactive returning only the rows
-and columns on display) and \code{"editor"} (a reactive returning the
-internal editor state, used by \code{data_edit()} for database commits).
+reactive expression containing the edited data. Pass it to
+\code{\link{dataEditCommit}()} to save the changes (e.g. write them to a
+database) and to \code{\link{dataEditChanges}()} for a summary of the
+changes that have not been saved yet. The reactive also carries the
+attribute \code{"view"}, a reactive returning only the rows and columns on
+display.
 }
 \description{
 \code{dataEdit} renders an editable, spreadsheet-like grid built on the

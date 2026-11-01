@@ -193,6 +193,28 @@ rows_append(cars, tibble::tibble(model = c("Ford Escort"), mpg = c(30.1), cyl = 
 
 Tables in other schemas are referred to with `dbplyr::in_schema()` in the generated code.
 
+## 7. Databases in shiny apps
+
+The `dataEdit` module edits database tables in your own shiny applications too. Pass the lazy table (or a `db_table()`) to `dataEditServer()` and call `dataEditCommit()` when the user wants to save; it writes the changes in a single transaction, raises an error of class `"editr_conflict"` if rows were changed by someone else, and reads the rows back from the database afterwards. `dataEditChanges()` summarises what will be written, e.g. to enable a *Save* button or ask for confirmation.
+
+```{r, eval = FALSE}
+server <- function(input, output, session) {
+  cars <- dataEditServer("cars", data = tbl(con, "cars"))
+
+  observeEvent(input$save, {
+    res <- tryCatch(dataEditCommit(cars), editr_conflict = function(e) e)
+    if (inherits(res, "editr_conflict")) {
+      showNotification(conditionMessage(res), type = "error")
+    } else {
+      showNotification(sprintf("%d updated, %d added, %d removed",
+                               res$updated, res$inserted, res$deleted))
+    }
+  })
+}
+```
+
+See `vignette("shiny-modules")` for a complete app with a confirmation dialog.
+
 ```{r, include = FALSE}
 DBI::dbDisconnect(con)
 ```

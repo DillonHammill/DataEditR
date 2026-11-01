@@ -253,6 +253,11 @@ directly to the complete data, so <code>row_index</code> and
 <code>dataSync</code> are no longer needed. The returned reactive
 carries a <code>"view"</code> attribute with only the rows and columns
 on screen.</li>
+<li>New <code><a href="../reference/dataEditCommit.html">dataEditCommit()</a></code> saves the changes made in the
+module: database changes are written in a single transaction and the
+rows read back, and for other data the current data becomes the new
+starting point. <code><a href="../reference/dataEditCommit.html">dataEditChanges()</a></code> summarises the changes
+that have not been saved yet.</li>
 <li>
 <code><a href="../reference/dataFilter.html">dataFilterServer()</a></code> and <code><a href="../reference/dataSelect.html">dataSelectServer()</a></code>
 gain a <code>reset</code> argument and <code><a href="../reference/dataSelect.html">dataSelectServer()</a></code>

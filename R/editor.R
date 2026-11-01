@@ -790,6 +790,21 @@ track_ops <- function(store, ops) {
   invisible(store)
 }
 
+#' Summary of unsaved changes (dataEditChanges() / dataEditCommit())
+#' @noRd
+editr_changes <- function(ed) {
+  if (!is.null(ed$cfg$db)) {
+    ch <- db_changes(ed$store)
+    list(updated = ch$updated, inserted = ch$inserted, deleted = ch$deleted,
+         columns = 0L, cells = sum(lengths(ch$changes$updated)),
+         total = ch$total)
+  } else {
+    ch <- change_counts(ed$store)
+    list(updated = ch$edited, inserted = ch$added, deleted = ch$removed,
+         columns = ch$columns, cells = ch$cells, total = ch$items)
+  }
+}
+
 #' Change counts for the status line and review badge (cheap)
 #' @noRd
 change_counts <- function(store) {

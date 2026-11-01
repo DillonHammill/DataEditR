@@ -281,6 +281,35 @@ shows the same code as you edit.</p>
 <p>Tables in other schemas are referred to with
 <code><a href="https://rdrr.io/pkg/dbplyr/man/in_schema.html" class="external-link">dbplyr::in_schema()</a></code> in the generated code.</p>
 </div>
+<div class="section level2">
+<h2 id="databases-in-shiny-apps">7. Databases in shiny apps<a class="anchor" aria-label="anchor" href="#databases-in-shiny-apps"></a>
+</h2>
+<p>The <code>dataEdit</code> module edits database tables in your own
+shiny applications too. Pass the lazy table (or a
+<code><a href="../reference/db_table.html">db_table()</a></code>) to <code><a href="../reference/dataEdit.html">dataEditServer()</a></code> and call
+<code><a href="../reference/dataEditCommit.html">dataEditCommit()</a></code> when the user wants to save; it writes the
+changes in a single transaction, raises an error of class
+<code>"editr_conflict"</code> if rows were changed by someone else, and
+reads the rows back from the database afterwards.
+<code><a href="../reference/dataEditCommit.html">dataEditChanges()</a></code> summarises what will be written, e.g. to
+enable a <em>Save</em> button or ask for confirmation.</p>
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">server</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">input</span>, <span class="va">output</span>, <span class="va">session</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="va">cars</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dataEdit.html">dataEditServer</a></span><span class="op">(</span><span class="st">"cars"</span>, data <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/dplyr/man/tbl.html" class="external-link">tbl</a></span><span class="op">(</span><span class="va">con</span>, <span class="st">"cars"</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/pkg/shiny/man/observeEvent.html" class="external-link">observeEvent</a></span><span class="op">(</span><span class="va">input</span><span class="op">$</span><span class="va">save</span>, <span class="op">{</span></span>
+<span>    <span class="va">res</span> <span class="op">&lt;-</span> <span class="kw"><a href="https://rdrr.io/r/base/conditions.html" class="external-link">tryCatch</a></span><span class="op">(</span><span class="fu"><a href="../reference/dataEditCommit.html">dataEditCommit</a></span><span class="op">(</span><span class="va">cars</span><span class="op">)</span>, editr_conflict <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">e</span><span class="op">)</span> <span class="va">e</span><span class="op">)</span></span>
+<span>    <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/class.html" class="external-link">inherits</a></span><span class="op">(</span><span class="va">res</span>, <span class="st">"editr_conflict"</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
+<span>      <span class="fu"><a href="https://rdrr.io/pkg/shiny/man/showNotification.html" class="external-link">showNotification</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/conditions.html" class="external-link">conditionMessage</a></span><span class="op">(</span><span class="va">res</span><span class="op">)</span>, type <span class="op">=</span> <span class="st">"error"</span><span class="op">)</span></span>
+<span>    <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span></span>
+<span>      <span class="fu"><a href="https://rdrr.io/pkg/shiny/man/showNotification.html" class="external-link">showNotification</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span><span class="st">"%d updated, %d added, %d removed"</span>,</span>
+<span>                               <span class="va">res</span><span class="op">$</span><span class="va">updated</span>, <span class="va">res</span><span class="op">$</span><span class="va">inserted</span>, <span class="va">res</span><span class="op">$</span><span class="va">deleted</span><span class="op">)</span><span class="op">)</span></span>
+<span>    <span class="op">}</span></span>
+<span>  <span class="op">}</span><span class="op">)</span></span>
+<span><span class="op">}</span></span></code></pre></div>
+<p>See <code><a href="../articles/shiny-modules.html">vignette("shiny-modules")</a></code> for a complete app with a
+confirmation dialog.</p>
+</div>
   </main><aside class="col-md-3"><nav id="toc"><h2>On this page</h2>
     </nav></aside>
 </div>

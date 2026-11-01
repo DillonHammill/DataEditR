@@ -332,7 +332,7 @@ db_commit <- function(db, store) {
       }
       n <- DBI::dbExecute(con, sql, params = params)
       if (n != nrow(rows)) {
-        stop(db_conflict_message(nrow(rows) - n, "deleted"), call. = FALSE)
+        stop(editr_conflict(db_conflict_message(nrow(rows) - n, "deleted")))
       }
     }
 
@@ -372,8 +372,8 @@ db_commit <- function(db, store) {
         }
         n <- DBI::dbExecute(con, sql, params = params)
         if (n != length(group)) {
-          stop(db_conflict_message(length(group) - n, "updated"),
-               call. = FALSE)
+          stop(editr_conflict(db_conflict_message(length(group) - n,
+                                                  "updated")))
         }
       }
     }
@@ -444,6 +444,15 @@ db_null_safe_eq <- function(con) {
   } else {
     " IS NOT DISTINCT FROM "
   }
+}
+
+#' Error raised when rows changed in the database since they were loaded
+#' @noRd
+editr_conflict <- function(message) {
+  structure(
+    class = c("editr_conflict", "error", "condition"),
+    list(message = message, call = NULL)
+  )
 }
 
 #' @noRd

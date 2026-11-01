@@ -88,6 +88,9 @@
 <code><a href="../reference/data_edit.html">data_edit()</a></code> and <code><a href="../reference/dataEdit.html">dataEditServer()</a></code> accept <code>dbplyr</code> lazy tables (e.g. <code>data_edit(tbl(con, "artists"))</code>, optionally filtered), or a <code><a href="../reference/db_table.html">db_table()</a></code>. Rows are matched by primary key (detected for SQLite, DuckDB and PostgreSQL), edits are staged until <em>Done</em>, the user confirms a summary, and changes are written in a single transaction with optimistic concurrency checks (the commit is rolled back if any row changed in the database since it was loaded). Columns that are not part of the table are read-only and schema changes are disabled.</li>
 <li>
 <code>code = TRUE</code> generates <code><a href="https://rdrr.io/pkg/dplyr/man/rows.html" class="external-link">rows_update()</a></code>, <code><a href="https://rdrr.io/pkg/dplyr/man/rows.html" class="external-link">rows_append()</a></code> and <code><a href="https://rdrr.io/pkg/dplyr/man/rows.html" class="external-link">rows_delete()</a></code> code for database edits.</li>
+<li>New <code><a href="../reference/dataEditCommit.html">dataEditCommit()</a></code> saves the changes made in a <code><a href="../reference/dataEdit.html">dataEditServer()</a></code> editor, so shiny applications can write database edits (in a single transaction, rolled back with an <code>editr_conflict</code> error if rows changed in the meantime) and read the rows back with the keys the database generated. For other data the current data becomes the new starting point for the review panel and change tracking. <code><a href="../reference/dataEditCommit.html">dataEditChanges()</a></code> returns a summary of the changes that have not been saved yet.</li>
+<li>
+<code><a href="../reference/data_edit.html">data_edit()</a></code> returns database rows as read back after the commit, so new rows include their generated keys.</li>
 </ul></div>
 <div class="section level3">
 <h3 id="other-changes-2-0-0">Other changes<a class="anchor" aria-label="anchor" href="#other-changes-2-0-0"></a></h3>
@@ -115,7 +118,7 @@
 <li>Database tables built from raw SQL queries give a clear error asking for <code>db_table(x, table = , key = )</code>, and factor values are written as text.</li>
 <li>The RStudio add-in returns the highlighted data when cancelled and accepts any object with dimensions or a database table.</li>
 <li>Test suite covers the gadget, the shiny modules (with <code><a href="https://rdrr.io/pkg/shiny/man/testServer.html" class="external-link">shiny::testServer()</a></code>) and the database backend, with over 95% code coverage.</li>
-<li>Documentation: new pkgdown articles on editing database tables, using the modules in shiny apps and what is new in 2.0, a rewritten user guide with new screenshots, and a new logo.</li>
+<li>Documentation: new pkgdown articles on editing database tables, using the modules in shiny apps and what is new in 2.0, a rewritten user guide with new screenshots, and a new logo with the package name typed into a table.</li>
 </ul></div>
 </div>
     <div class="section level2">

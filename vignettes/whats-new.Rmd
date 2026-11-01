@@ -79,6 +79,7 @@ If you used earlier versions of **DataEditR**, this is where the controls of the
 
 * `dataEditUI()` gains `height`, `toolbar`, `toolbar_left` and `toolbar_right` arguments to control the layout around the grid.
 * `dataEditServer()` gains `rows` and `columns` arguments to show part of the data; edits apply directly to the complete data, so `row_index` and `dataSync` are no longer needed. The returned reactive carries a `"view"` attribute with only the rows and columns on screen.
+* New `dataEditCommit()` saves the changes made in the module: database changes are written in a single transaction and the rows read back, and for other data the current data becomes the new starting point. `dataEditChanges()` summarises the changes that have not been saved yet.
 * `dataFilterServer()` and `dataSelectServer()` gain a `reset` argument and `dataSelectServer()` returns the selected column `names`.
 
 See `vignette("shiny-modules")` for examples, and the [changelog](https://dillonhammill.github.io/DataEditR/news/index.html) for the full list of changes.

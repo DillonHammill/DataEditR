@@ -191,17 +191,10 @@ like any other reactive:</p>
 <span>    content <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">file</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/utils/write.table.html" class="external-link">write.csv</a></span><span class="op">(</span><span class="fu">cars</span><span class="op">(</span><span class="op">)</span>, <span class="va">file</span><span class="op">)</span></span>
 <span>  <span class="op">)</span></span>
 <span><span class="op">}</span></span></code></pre></div>
-<p>The reactive also carries two attributes:</p>
-<ul>
-<li>
-<code>attr(cars, "view")</code> is a reactive returning only the
-rows and columns on screen (after header filters, hidden columns and the
-<code>rows</code>/<code>columns</code> arguments below);</li>
-<li>
-<code>attr(cars, "editor")</code> is a reactive returning the
-internal state of the editor (used by <code><a href="../reference/data_edit.html">data_edit()</a></code> to commit
-database changes).</li>
-</ul>
+<p>The reactive also carries a <code>"view"</code> attribute:
+<code>attr(cars, "view")</code> is a reactive returning only the rows
+and columns on screen (after header filters, hidden columns and the
+<code>rows</code>/<code>columns</code> arguments below).</p>
 </div>
 <div class="section level3">
 <h3 id="showing-part-of-the-data">1.4 Showing part of the data<a class="anchor" aria-label="anchor" href="#showing-part-of-the-data"></a>
@@ -227,6 +220,91 @@ what the returned reactive contains.</p>
 <span>    columns <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"mpg"</span>, <span class="st">"cyl"</span>, <span class="st">"hp"</span>, <span class="st">"wt"</span><span class="op">)</span></span>
 <span>  <span class="op">)</span></span>
 <span><span class="op">}</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="saving-changes">1.5 Saving changes<a class="anchor" aria-label="anchor" href="#saving-changes"></a>
+</h3>
+<p>Pass the reactive returned by <code><a href="../reference/dataEdit.html">dataEditServer()</a></code> to
+<code><a href="../reference/dataEditCommit.html">dataEditCommit()</a></code> to save the changes, typically when the
+user presses a <em>Save</em> button, and to
+<code><a href="../reference/dataEditCommit.html">dataEditChanges()</a></code> for a summary of the changes that have
+not been saved yet:</p>
+<ul>
+<li>for <strong>database tables</strong> the changes are written to the
+database in a single transaction, exactly as <code><a href="../reference/data_edit.html">data_edit()</a></code>
+does when you press <em>Done</em>. The rows are then read back from the
+database, so new rows show the keys the database generated and the
+editor starts afresh;</li>
+<li>for <strong>data in your R session</strong> nothing is written, but
+the current data becomes the new starting point: the review panel,
+change highlights and the code in the <code>Code</code> tab start again
+from the saved data. Write the data wherever it needs to go in the same
+observer.</li>
+</ul>
+<p><code><a href="../reference/dataEditCommit.html">dataEditChanges()</a></code> returns the number of rows
+<code>updated</code>, <code>inserted</code> and <code>deleted</code>,
+the number of <code>columns</code> added, removed or renamed, the number
+of edited <code>cells</code> and the <code>total</code> number of
+changes. Like any reactive it updates as the data is edited.</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://shiny.posit.co/" class="external-link">shiny</a></span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dillonhammill.github.io/DataEditR/">DataEditR</a></span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">con</span> <span class="op">&lt;-</span> <span class="fu">DBI</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/DBI/man/dbConnect.html" class="external-link">dbConnect</a></span><span class="op">(</span><span class="fu">RSQLite</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/RSQLite/man/SQLite.html" class="external-link">SQLite</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"cars.sqlite"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">ui</span> <span class="op">&lt;-</span> <span class="fu">bslib</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/bslib/man/page.html" class="external-link">page_fluid</a></span><span class="op">(</span></span>
+<span>  <span class="fu">shinyjs</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/shinyjs/man/useShinyjs.html" class="external-link">useShinyjs</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="../reference/dataEdit.html">dataEditUI</a></span><span class="op">(</span></span>
+<span>    <span class="st">"cars"</span>,</span>
+<span>    toolbar_right <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/shiny/man/actionButton.html" class="external-link">actionButton</a></span><span class="op">(</span><span class="st">"save"</span>, <span class="st">"Save"</span>, class <span class="op">=</span> <span class="st">"btn-primary"</span><span class="op">)</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">server</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">input</span>, <span class="va">output</span>, <span class="va">session</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="va">cars</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dataEdit.html">dataEditServer</a></span><span class="op">(</span><span class="st">"cars"</span>, data <span class="op">=</span> <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/dplyr/man/tbl.html" class="external-link">tbl</a></span><span class="op">(</span><span class="va">con</span>, <span class="st">"cars"</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span>  <span class="co"># only enable the button when there is something to save</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/pkg/shiny/man/observe.html" class="external-link">observe</a></span><span class="op">(</span><span class="op">{</span></span>
+<span>    <span class="va">ch</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dataEditCommit.html">dataEditChanges</a></span><span class="op">(</span><span class="va">cars</span><span class="op">)</span></span>
+<span>    <span class="fu">shinyjs</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/shinyjs/man/stateFuncs.html" class="external-link">toggleState</a></span><span class="op">(</span><span class="st">"save"</span>, <span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/NULL.html" class="external-link">is.null</a></span><span class="op">(</span><span class="va">ch</span><span class="op">)</span> <span class="op">&amp;&amp;</span> <span class="va">ch</span><span class="op">$</span><span class="va">total</span> <span class="op">&gt;</span> <span class="fl">0</span><span class="op">)</span></span>
+<span>  <span class="op">}</span><span class="op">)</span></span>
+<span></span>
+<span>  <span class="co"># ask before writing to the database</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/pkg/shiny/man/observeEvent.html" class="external-link">observeEvent</a></span><span class="op">(</span><span class="va">input</span><span class="op">$</span><span class="va">save</span>, <span class="op">{</span></span>
+<span>    <span class="va">ch</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dataEditCommit.html">dataEditChanges</a></span><span class="op">(</span><span class="va">cars</span><span class="op">)</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/pkg/shiny/man/showModal.html" class="external-link">showModal</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/pkg/shiny/man/modalDialog.html" class="external-link">modalDialog</a></span><span class="op">(</span></span>
+<span>      title <span class="op">=</span> <span class="st">"Save changes?"</span>,</span>
+<span>      <span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span><span class="st">"%d row(s) updated, %d added and %d removed."</span>,</span>
+<span>              <span class="va">ch</span><span class="op">$</span><span class="va">updated</span>, <span class="va">ch</span><span class="op">$</span><span class="va">inserted</span>, <span class="va">ch</span><span class="op">$</span><span class="va">deleted</span><span class="op">)</span>,</span>
+<span>      footer <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/htmltools/man/tagList.html" class="external-link">tagList</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/pkg/shiny/man/modalDialog.html" class="external-link">modalButton</a></span><span class="op">(</span><span class="st">"Keep editing"</span><span class="op">)</span>,</span>
+<span>                       <span class="fu"><a href="https://rdrr.io/pkg/shiny/man/actionButton.html" class="external-link">actionButton</a></span><span class="op">(</span><span class="st">"confirm"</span>, <span class="st">"Save"</span>, class <span class="op">=</span> <span class="st">"btn-primary"</span><span class="op">)</span><span class="op">)</span></span>
+<span>    <span class="op">)</span><span class="op">)</span></span>
+<span>  <span class="op">}</span><span class="op">)</span></span>
+<span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/pkg/shiny/man/observeEvent.html" class="external-link">observeEvent</a></span><span class="op">(</span><span class="va">input</span><span class="op">$</span><span class="va">confirm</span>, <span class="op">{</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/pkg/shiny/man/showModal.html" class="external-link">removeModal</a></span><span class="op">(</span><span class="op">)</span></span>
+<span>    <span class="va">res</span> <span class="op">&lt;-</span> <span class="kw"><a href="https://rdrr.io/r/base/conditions.html" class="external-link">tryCatch</a></span><span class="op">(</span><span class="fu"><a href="../reference/dataEditCommit.html">dataEditCommit</a></span><span class="op">(</span><span class="va">cars</span><span class="op">)</span>, editr_conflict <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">e</span><span class="op">)</span> <span class="va">e</span><span class="op">)</span></span>
+<span>    <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/class.html" class="external-link">inherits</a></span><span class="op">(</span><span class="va">res</span>, <span class="st">"editr_conflict"</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
+<span>      <span class="fu"><a href="https://rdrr.io/pkg/shiny/man/showNotification.html" class="external-link">showNotification</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/conditions.html" class="external-link">conditionMessage</a></span><span class="op">(</span><span class="va">res</span><span class="op">)</span>, type <span class="op">=</span> <span class="st">"error"</span>, duration <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
+<span>    <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span></span>
+<span>      <span class="fu"><a href="https://rdrr.io/pkg/shiny/man/showNotification.html" class="external-link">showNotification</a></span><span class="op">(</span><span class="st">"Changes saved"</span><span class="op">)</span></span>
+<span>    <span class="op">}</span></span>
+<span>  <span class="op">}</span><span class="op">)</span></span>
+<span><span class="op">}</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/pkg/shiny/man/shinyApp.html" class="external-link">shinyApp</a></span><span class="op">(</span><span class="va">ui</span>, <span class="va">server</span><span class="op">)</span></span></code></pre></div>
+<p>If a row was changed or removed by someone else since it was loaded,
+<code><a href="../reference/dataEditCommit.html">dataEditCommit()</a></code> rolls back the whole transaction, writes
+nothing and raises an error of class <code>"editr_conflict"</code>. The
+changes stay in the editor, so the user can review them and try again.
+Other errors (e.g. a lost connection) are raised as usual; wrap the call
+in <code><a href="https://rdrr.io/r/base/conditions.html" class="external-link">tryCatch()</a></code> to show them to the user.</p>
+<p>For data frames, save the edited data in the same observer:</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/pkg/shiny/man/observeEvent.html" class="external-link">observeEvent</a></span><span class="op">(</span><span class="va">input</span><span class="op">$</span><span class="va">save</span>, <span class="op">{</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/utils/write.table.html" class="external-link">write.csv</a></span><span class="op">(</span><span class="fu">cars</span><span class="op">(</span><span class="op">)</span>, <span class="st">"cars.csv"</span>, row.names <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="../reference/dataEditCommit.html">dataEditCommit</a></span><span class="op">(</span><span class="va">cars</span><span class="op">)</span></span>
+<span><span class="op">}</span><span class="op">)</span></span></code></pre></div>
 </div>
 </div>
 <div class="section level2">
@@ -280,7 +358,7 @@ function</td>
 <code>rows</code> and <code>columns</code> arguments of
 <code><a href="../reference/dataEdit.html">dataEditServer()</a></code>, so there is no need for
 <code>dataSync</code>:</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://shiny.posit.co/" class="external-link">shiny</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://deanattali.com/shinyjs/" class="external-link">shinyjs</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dillonhammill.github.io/DataEditR/">DataEditR</a></span><span class="op">)</span></span>

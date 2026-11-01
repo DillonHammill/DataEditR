@@ -87,7 +87,8 @@ tidyverse-style code that reproduces your edits.
   tidyverse-style code that reproduces your edits (`data_code()`)
 - support for custom themes through the `bslib` package
 - customisable user interface (title, logo, menus)
-- shiny modules to use the data editor in your own applications
+- shiny modules to use the data editor in your own applications, with
+  `dataEditCommit()` to save changes (including to databases)
 
 #### Data editing features:
 
