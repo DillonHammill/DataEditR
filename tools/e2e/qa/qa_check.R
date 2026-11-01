@@ -306,6 +306,13 @@ if (scenario == "df") {
   saved <- read.csv(file.path(out, "rsvp.csv"), row.names = 1)
   same(saved, e, "save_as written by Done")
 
+} else if (scenario == "db_rows") {
+  db <- result$db
+  check(db$delay[1] == 1000, "edit saved before other rows were loaded")
+  dl <- db[db$carrier == "DL" & db$delay < 0, ]
+  check(nrow(dl) == 1 && dl$delay == -1, "edit to the loaded rows committed")
+  check(nrow(result$result) == 20, "the loaded rows are returned")
+
 } else if (scenario == "db") {
   before <- read("db_before.rds")
   db <- result$db

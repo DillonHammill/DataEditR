@@ -53,6 +53,23 @@
   no longer converted to numbers. Dates stay dates, and matrices, tibbles and
   data.tables are returned with their original class.
 
+## Tables too big to load
+
+* Database tables no longer have to fit in memory: at most 100,000 rows are
+  loaded at a time (`db_table(limit = )`, default
+  `getOption("DataEditR.db_rows", 100000)`; it was all rows). The header and
+  a new **Rows** button in the toolbar show how many rows are loaded out of
+  how many there are.
+* **Rows** loads other rows: those matching a filter written like
+  `dplyr::filter()` (translated to SQL by dbplyr, limited to columns and the
+  functions formulas may use), sorted by a column, at most a number of rows.
+  The dialog counts the matching rows first, and unsaved changes are saved
+  to the database or discarded before other rows are loaded.
+* Queries that cannot be written back (SQL, joins, tables without a primary
+  key, e.g. Parquet files read by DuckDB) are opened read-only instead of
+  failing; `db_table(readonly = FALSE)` still stops with an error, and
+  `readonly = TRUE` opens any table read-only.
+
 ## Labelled data (SPSS, Stata and SAS)
 
 * SPSS (`.sav`, `.por`), Stata (`.dta`) and SAS (`.sas7bdat`, `.xpt`) files

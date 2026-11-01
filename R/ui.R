@@ -18,6 +18,7 @@ editr_icon <- function(name, size = 16) {
     review = '<path d="M3 6h11M3 12h11M3 18h7"/><path d="m15 17 2 2 4-4"/>',
     code = '<path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/>',
     download = '<path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/>',
+    database = '<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/>',
     upload = '<path d="M12 21V9"/><path d="m7 14 5-5 5 5"/><path d="M5 3h14"/>',
     open = '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v1"/><path d="M3 19 5.6 11.4A2 2 0 0 1 7.5 10H21l-2.6 7.6a2 2 0 0 1-1.9 1.4H3z"/>',
     chevron = '<path d="m6 9 6 6 6-6"/>',

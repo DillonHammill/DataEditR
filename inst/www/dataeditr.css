@@ -331,9 +331,11 @@
   }
 }
 
-/* filter chips need the room in wider editors too */
+/* filter chips and the Rows button of database tables need the room in
+   wider editors too */
 @container (max-width: 1300px) {
-  .editr-toolbar:has(.editr-chips:not(:empty)) .editr-tool-collapse .editr-tool-label {
+  .editr-toolbar:has(.editr-chips:not(:empty)) .editr-tool-collapse .editr-tool-label,
+  .editr-toolbar:has(.editr-rows-btn:not([hidden])) .editr-tool-collapse .editr-tool-label {
     position: absolute;
     width: 1px;
     height: 1px;
@@ -341,7 +343,8 @@
     clip: rect(0 0 0 0);
     white-space: nowrap;
   }
-  .editr-toolbar:has(.editr-chips:not(:empty)) .btn.editr-tool.editr-tool-collapse {
+  .editr-toolbar:has(.editr-chips:not(:empty)) .btn.editr-tool.editr-tool-collapse,
+  .editr-toolbar:has(.editr-rows-btn:not([hidden])) .btn.editr-tool.editr-tool-collapse {
     padding: 0 10px;
   }
 }
@@ -1022,4 +1025,19 @@ button.editr-change-title:hover {
   margin-left: 6px;
   color: #7B8794;
   font-weight: 400;
+}
+
+/* database tables: the Rows button (filtered rows are highlighted) and the
+   Load rows dialog */
+.editr-toolbar .btn.editr-tool.editr-tool-on {
+  border-color: #2563EB;
+  color: #1E3A8A;
+}
+
+.editr-load-row {
+  align-items: end;
+}
+
+.editr-load-row .form-group {
+  margin-bottom: 0;
 }

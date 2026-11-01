@@ -15,6 +15,13 @@
 #' whole commit is rolled back and nothing is written. Adding, removing and
 #' renaming columns is disabled for database tables.
 #'
+#' Tables do not have to fit in memory: at most \code{limit} rows are loaded
+#' at a time, and \emph{Rows} in the toolbar loads other rows (those matching
+#' a filter, in a chosen order), with the filter and sorting done by the
+#' database. Queries that cannot be written back (SQL, joins, or tables
+#' without a primary key, e.g. \code{read_parquet()} with DuckDB) are opened
+#' read-only, so large files can still be explored.
+#'
 #' @param x a \code{dbplyr} lazy table (e.g. \code{dplyr::tbl(con, "artists")},
 #'   optionally with \code{filter()}, \code{select()} or \code{arrange()}
 #'   applied) or a \code{DBI} connection.
@@ -24,12 +31,17 @@
 #' @param key name(s) of the column(s) that uniquely identify each row. When
 #'   \code{NULL} the primary key is detected for SQLite, DuckDB and PostgreSQL
 #'   databases.
-#' @param limit maximum number of rows to load into the editor, set to
-#'   \code{Inf} by default. Use \code{dplyr::filter()} on the lazy table to
-#'   choose which rows to edit.
+#' @param limit maximum number of rows to load into the editor at a time, set
+#'   to \code{getOption("DataEditR.db_rows", 100000)} by default. Use
+#'   \code{dplyr::filter()} on the lazy table, or \emph{Rows} in the editor,
+#'   to choose which rows to load.
 #' @param check logical indicating whether updates and deletes should verify
 #'   that rows have not changed in the database since they were loaded
 #'   (optimistic concurrency), set to \code{TRUE} by default.
+#' @param readonly \code{TRUE} to open the table read-only, \code{FALSE} to
+#'   stop with an error when it cannot be written to. Set to \code{NULL} by
+#'   default to open queries that cannot be written to (SQL, joins, tables
+#'   without a primary key) read-only.
 #'
 #' @return an object of class \code{editr_db_table} to pass to
 #'   \code{data_edit()} or \code{dataEditServer()}.
@@ -55,13 +67,15 @@
 db_table <- function(x,
                      table = NULL,
                      key = NULL,
-                     limit = Inf,
-                     check = TRUE) {
+                     limit = NULL,
+                     check = TRUE,
+                     readonly = NULL) {
   if (inherits(x, "editr_db_table")) {
     return(x)
   }
   editr_require("DBI", "edit database tables")
   query <- NULL
+  why <- NULL # WHY THE TABLE CANNOT BE WRITTEN TO
   if (inherits(x, "DBIConnection")) {
     con <- x
     if (is.null(table)) {
@@ -73,36 +87,49 @@ db_table <- function(x,
     con <- dbplyr::remote_con(x)
     query <- x
     if (is.null(table)) {
-      table <- db_base_table(x, con)
+      table <- tryCatch(db_base_table(x, con), error = function(e) {
+        why <<- conditionMessage(e)
+        NULL
+      })
     }
   } else {
     stop("'x' must be a dbplyr lazy table or a DBI connection.", call. = FALSE)
   }
-  fields <- DBI::dbListFields(con, table)
-  if (is.null(key)) {
-    key <- db_primary_key(con, table)
-  }
-  if (length(key) == 0) {
-    stop(
-      "Could not detect a primary key for table '", db_table_label(table),
-      "'. Supply the column(s) that uniquely identify each row through ",
-      "`db_table(x, key = ...)`.",
-      call. = FALSE
-    )
-  }
-  if (!all(key %in% fields)) {
+  if (isTRUE(readonly) && is.null(why)) why <- "Opened read-only."
+  fields <- if (!is.null(table)) DBI::dbListFields(con, table) else colnames(query)
+  if (!is.null(key) && !all(key %in% fields)) {
     stop("Key column(s) not found in table: ",
          paste(setdiff(key, fields), collapse = ", "), call. = FALSE)
+  }
+  if (is.null(why) && is.null(key)) {
+    key <- db_primary_key(con, table)
+  }
+  if (is.null(why) && length(key) == 0) {
+    why <- paste0(
+      "Could not detect a primary key for table '", db_table_label(table),
+      "'. Supply the column(s) that uniquely identify each row through ",
+      "`db_table(x, key = ...)`."
+    )
+  }
+  if (!is.null(why) && isFALSE(readonly)) {
+    stop(why, call. = FALSE)
   }
   structure(
     list(
       con = con,
       table = table,
-      key = key,
+      key = if (is.null(why)) key else NULL,
       fields = fields,
       query = query,
-      limit = limit,
-      check = isTRUE(check)
+      limit = limit %||% getOption("DataEditR.db_rows", 100000),
+      check = isTRUE(check),
+      readonly = !is.null(why),
+      why = why,
+      # ROWS ARE LOADED FROM THE QUERY AS GIVEN, FILTERED AND SORTED IN THE
+      # EDITOR (SEE db_window())
+      filter = NULL,
+      sort = NULL,
+      desc = FALSE
     ),
     class = "editr_db_table"
   )
@@ -120,9 +147,12 @@ editr_require <- function(pkg, what) {
 #' @export
 print.editr_db_table <- function(x, ...) {
   cat("<editr_db_table>\n")
-  cat("  table: ", db_table_label(x$table), "\n", sep = "")
-  cat("  key:   ", paste(x$key, collapse = ", "), "\n", sep = "")
-  cat("  check: ", x$check, "\n", sep = "")
+  cat("  table: ", if (is.null(x$table)) "(query)" else db_table_label(x$table),
+      if (isTRUE(x$readonly)) " (read-only)", "\n", sep = "")
+  if (!isTRUE(x$readonly)) {
+    cat("  key:   ", paste(x$key, collapse = ", "), "\n", sep = "")
+    cat("  check: ", x$check, "\n", sep = "")
+  }
   invisible(x)
 }
 
@@ -261,11 +291,81 @@ db_primary_key <- function(con, table) {
   as.character(key)
 }
 
+#' The query rows are loaded from: the table or query given, with the filter
+#' and order chosen in the editor (NULL without dbplyr)
+#'
+#' @param sorted whether to sort (counting does not need it).
+#'
+#' @noRd
+db_window_query <- function(db, sorted = TRUE) {
+  q <- db$query
+  if (is.null(q)) {
+    if (is.null(db$filter) && is.null(db$sort)) return(NULL)
+    editr_require("dbplyr", "load rows by a filter")
+    q <- dplyr::tbl(db$con, db$table)
+  }
+  if (!is.null(db$filter)) {
+    expr <- formula_parse(db$filter)
+    formula_check(expr, colnames(q))
+    q <- dplyr::filter(q, !!expr)
+  }
+  if (sorted && !is.null(db$sort)) {
+    col <- rlang::sym(db$sort)
+    q <- if (isTRUE(db$desc)) dplyr::arrange(q, dplyr::desc(!!col)) else dplyr::arrange(q, !!col)
+  }
+  q
+}
+
+#' Number of rows of the table or query (with the filter chosen in the editor)
+#' @noRd
+db_count <- function(db) {
+  q <- db_window_query(db, sorted = FALSE)
+  n <- if (is.null(q)) {
+    DBI::dbGetQuery(db$con, paste0("SELECT COUNT(*) AS n FROM ",
+                                   DBI::dbQuoteIdentifier(db$con, db$table)))[[1]]
+  } else {
+    dplyr::pull(dplyr::collect(dplyr::count(q)), 1)
+  }
+  as.numeric(n)
+}
+
+#' Rows to load from a database table: those matching a filter (an R
+#' expression translated to SQL by dbplyr, using columns and the functions
+#' formulas may use), in the order of a column, at most limit
+#'
+#' @return the editr_db_table, set to load these rows.
+#'
+#' @noRd
+db_window <- function(db, filter = NULL, sort = NULL, desc = FALSE,
+                      limit = db$limit) {
+  filter <- trimws(paste(as.character(filter %||% ""), collapse = "\n"))
+  db$filter <- if (nzchar(filter)) filter else NULL
+  sort <- as.character(sort %||% "")
+  if (nzchar(sort) && !sort %in% db$fields) {
+    stop("There is no column called '", sort, "'.", call. = FALSE)
+  }
+  db$sort <- if (nzchar(sort)) sort else NULL
+  db$desc <- isTRUE(desc)
+  limit <- suppressWarnings(as.numeric(limit))
+  if (length(limit) != 1 || is.na(limit) || limit < 1) {
+    stop("Load at least one row.", call. = FALSE)
+  }
+  db$limit <- floor(limit)
+  # CHECK THE FILTER NOW (dbplyr TRANSLATES IT WHEN ROWS ARE LOADED)
+  db_window_query(db)
+  db
+}
+
 #' Load rows from the database
+#'
+#' @return a data frame, with the number of rows of the table or query in
+#'   attribute \code{"db_total"}.
+#'
 #' @noRd
 db_collect <- function(db) {
-  if (!is.null(db$query)) {
-    data <- dplyr::collect(db$query, n = db$limit)
+  q <- db_window_query(db)
+  if (!is.null(q)) {
+    data <- dplyr::collect(q, n = db$limit)
   } else if (is.finite(db$limit)) {
     sql <- paste0(
       "SELECT * FROM ", DBI::dbQuoteIdentifier(db$con, db$table),
@@ -276,6 +376,10 @@ db_collect <- function(db) {
     data <- DBI::dbReadTable(db$con, db$table)
   }
   data <- as.data.frame(data, stringsAsFactors = FALSE)
+  # ONLY COUNTED WHEN THERE MAY BE MORE ROWS THAN WERE LOADED
+  total <- if (nrow(data) < db$limit) nrow(data) else db_count(db)
+  attr(data, "db_total") <- total
+  if (isTRUE(db$readonly)) return(data)
   missing_key <- setdiff(db$key, names(data))
   if (length(missing_key) > 0) {
     stop("The key column(s) ", paste(missing_key, collapse = ", "),
@@ -314,6 +418,10 @@ db_changes <- function(store) {
 #'
 #' @noRd
 db_commit <- function(db, store) {
+  if (isTRUE(db$readonly)) {
+    stop("The table was opened read-only; nothing can be written to it.",
+         call. = FALSE)
+  }
   con <- db$con
   state <- store$state
   original <- store$original

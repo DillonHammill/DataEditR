@@ -35,9 +35,20 @@ editr_prepare <- function(x,
   if (is_db_input(x)) {
     db <- as_db_table(x)
     x <- db_collect(db)
-    if (!isFALSE(col_edit) && !quiet) {
+    db$total <- attr(x, "db_total")
+    attr(x, "db_total") <- NULL
+    if (isTRUE(db$readonly)) {
+      if (!quiet) message("The table is opened read-only. ", db$why)
+      col_readonly <- names(x)
+      row_edit <- FALSE
+    } else if (!isFALSE(col_edit) && !quiet) {
       message("Adding, removing or renaming columns is disabled when editing ",
               "a database table.")
+    }
+    if (!quiet && db$total > nrow(x)) {
+      message("Loaded ", format(nrow(x), big.mark = ","), " of ",
+              format(db$total, big.mark = ","), " rows; use Rows in the ",
+              "toolbar to load others.")
     }
     col_edit <- FALSE
     col_names <- FALSE

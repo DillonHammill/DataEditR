@@ -121,18 +121,15 @@ cars_db
 
 The key columns must be part of the data you edit (don't drop them with `select()`), and their values must be unique in the loaded rows.
 
-`db_table()` also accepts a connection and a table name, which is useful for tables in another schema or when you only want to load the first rows of a large table:
+`db_table()` also accepts a connection and a table name, which is useful for tables in another schema:
 
 ```{r, eval = FALSE}
 # a table in another schema
 data_edit(db_table(con, table = DBI::Id(schema = "sales", table = "orders"),
                    key = "order_id"))
-
-# only load the first 1,000 rows
-data_edit(db_table(con, table = "cars", key = "id", limit = 1000))
 ```
 
-Queries that combine tables, such as joins or unions, or raw SQL queries cannot be written back automatically. Use `db_table()` to say which table the edits belong to; columns from other tables are then read-only:
+Queries that combine tables, such as joins or unions, raw SQL queries and tables without a primary key cannot be written back automatically, so they are opened **read-only** (you can still filter, sort and look through them). Use `db_table()` to say which table the edits belong to; columns from other tables are then read-only:
 
 ```{r, eval = FALSE}
 owners <- tbl(con, "owners")
@@ -141,7 +138,34 @@ cars_and_owners <- left_join(tbl(con, "cars"), owners, by = c("id" = "car_id"))
 data_edit(db_table(cars_and_owners, table = "cars", key = "id"))
 ```
 
-## 4. Committing changes
+## 4. Tables too big to load
+
+The table does not have to fit in memory. `data_edit()` loads at most 100,000 rows at a time (set `limit` in `db_table()`, or `options(DataEditR.db_rows = )`), and the header and the `Rows` button in the toolbar show how many rows are loaded out of how many there are:
+
+```{r, eval = FALSE}
+flights <- tbl(con, "flights")    # 30 million rows
+data_edit(flights)                # loads 100,000 of them
+
+# or choose the rows before opening the editor
+data_edit(filter(flights, carrier == "UA", dep_delay > 60))
+```
+
+Click `Rows` to load other rows: the rows matching a filter, written like `dplyr::filter()` (e.g. `carrier == "UA" & dep_delay > 60`), sorted by a column, at most a number of rows. The database does the filtering and sorting (the filter is translated to SQL by `dbplyr`), and the dialog shows how many rows match before you load them. If you have changed rows that are not saved yet, you can save them to the database first or discard them.
+
+```{r, echo = FALSE, fig.align = "center", out.width = "100%"}
+screenshot("db-rows.png")
+```
+
+Filters can use column names, values and the functions that formulas may use (see the user guide), so users of a shiny app cannot run other code or SQL. Column summaries, the filters under the column headers and *Find* work on the loaded rows.
+
+Files that are too big for memory can be explored the same way through DuckDB, which reads Parquet and CSV files without loading them; such queries are read-only:
+
+```{r, eval = FALSE}
+con <- DBI::dbConnect(duckdb::duckdb())
+data_edit(tbl(con, sql("SELECT * FROM read_parquet('trips/*.parquet')")))
+```
+
+## 5. Committing changes
 
 Nothing is written to the database while you edit. When you press `Done`, the editor shows a summary of the rows that will be updated, inserted and deleted and asks you to confirm. Choose `Keep editing` to go back to the editor or `Commit` to write the changes. The `Code` panel shows the `rows_update()`, `rows_append()` and `rows_delete()` calls that make the same changes.
 
@@ -173,7 +197,7 @@ data_edit(tbl(con, "cars"),
                                                 append = TRUE))
 ```
 
-## 5. When someone else changes the data
+## 6. When someone else changes the data
 
 Databases are often shared, so the rows you are editing may be changed by someone else before you press `Done`. To make sure you never overwrite their changes without knowing, every update checks that the values you changed are still the values that were loaded, and every delete checks that the whole row is unchanged (optimistic concurrency). If any row was changed or removed in the meantime, the whole commit is rolled back, nothing is written and you are told how many rows conflicted. Close the editor, load the data again to see the latest values and redo your edits.
 
@@ -183,7 +207,7 @@ If you would rather overwrite rows regardless of changes made by others, turn th
 data_edit(db_table(tbl(con, "cars"), check = FALSE))
 ```
 
-## 6. Code to reproduce the changes
+## 7. Code to reproduce the changes
 
 Set `code = TRUE` (or supply the name of an R script) to get the `dplyr` code that makes the same changes to the database with `rows_delete()`, `rows_update()` and `rows_append()`. The `Code` tab in the editor shows the same code as you edit.
 
@@ -205,7 +229,7 @@ rows_append(cars, tibble::tibble(model = c("Ford Escort"), mpg = c(30.1), cyl = 
 
 Tables in other schemas are referred to with `dbplyr::in_schema()` in the generated code.
 
-## 7. Databases in shiny apps
+## 8. Databases in shiny apps
 
 The `dataEdit` module edits database tables in your own shiny applications too. Pass the lazy table (or a `db_table()`) to `dataEditServer()` and call `dataEditCommit()` when the user wants to save; it writes the changes in a single transaction, raises an error of class `"editr_conflict"` if rows were changed by someone else, and reads the rows back from the database afterwards. `dataEditChanges()` summarises what will be written, e.g. to enable a *Save* button or ask for confirmation.
 

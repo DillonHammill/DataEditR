@@ -897,6 +897,41 @@ const scenarios = {
     await done(page);
   },
 
+  async db_rows(page) {
+    const info = () => page.$eval("#edit1-load_rows", (e) => e.textContent.replace(/\s+/g, " ").trim());
+    check(await info() === "Rows 500 of 5,000", "rows button: " + await info());
+    check((await L.gridData(page)).length === 500, "500 rows loaded");
+    await L.editCell(page, 1, "c3", "1000");
+    // load other rows: the database filters and sorts them
+    await page.click("#edit1-load_rows");
+    await page.waitForSelector("#edit1-ld_filter");
+    await sleep(800);
+    await page.type("#edit1-ld_filter", 'carrier == "DL" & delay >= 200');
+    await page.select("#edit1-ld_sort", "delay");
+    await page.click("#edit1-ld_desc");
+    await page.click("#edit1-ld_limit", { clickCount: 3 });
+    await page.keyboard.type("20");
+    await sleep(1500);
+    const prev = await page.$eval("#edit1-load_preview", (e) => e.textContent.replace(/\s+/g, " ").trim());
+    check(/^\d+ rows match; the first 20 will be loaded/.test(prev), "preview: " + prev);
+    const n = Number(prev.split(" ")[0]);
+    check(await page.$("#edit1-load_save") !== null, "unsaved changes are saved or discarded");
+    await page.click("#edit1-load_save");
+    await L.settle(page, 2500);
+    const d = await L.gridData(page);
+    const delays = d.map((r) => Number(r.c3));
+    check(d.length === 20 && d.every((r) => r.c2 === "DL") &&
+          delays.every((x, i) => i === 0 || delays[i - 1] >= x), "loaded rows filtered and sorted");
+    check(await info() === "Rows 20 of " + n, "rows button after loading: " + await info());
+    // edit a loaded row and commit
+    await L.editCell(page, d[0].__editr_id__, "c3", "-1");
+    await page.click("#done");
+    await page.waitForSelector("#db_commit", { timeout: 5000 });
+    await sleep(900);
+    await page.click("#db_commit");
+    await sleep(2000);
+  },
+
   async db(page) {
     const d0 = await L.gridData(page);
     check(d0.map((r) => r.c1).join() === "1,2,4,5", "filtered rows cyl >= 6: ids " + d0.map((r) => r.c1).join());

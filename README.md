@@ -81,6 +81,8 @@ reproduces your edits.
   are sent to R cell by cell
 - edit tables in a database directly (`dplyr::tbl()` or `db_table()`),
   with changes written in a single transaction after you confirm them
+- tables bigger than memory: rows are loaded on demand, filtered and
+  sorted by the database
 - ability to interactively create data.frames from scratch
 - load tabular data saved to file using any reading function
   (e.g. `read.csv()`)

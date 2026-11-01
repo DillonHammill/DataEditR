@@ -126,6 +126,23 @@ res <- switch(
     )
     data_edit(survey, viewer = noview, quiet = TRUE)
   },
+  db_rows = {
+    options(DataEditR.db_rows = 100000)
+    file <- file.path(out, "flights.sqlite")
+    con <- DBI::dbConnect(RSQLite::SQLite(), file)
+    DBI::dbExecute(con, "CREATE TABLE flights (id INTEGER PRIMARY KEY,
+      carrier TEXT, origin TEXT, dest TEXT, dep_delay REAL, distance INTEGER)")
+    set.seed(5)
+    n <- 336776
+    DBI::dbAppendTable(con, "flights", data.frame(
+      carrier = sample(c("UA", "B6", "EV", "DL", "AA", "MQ", "US", "9E"), n, TRUE),
+      origin = sample(c("JFK", "LGA", "EWR"), n, TRUE),
+      dest = sample(c("ATL", "ORD", "LAX", "BOS", "MCO", "SFO", "CLT"), n, TRUE),
+      dep_delay = round(stats::rexp(n, 1 / 15) - 5),
+      distance = sample(c(187, 228, 733, 762, 944, 2475, 2586), n, TRUE)
+    ))
+    data_edit(tbl(con, "flights"), viewer = noview, quiet = TRUE)
+  },
   restore = {
     # the draft left by an editor that was closed without pressing Done
     p <- DataEditR:::editr_prepare(mtcars, quiet = TRUE)

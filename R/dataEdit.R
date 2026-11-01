@@ -201,6 +201,11 @@ dataEditUI <- function(id,
                  `aria-expanded` = "false",
                  span(class = "editr-muted", id = ns("columns_count")),
                  editr_icon("chevron", 14)),
+      # DATABASE TABLES: LOAD OTHER ROWS (SHOWN BY THE GRID)
+      editr_tool(ns("load_rows"), label = "Rows", icon = "database",
+                 title = "Load other rows from the database", hidden = NA,
+                 class = "editr-tool-collapse editr-rows-btn",
+                 span(class = "editr-muted", id = ns("load_info"))),
       div(class = "editr-chips", id = ns("chips"),
           `aria-label` = "Active filters"),
       tags$label(
@@ -481,6 +486,10 @@ dataEditServer <- function(id,
             grid_summaries(store, cfg, summary_cache)
           },
           db = !is.null(cfg$db),
+          db_rows = if (!is.null(cfg$db)) {
+            list(loaded = nrow(store$state$data), total = cfg$db$total,
+                 filtered = !is.null(cfg$db$filter), readonly = isTRUE(cfg$db$readonly))
+          },
           problems = {
             p <- isolate(problems())
             if (!is.null(p)) {
@@ -494,6 +503,8 @@ dataEditServer <- function(id,
             selection = ns("selection"),
             chips = ns("chips"),
             columns_btn = ns("columns"),
+            rows_btn = ns("load_rows"),
+            rows_info = ns("load_info"),
             summary_btn = ns("summary"),
             record = ns("record"),
             columns_count = ns("columns_count"),
@@ -906,6 +917,64 @@ dataEditServer <- function(id,
         shiny::removeModal()
       }
     })
+
+    # DATABASE ROWS ------------------------------------------------------------
+
+    # LOAD OTHER ROWS OF A DATABASE TABLE: THOSE MATCHING A FILTER, IN AN ORDER
+    observeEvent(input$grid_load_rows, {
+      ed <- editor()
+      if (is.null(ed) || is.null(ed$cfg$db)) return()
+      pending <- if (isTRUE(ed$cfg$db$readonly)) 0 else db_changes(ed$store)$total
+      showModal(load_modal(ed$cfg$db, nrow(ed$store$state$data), pending, ns))
+    })
+
+    load_inputs <- reactive(list(filter = input$ld_filter, sort = input$ld_sort,
+                                 desc = input$ld_desc, limit = input$ld_limit))
+    load_due <- shiny::debounce(load_inputs, 400)
+    output$load_preview <- shiny::renderUI({
+      spec <- load_due()
+      shiny::req(!is.null(spec$limit))
+      ed <- isolate(editor())
+      shiny::req(ed, ed$cfg$db)
+      load_preview_ui(ed$cfg$db, spec)
+    })
+
+    load_window <- function(save) {
+      ed <- editor()
+      if (is.null(ed) || is.null(ed$cfg$db)) return()
+      store <- ed$store
+      res <- tryCatch({
+        db <- db_window(ed$cfg$db, input$ld_filter, input$ld_sort,
+                        input$ld_desc, input$ld_limit)
+        if (save) db_commit(ed$cfg$db, store)
+        suppressMessages(prepare(db))
+      }, error = function(e) e)
+      if (inherits(res, "error")) {
+        showNotification(conditionMessage(res), type = "error")
+        return()
+      }
+      draft_delete(store$draft_key)
+      # THE CHANGE LOG CARRIES ON, WITHOUT CHANGES THAT WERE DISCARDED
+      new <- res$store
+      done <- if (save) store$step else (store$committed_step %||% 0L)
+      log <- store_log_df(store)
+      log <- log[log$step <= done, setdiff(names(log), "note"), drop = FALSE]
+      new$log <- if (nrow(log) > 0) list(log) else list()
+      new$notes <- store$notes[as.integer(names(store$notes)) <= done]
+      new$step <- done
+      new$committed_step <- done
+      shiny::removeModal()
+      load_editor(res, recover = FALSE)
+      n <- nrow(new$state$data)
+      total <- res$cfg$db$total
+      showNotification(paste0("Loaded ", format(n, big.mark = ","),
+                              if (total > n) paste0(" of ", format(total, big.mark = ",",
+                                                                    scientific = FALSE)),
+                              if (n == 1) " row." else " rows."), type = "message")
+    }
+    observeEvent(input$load_apply, load_window(FALSE))
+    observeEvent(input$load_discard, load_window(FALSE))
+    observeEvent(input$load_save, load_window(TRUE))
 
     # DRAFTS -------------------------------------------------------------------
 

@@ -118,6 +118,7 @@
 <li>flexible display options (either <code>dialog</code> box, <code>browser</code> or RStudio <code>viewer</code> pane)</li>
 <li>fast, even with large data: only the visible rows are drawn and edits are sent to R cell by cell</li>
 <li>edit tables in a database directly (<code><a href="https://rdrr.io/pkg/dplyr/man/tbl.html" class="external-link">dplyr::tbl()</a></code> or <code><a href="reference/db_table.html">db_table()</a></code>), with changes written in a single transaction after you confirm them</li>
+<li>tables bigger than memory: rows are loaded on demand, filtered and sorted by the database</li>
 <li>ability to interactively create data.frames from scratch</li>
 <li>load tabular data saved to file using any reading function (e.g. <code><a href="https://rdrr.io/r/utils/read.table.html" class="external-link">read.csv()</a></code>)</li>
 <li>open other R objects, files or a new table without leaving the editor</li>

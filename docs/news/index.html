@@ -75,6 +75,13 @@
 <li>Column types are preserved: only empty template/new columns are passed through <code><a href="https://rdrr.io/r/utils/type.convert.html" class="external-link">type.convert()</a></code> on return, so character columns such as <code>"001"</code> are no longer converted to numbers. Dates stay dates, and matrices, tibbles and data.tables are returned with their original class.</li>
 </ul></div>
 <div class="section level3">
+<h3 id="tables-too-big-to-load-2-0-0">Tables too big to load<a class="anchor" aria-label="anchor" href="#tables-too-big-to-load-2-0-0"></a></h3>
+<ul><li>Database tables no longer have to fit in memory: at most 100,000 rows are loaded at a time (<code>db_table(limit = )</code>, default <code>getOption("DataEditR.db_rows", 100000)</code>; it was all rows). The header and a new <strong>Rows</strong> button in the toolbar show how many rows are loaded out of how many there are.</li>
+<li>
+<strong>Rows</strong> loads other rows: those matching a filter written like <code><a href="https://rdrr.io/pkg/dplyr/man/filter.html" class="external-link">dplyr::filter()</a></code> (translated to SQL by dbplyr, limited to columns and the functions formulas may use), sorted by a column, at most a number of rows. The dialog counts the matching rows first, and unsaved changes are saved to the database or discarded before other rows are loaded.</li>
+<li>Queries that cannot be written back (SQL, joins, tables without a primary key, e.g. Parquet files read by DuckDB) are opened read-only instead of failing; <code>db_table(readonly = FALSE)</code> still stops with an error, and <code>readonly = TRUE</code> opens any table read-only.</li>
+</ul></div>
+<div class="section level3">
 <h3 id="labelled-data-spss-stata-and-sas-2-0-0">Labelled data (SPSS, Stata and SAS)<a class="anchor" aria-label="anchor" href="#labelled-data-spss-stata-and-sas-2-0-0"></a></h3>
 <ul><li>SPSS (<code>.sav</code>, <code>.por</code>), Stata (<code>.dta</code>) and SAS (<code>.sas7bdat</code>, <code>.xpt</code>) files are read with haven, from a file name or the Open menu (unless <code>read_fun</code> is given). <code>save_as</code> files ending in <code>.sav</code>, <code>.dta</code> or <code>.xpt</code> are written with haven, and the Export menu can download SPSS and Stata files.</li>
 <li>Variable labels, value labels (<code>haven_labelled</code>, or the <code>labels</code> attribute of labelled/sjlabelled) and SPSS user-defined missing values are kept through every edit, added and removed rows, undo and column actions. Variable labels of plain columns were dropped when rows were added or removed, and text columns with value labels made the editor fail.</li>
