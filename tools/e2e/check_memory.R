@@ -6,7 +6,7 @@ expected <- data.frame(
   mpg = c(99, 21.5, 22.8, 40, 11, 12, 18.1, 14.3),
   cylinders = c(6, 6, 4, NA, 5, 6, 6, 8),
   hp = c(110, 110, 93, NA, 110, 175, 105, 245),
-  V1 = c("hello", NA, NA, NA, NA, NA, NA, NA),
+  V1 = c("hello (it's #1 & 100%!)", NA, NA, NA, NA, NA, NA, NA),
   row.names = c("Mazda RX4", "Mazda RX4 Wag", "Datsun 710", "My car",
                 "Hornet 4 Drive", "Hornet Sportabout", "Valiant", "Duster 360")
 )

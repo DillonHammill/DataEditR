@@ -169,6 +169,8 @@ test_that("col_options convert columns and map to grid options", {
   expect_identical(cols[[1]]$option$type, "checkbox")
   expect_identical(cols[[2]]$option$type, "dropdown")
   expect_identical(cols[[3]]$option$type, "date")
+  expect_identical(vapply(cols, `[[`, logical(1), "empty"),
+                   c(FALSE, TRUE, FALSE))
   expect_true(p$cfg$col_edit)
 })
 

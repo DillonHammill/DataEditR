@@ -29,6 +29,18 @@
   border-right: 1px solid #EEF0F3;
 }
 
+/* headers of the selected range (the rule above would otherwise leave
+   Tabulator's white text of a selected column on the light header) */
+.editr_grid .tabulator .tabulator-header .tabulator-col.tabulator-range-highlight {
+  background: #EEF3FD;
+  color: var(--editr-text);
+}
+
+.editr_grid .tabulator .tabulator-header .tabulator-col.tabulator-range-selected {
+  background: var(--editr-accent-soft);
+  color: #1E3A8A;
+}
+
 .editr_grid .tabulator .tabulator-row {
   min-height: 32px;
 }

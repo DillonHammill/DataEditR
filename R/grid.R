@@ -163,6 +163,8 @@ grid_columns <- function(store, cfg) {
       readonly = cid %in% cfg$readonly,
       rename = cfg$col_edit_names && !cid %in% cfg$protected_names,
       frozen = identical(cid, cfg$rownames_cid),
+      # columns without values (templates, new tables) start wider
+      empty = all(is.na(col) | (is.character(col) & col %in% "")),
       filter = column_filter(col, opt, identical(cid, cfg$rownames_cid))
     )
   })

@@ -275,6 +275,23 @@
   display: none;
 }
 
+/* narrower editors: a smaller find box without the shortcut hint keeps the
+   toolbar on one line for longer */
+.editr-toolbar {
+  container-type: inline-size;
+}
+
+@container (max-width: 1060px) {
+  .editr-find {
+    flex-basis: 120px;
+    min-width: 110px;
+  }
+  .editr-find kbd,
+  .editr-find-count:empty + kbd {
+    display: none;
+  }
+}
+
 .editr-kbd,
 .editr-find kbd {
   padding: 1px 6px;

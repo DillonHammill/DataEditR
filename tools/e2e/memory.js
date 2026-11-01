@@ -42,7 +42,12 @@ const { check } = L;
     await L.headerMenu(page, "c5", "Insert column right");
     cols = await L.columns(page);
     check(cols.length === 6 && cols[5].title === "V1", "column V1 added at end");
-    await L.editCell(page, 1, cols[5].field, "hello");
+    // punctuation must not move the editor ("(" used to act as ArrowDown,
+    // "'" as ArrowRight, "&" as ArrowUp and "%" as ArrowLeft)
+    await L.editCell(page, 1, cols[5].field, "hello (it's #1 & 100%!)");
+    data = await L.gridData(page);
+    check(data[0][cols[5].field] === "hello (it's #1 & 100%!)" && data[1][cols[5].field] == null,
+          "punctuation typed into one cell: " + JSON.stringify(data[0][cols[5].field]));
     await L.headerMenu(page, "c4", "Delete column");
     cols = await L.columns(page);
     check(!cols.some((c) => c.title === "disp"), "disp deleted");
@@ -99,13 +104,26 @@ const { check } = L;
     check(/edited/.test(status), "status shows change summary: '" + status + "'");
 
     console.log("columns menu");
+    const fieldOf = async (title) => (await L.columns(page)).find((c) => c.title === title).field;
+    const selected = async () => page.evaluate(() => {
+      const c = document.getElementById("edit1-grid").__editr.table.getRanges()[0].getCells();
+      return c.length && c[0].length ? c[0][0].getRow().getIndex() + "|" + c[0][0].getField() : null;
+    });
+    const v1 = await fieldOf("V1");
+    await L.selectCell(page, 2, v1);
     await page.click("#edit1-columns");
     await page.waitForSelector(".editr-columns-menu");
+    // the selection stays on its cell when a column to its left is hidden,
+    // and moves to the nearest visible column when its own column is hidden
+    const expectSel = { hp: "2|" + v1, V1: "2|c3" };
     for (const name of ["hp", "V1"]) {
       await page.evaluate((n) => {
         const l = [...document.querySelectorAll(".editr-columns-list label")].find((x) => x.textContent.trim() === n);
         l.querySelector("input").click();
       }, name);
+      await L.sleep(150);
+      const sel = await selected();
+      check(sel === expectSel[name], "selection after hiding " + name + ": " + sel);
     }
     await page.mouse.click(900, 700);
     await L.settle(page);
@@ -114,6 +132,30 @@ const { check } = L;
     let vis = await visibleTitles();
     check(JSON.stringify(vis) === JSON.stringify([" ", "mpg", "cylinders"]), "hp and V1 hidden: " + vis.join(","));
     check((await page.$eval("#edit1-columns_count", (e) => e.textContent)) === "2 of 4", "toolbar shows 2 of 4 columns");
+
+    console.log("column layout survives undo/redo of a structural edit");
+    const mpgWidth = async () => page.evaluate(() => document.getElementById("edit1-grid").__editr.table.getColumn("c2").getWidth());
+    const edge = await page.evaluate(() => {
+      const b = document.getElementById("edit1-grid").__editr.table.getColumn("c2").getElement().getBoundingClientRect();
+      return { x: b.right - 2, y: b.top + 12 };
+    });
+    await page.mouse.move(edge.x, edge.y);
+    await page.mouse.down();
+    await page.mouse.move(edge.x + 60, edge.y, { steps: 6 });
+    await page.mouse.up();
+    await L.settle(page);
+    const resized = await mpgWidth();
+    await L.renameColumn(page, "c2", "miles");
+    await page.click("#edit1-undo");
+    await L.settle(page);
+    await page.click("#edit1-redo");
+    await L.settle(page);
+    await page.click("#edit1-undo");
+    await L.settle(page);
+    vis = await visibleTitles();
+    check(JSON.stringify(vis) === JSON.stringify([" ", "mpg", "cylinders"]), "hidden columns stay hidden: " + vis.join(","));
+    const after = await mpgWidth();
+    check(Math.abs(after - resized) < 2, "resized width kept: " + resized + " -> " + after);
 
     console.log("header filter (values list)");
     const before = await L.gridData(page);

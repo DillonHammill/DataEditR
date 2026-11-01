@@ -127,6 +127,29 @@
     };
   }
 
+  // Shiny can take input only while the session is open (a gadget that has
+  // just closed would otherwise throw on a pending view report)
+  function shinyOpen() {
+    if (!window.Shiny || !Shiny.setInputValue) return false;
+    var app = Shiny.shinyapp;
+    return !app || typeof app.isConnected !== "function" || app.isConnected();
+  }
+
+  // Tabulator 6.7.1 turns a typed character into a key code with
+  // key.toUpperCase().charCodeAt(0), so while editing a cell "(" (code 40)
+  // acted as ArrowDown, "'" (39) as ArrowRight, "&" (38) as ArrowUp,
+  // "%" (37) as ArrowLeft and "!", '"', "#", "$" scrolled the table. Only
+  // letters and digits can be part of a shortcut, so ignore other characters.
+  function patchKeyCodes(table) {
+    var kb = table.modules && table.modules.keybindings;
+    if (!kb || typeof kb.getKeyCode !== "function") return;
+    var original = kb.getKeyCode;
+    kb.getKeyCode = function (e) {
+      if (e.key && e.key.length === 1 && !/^[A-Za-z0-9]$/.test(e.key)) return 0;
+      return original.call(this, e);
+    };
+  }
+
   // Row.isDisplayed() is also a linear scan, and range selection calls it for
   // every rendered cell on every layout. Displayed rows carry their 1-based
   // display position (regenerated whenever the display changes), so check
@@ -173,6 +196,7 @@
         nextCol: 1,
         colMap: {},
         changed: {},
+        widths: {}, // columns the user resized
         pinned: {}, // new rows stay visible whatever the filters say
         opts: {},
         ui: {},
@@ -217,7 +241,7 @@
         grid.timer = null;
         var ops = coalesce(grid.queue);
         grid.queue = [];
-        if (!ops.length || !window.Shiny || !Shiny.setInputValue) return;
+        if (!ops.length || !shinyOpen()) return;
         grid.seq += 1;
         Shiny.setInputValue(el.id + "_ops", {seq: grid.seq, ops: ops},
                             {priority: "event"});
@@ -368,7 +392,7 @@
           titleFormatter: titleFormatter,
           field: c.field,
           headerSort: false,
-          minWidth: 60,
+          minWidth: c.empty ? 110 : 60,
           frozen: !!c.frozen,
           editor: c.readonly ? false : "input",
           formatter: makeFormatter(null),
@@ -425,9 +449,76 @@
         return defs;
       }
 
+      // column definitions for the same data sent again from R (undo/redo
+      // of structural edits): columns the user hid stay hidden and columns
+      // the user resized keep their width
+      function sameLayout(cols) {
+        var hidden = {};
+        if (grid.table) {
+          grid.table.getColumns().forEach(function (col) {
+            if (!col.isVisible()) hidden[col.getField()] = true;
+          });
+        }
+        var defs = setColumns(cols);
+        defs.forEach(function (d) {
+          if (hidden[d.field]) d.visible = false;
+          if (grid.widths[d.field]) d.width = grid.widths[d.field];
+        });
+        return defs;
+      }
+
       function realColumns() {
         return grid.table.getColumns().filter(function (col) {
           return !!grid.colMap[col.getField()];
+        });
+      }
+
+      // Tabulator ranges remember column positions, so hiding or showing a
+      // column made the selection jump to another column or outline empty
+      // space. Run fn() and then put each range back on the same cells, or
+      // on the nearest visible column when all of its columns were hidden.
+      function keepRanges(fn) {
+        var table = grid.table;
+        var saved = [];
+        if (table && typeof table.getRanges === "function") {
+          table.getRanges().forEach(function (r) {
+            // the anchor and end cells (cheap, unlike listing every cell of
+            // a whole-column selection)
+            var a = null, b = null;
+            try {
+              a = r._range.getStartCell();
+              b = r._range.getEndCell();
+            } catch (e) {}
+            if (!a || !b || !a.column || !b.column) return;
+            saved.push({range: r, a: a.getComponent(), b: b.getComponent()});
+          });
+        }
+        fn();
+        if (!saved.length) return;
+        var cols = realColumns();
+        var fields = cols.map(function (col) { return col.getField(); });
+        var shown = cols.map(function (col) { return col.isVisible(); });
+        saved.forEach(function (s) {
+          var ia = fields.indexOf(s.a.getField());
+          var ib = fields.indexOf(s.b.getField());
+          if (ia < 0 || ib < 0) return;
+          var from = Math.min(ia, ib), to = Math.max(ia, ib);
+          var lo = -1, hi = -1, i;
+          for (i = from; i <= to; i++) {
+            if (shown[i]) { if (lo < 0) lo = i; hi = i; }
+          }
+          if (lo < 0) {
+            for (i = 1; i < fields.length && lo < 0; i++) {
+              if (shown[from + i]) lo = from + i;
+              else if (shown[from - i]) lo = from - i;
+            }
+            hi = lo;
+          }
+          if (lo < 0) return;
+          try {
+            s.range.setBounds(s.a.getRow().getCell(fields[ia <= ib ? lo : hi]),
+                              s.b.getRow().getCell(fields[ia <= ib ? hi : lo]));
+          } catch (e) {}
         });
       }
 
@@ -527,7 +618,8 @@
         var cid = "c" + grid.nextCol++;
         var name = uniqueName("V", currentTitles());
         var c = {field: cid, title: name, kind: "character", readonly: false,
-                 rename: true, frozen: false, filter: {type: "text"}};
+                 rename: true, frozen: false, empty: true,
+                 filter: {type: "text"}};
         grid.colMap[cid] = c;
         grid.table.addColumn(buildColumn(c), !right, column);
         updateStatus();
@@ -560,7 +652,7 @@
         }
         if (!c.frozen) {
           items.push({label: "Hide column", action: function (e, col) {
-            col.hide();
+            keepRanges(function () { col.hide(); });
             updateStatus();
             reportView();
           }});
@@ -691,7 +783,9 @@
           box.type = "checkbox";
           box.checked = col.isVisible();
           box.addEventListener("change", function () {
-            if (box.checked) col.show(); else col.hide();
+            keepRanges(function () {
+              if (box.checked) col.show(); else col.hide();
+            });
             updateStatus();
             reportView();
           });
@@ -916,7 +1010,7 @@
         if (!window.Shiny || !Shiny.setInputValue) return;
         clearTimeout(grid.viewTimer);
         grid.viewTimer = setTimeout(function () {
-          if (!grid.table) return;
+          if (!grid.table || !shinyOpen()) return;
           var rows = null, cols = null;
           if (activeFilters().length) {
             rows = grid.table.getRows("active").map(function (r) { return r.getIndex(); });
@@ -1108,7 +1202,7 @@
             var upd = Object.keys(byRow).map(function (k) { return byRow[k]; });
             if (upd.length) table.updateData(upd);
           } else if (method === "replace_data") {
-            if (args.columns) table.setColumns(setColumns(args.columns));
+            if (args.columns) table.setColumns(sameLayout(args.columns));
             table.replaceData(rowsFromColumns(args.data)).then(function () {
               updateStatus();
               renderChips();
@@ -1142,6 +1236,7 @@
         grid.opts = opts;
         grid.ui = opts.ui || {};
         grid.pinned = {};
+        grid.widths = {};
         grid.nextId = opts.next_id || 1;
         grid.nextCol = opts.next_col || 1;
         grid.changed = {};
@@ -1190,6 +1285,7 @@
               '<span>Add row</span></button>' : undefined
         });
         grid.table = table;
+        patchKeyCodes(table);
         patchRowLookup(table);
         patchRangeLayout(table);
 
@@ -1260,6 +1356,10 @@
 
         table.on("headerDblClick", function (e, column) {
           startRename(column);
+        });
+
+        table.on("columnResized", function (column) {
+          grid.widths[column.getField()] = column.getWidth();
         });
       }
 
