@@ -466,3 +466,147 @@ input.editr-rename {
   color: #1F2933;
   opacity: 1;
 }
+
+/* column summaries under the header title ------------------------------------ */
+.editr_grid .editr-summary {
+  display: block;
+  /* takes the width of the column without making it wider */
+  width: 0;
+  min-width: 100%;
+  overflow: hidden;
+  height: 38px;
+  margin: 6px 0 0;
+  font-weight: 400;
+  white-space: nowrap;
+  container-type: inline-size;
+}
+
+/* narrow columns drop the words and keep the numbers */
+@container (max-width: 130px) {
+  .editr_grid .editr-sum-word { display: none; }
+}
+
+@container (max-width: 72px) {
+  .editr_grid .editr-sum-na { display: none; }
+}
+
+.editr_grid.editr-summaries-off .editr-summary {
+  display: none;
+}
+
+.editr_grid .editr-sum-chart {
+  display: block;
+  width: 100%;
+  height: 20px;
+}
+
+.editr_grid .editr-sum-hit {
+  fill: transparent;
+  cursor: pointer;
+}
+
+.editr_grid .editr-sum-bar-v {
+  fill: #93B4F5;
+  pointer-events: none;
+}
+
+.editr_grid g[data-act="bin"]:hover .editr-sum-bar-v {
+  fill: #1D4ED8;
+}
+
+.editr_grid .editr-sum-values {
+  display: flex;
+  gap: 1px;
+  height: 12px;
+  margin: 4px 0;
+  overflow: hidden;
+  border-radius: 3px;
+}
+
+.editr_grid .editr-sum-seg {
+  min-width: 3px;
+  cursor: pointer;
+}
+
+.editr_grid .editr-sum-seg-0 { background: #1D4ED8; }
+.editr_grid .editr-sum-seg-1 { background: #5B84E8; }
+.editr_grid .editr-sum-seg-2 { background: #93B4F5; }
+.editr_grid .editr-sum-seg-3 { background: #BFD2FA; }
+.editr_grid .editr-sum-seg-4 { background: #DCE7FC; }
+.editr_grid .editr-sum-seg-other { background: #E3E6EA; cursor: default; }
+
+.editr_grid .editr-sum-seg:hover {
+  outline: 2px solid #1F2933;
+  outline-offset: -2px;
+}
+
+.editr_grid .editr-sum-empty {
+  color: #7B8794;
+  font-size: 11px;
+  line-height: 20px;
+}
+
+.editr_grid .editr-sum-foot {
+  display: flex;
+  gap: 6px;
+  justify-content: space-between;
+  height: 16px;
+  font-size: 11px;
+  line-height: 16px;
+  color: #52606D;
+}
+
+.editr_grid .editr-sum-foot button {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.editr_grid .editr-sum-foot button:hover {
+  text-decoration: underline;
+}
+
+.editr_grid .editr-sum-missing {
+  color: #B91C1C !important;
+  font-weight: 600 !important;
+}
+
+.editr_grid .editr-sum-muted {
+  color: #9AA5B1;
+}
+
+.editr-sum-details {
+  min-width: 220px;
+  max-width: 320px;
+  padding: 10px 12px;
+  font-size: 13px;
+}
+
+.editr-sum-details .editr-sum-title {
+  margin: 0 0 4px;
+  font-weight: 600;
+}
+
+.editr-sum-details table {
+  width: 100%;
+  margin-bottom: 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+.editr-sum-details th {
+  padding: 1px 12px 1px 0;
+  font-weight: 400;
+  color: #52606D;
+  overflow-wrap: anywhere;
+}
+
+.editr-sum-details td {
+  padding: 1px 0;
+  text-align: right;
+}

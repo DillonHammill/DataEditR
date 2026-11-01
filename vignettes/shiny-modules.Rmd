@@ -146,7 +146,7 @@ observe({
 })
 ```
 
-Column actions (formulas, find and replace, recoding, type changes and sorting) are offered in the column menu; formulas can only use column names and common functions, so users cannot run other R code on your server. Set `col_actions = FALSE` to remove them.
+Column actions (formulas, find and replace, recoding, type changes and sorting) are offered in the column menu; formulas can only use column names and common functions, so users cannot run other R code on your server. Set `col_actions = FALSE` to remove them. Column summaries are worked out on the server from all rows, only for the columns that changed and not while they are hidden; set `col_summary = FALSE` to leave them out.
 
 `dataEditCommit()` returns the same counts and the `log` of the changes it saved: one row per changed cell (or added, removed or renamed row and column) with the `time`, the `user`, `how` the change was made, the `row`, `column`, `old` and `new` values and the `note` the user added in the `History` tab. Write it next to the data to keep a record of who changed what. `dataEditLog()` returns the log of the whole session. The user is taken from `session$user` when the app runs on a server that signs users in (such as Posit Connect), and can be set with the `user` argument of `dataEditServer()`.
 

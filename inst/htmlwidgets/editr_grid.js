@@ -403,6 +403,31 @@
     };
   }
 
+  // scrollToRow() with "center" or "bottom" checks whether the table is
+  // scrolled to the end with an exact comparison, which fails when the scroll
+  // position is fractional (browser zoom or screen scaling), and a row near
+  // the end (e.g. a new row) can be left below the visible area. Bring the
+  // row into view afterwards.
+  function patchScrollToRow(table) {
+    var r = table.rowManager && table.rowManager.renderer;
+    if (!r || r.__editrPatched || typeof r.scrollToRowPosition !== "function") return;
+    r.__editrPatched = true;
+    var orig = r.scrollToRowPosition;
+    r.scrollToRowPosition = function (row, position, ifVisible) {
+      var ev = this.elementVertical;
+      return orig.call(this, row, position, ifVisible).then(function () {
+        var el = row.getElement();
+        if (!ev || !el || !el.isConnected) return;
+        var box = ev.getBoundingClientRect();
+        var b = el.getBoundingClientRect();
+        var top = box.top + ev.clientTop;
+        var bottom = top + ev.clientHeight;
+        if (b.bottom > bottom + 1) ev.scrollTop += b.bottom - bottom;
+        else if (b.top < top - 1) ev.scrollTop -= top - b.top;
+      });
+    };
+  }
+
   // Range selection re-styles every row in the table after each edit or
   // keyboard move (layoutElement() with no arguments). Rows outside the
   // virtual viewport are styled when they render, so only lay out the
@@ -693,7 +718,215 @@
         return '<span class="editr-title"><span class="editr-badge">' +
           badge + '</span><span class="editr-name">' + escapeHTML(name) +
           '</span>' + (c.readonly ? '<span class="editr-lock">' + ICONS.lock +
-          '</span>' : '') + '</span>';
+          '</span>' : '') + '</span>' +
+          (grid.opts.summary !== false && !c.frozen ? summaryHTML(c.field) : "");
+      }
+
+      /* column summaries (see R/summary.R) ------------------------------ */
+
+      function plural(n, w) { return n + " " + w + (n === 1 ? "" : "s"); }
+
+      function percent(part, total) {
+        if (!total) return "0%";
+        var p = 100 * part / total;
+        return (p > 0 && p < 1 ? p.toFixed(1) : Math.round(p)) + "%";
+      }
+
+      function summaryHTML(field) {
+        var s = grid.summary[field];
+        var html = '<div class="editr-summary" data-field="' + escapeHTML(field) + '">';
+        if (!s) return html + '</div>';
+        if (s.type === "hist" || s.type === "dates") {
+          var bins = toArray(s.bins);
+          var max = Math.max.apply(null, bins.map(function (b) { return b.n; }).concat([1]));
+          html += '<svg class="editr-sum-chart" viewBox="0 0 ' + bins.length +
+            ' 20" preserveAspectRatio="none" role="img" aria-label="Distribution">';
+          bins.forEach(function (b, i) {
+            var h = b.n ? Math.max(1.5, 20 * b.n / max) : 0;
+            var tip = escapeHTML(b.label + ": " + plural(b.n, "row"));
+            html += '<g data-act="bin" data-i="' + i + '"><title>' + tip + '</title>' +
+              '<rect class="editr-sum-hit" x="' + i + '" y="0" width="1" height="20"/>' +
+              '<rect class="editr-sum-bar-v" x="' + (i + 0.1) + '" y="' + (20 - h) +
+              '" width="0.8" height="' + h + '"/></g>';
+          });
+          html += '</svg>';
+        } else if (s.type === "values" && s.unique > 20 && s.unique === s.n - s.missing) {
+          // identifiers: a bar of values that each appear once says nothing
+          html += '<div class="editr-sum-chart editr-sum-empty">all unique</div>';
+        } else if (s.type === "values") {
+          var total = Math.max(1, s.n - s.missing);
+          html += '<div class="editr-sum-values">';
+          toArray(s.top).forEach(function (t, i) {
+            var tip = escapeHTML(t.value + ": " + plural(t.n, "row") + " (" + percent(t.n, total) + ")");
+            html += '<span class="editr-sum-seg editr-sum-seg-' + (i % 5) + '" data-act="value" data-i="' + i +
+              '" style="flex-grow:' + t.n + '" title="' + tip + '"></span>';
+          });
+          if (s.other > 0) {
+            html += '<span class="editr-sum-seg editr-sum-seg-other" style="flex-grow:' + s.other +
+              '" title="' + escapeHTML("other values: " + plural(s.other, "row")) + '"></span>';
+          }
+          html += '</div>';
+        } else {
+          html += '<div class="editr-sum-chart editr-sum-empty">no values</div>';
+        }
+        html += '<div class="editr-sum-foot">';
+        if (s.missing > 0) {
+          html += '<button type="button" class="editr-sum-missing" data-act="missing" title="' + plural(s.missing, "missing value") + ' (show these rows)">' +
+            percent(s.missing, s.n) + '<span class="editr-sum-na"> NA</span></button>';
+        } else {
+          html += '<span></span>';
+        }
+        html += '<button type="button" class="editr-sum-more" data-act="details" title="' +
+          plural(s.unique, "distinct value") + ' (details)">' + s.unique +
+          '<span class="editr-sum-word"> distinct</span></button></div>';
+        return html + '</div>';
+      }
+
+      function fillSummaries() {
+        if (grid.opts.summary === false) return;
+        el.querySelectorAll(".editr-summary[data-field]").forEach(function (box) {
+          var tmp = document.createElement("div");
+          tmp.innerHTML = summaryHTML(box.getAttribute("data-field"));
+          box.innerHTML = tmp.firstChild.innerHTML;
+        });
+      }
+
+      function setSummaryOn(on, tell) {
+        grid.summaryOn = on;
+        el.classList.toggle("editr-summaries-off", !on);
+        var btn = byId(grid.ui.summary_btn);
+        if (btn) btn.setAttribute("aria-pressed", on ? "true" : "false");
+        try { window.localStorage.setItem("DataEditR.summary", on ? "on" : "off"); } catch (e) {}
+        if (grid.table && grid.ready) grid.table.redraw(true);
+        if (tell && shinyOpen()) Shiny.setInputValue(el.id + "_summary", on, {priority: "event"});
+      }
+
+      // clicking a bar filters the rows, the missing count shows the rows
+      // where the value is missing, the count of values opens the details.
+      // The header filter of the column is used when it can express the bar
+      // (a range for numbers, "contains" for dates, a list of values);
+      // otherwise the bar becomes a filter of its own (grid.picks), shown as
+      // a chip like the others
+      function summaryClick(target) {
+        var box = target.closest(".editr-summary");
+        var act = target.closest("[data-act]");
+        if (!box || !act) return;
+        var field = box.getAttribute("data-field");
+        var s = grid.summary[field];
+        var c = grid.colMap[field];
+        if (!s || !c) return;
+        var kind = act.getAttribute("data-act");
+        var i = Number(act.getAttribute("data-i"));
+        var header = c.filter ? c.filter.type : null;
+        var useHeader = function (value) {
+          delete grid.picks[field];
+          grid.table.setHeaderFilterValue(field, value);
+          grid.table.refreshFilter();
+        };
+        var usePick = function (pick) {
+          grid.picks[field] = pick;
+          if (header) grid.table.setHeaderFilterValue(field, "");
+          grid.table.refreshFilter();
+        };
+        if (kind === "bin") {
+          var bins = toArray(s.bins);
+          var b = bins[i];
+          if (s.type === "hist") {
+            // bins hold values from lo up to (not including) hi, but the last
+            // bin includes its upper end
+            var below = i < bins.length - 1;
+            if (header === "range") {
+              var range = {min: String(b.lo), max: String(b.hi)};
+              if (below) range.below = true;
+              useHeader(range);
+            } else {
+              usePick({kind: "range", lo: b.lo, hi: b.hi, below: below});
+            }
+          } else if (header === "text") {
+            useHeader(b.label);
+          } else {
+            usePick({kind: "prefix", value: b.label});
+          }
+        } else if (kind === "value") {
+          var v = toArray(s.top)[i].value;
+          if (header === "values") {
+            useHeader([c.kind === "logical" ? v === "TRUE" : c.kind === "numeric" ? Number(v) : v]);
+          } else {
+            usePick({kind: "equals", value: v});
+          }
+        } else if (kind === "missing") {
+          if (grid.picks[field] && grid.picks[field].kind === "missing") {
+            delete grid.picks[field];
+            grid.table.refreshFilter();
+          } else {
+            usePick({kind: "missing"});
+          }
+        } else if (kind === "details") {
+          openSummaryDetails(act, c, s);
+        }
+      }
+
+      function openSummaryDetails(anchor, c, s) {
+        var box = document.createElement("div");
+        box.className = "editr-popup editr-sum-details";
+        box.setAttribute("role", "dialog");
+        box.setAttribute("aria-label", "Summary of " + c.title);
+        var rows = [["Rows", s.n], ["Missing", s.missing + " (" + percent(s.missing, s.n) + ")"],
+                    ["Distinct values", s.unique]];
+        var st = s.stats || {};
+        if (s.type === "hist") {
+          rows = rows.concat([["Smallest", st.min], ["Largest", st.max], ["Mean", st.mean],
+                              ["Median", st.median], ["Standard deviation", st.sd]]);
+        } else if (s.type === "dates") {
+          rows = rows.concat([["Earliest", st.min], ["Latest", st.max]]);
+        }
+        var html = '<div class="editr-sum-title">' + escapeHTML(c.title) + '</div><table>';
+        rows.forEach(function (r) {
+          html += '<tr><th>' + r[0] + '</th><td>' + escapeHTML(r[1] === undefined ? "" : r[1]) + '</td></tr>';
+        });
+        html += '</table>';
+        if (s.type === "values") {
+          var total = Math.max(1, s.n - s.missing);
+          html += '<div class="editr-sum-title">Most common</div><table>';
+          toArray(s.top).forEach(function (t) {
+            html += '<tr><th>' + escapeHTML(t.value) + '</th><td>' + t.n + ' (' + percent(t.n, total) + ')</td></tr>';
+          });
+          html += '</table>';
+        }
+        box.innerHTML = html;
+        openPopup(anchor, box);
+      }
+
+      // rows that match the filters set from the column summaries (added
+      // rows stay)
+      function pickFilter(data) {
+        if (pinnedRow(data)) return true;
+        for (var f in grid.picks) {
+          var c = grid.colMap[f];
+          if (!c) continue;
+          var p = grid.picks[f];
+          var v = data[f];
+          var empty = v === null || v === undefined || v === "";
+          if (p.kind === "missing") {
+            if (!empty) return false;
+            continue;
+          }
+          if (empty) return false;
+          if (p.kind === "range") {
+            var x = Number(v);
+            if (isNaN(x) || x < p.lo || (p.below ? x >= p.hi : x > p.hi)) return false;
+          } else if (p.kind === "prefix") {
+            if (String(v).indexOf(p.value) !== 0) return false;
+          } else if (typeof v === "boolean") {
+            if ((v ? "TRUE" : "FALSE") !== p.value) return false;
+          } else if (typeof v === "number") {
+            var w = Number(p.value);
+            if (Math.abs(v - w) > 1e-12 * Math.max(1, Math.abs(w))) return false;
+          } else if (String(v) !== p.value) {
+            return false;
+          }
+        }
+        return true;
       }
 
       /* header filters ------------------------------------------------- */
@@ -745,7 +978,7 @@
         var lo = value.min === "" ? null : Number(value.min);
         var hi = value.max === "" ? null : Number(value.max);
         if (lo !== null && !isNaN(lo) && x < lo) return false;
-        if (hi !== null && !isNaN(hi) && x > hi) return false;
+        if (hi !== null && !isNaN(hi) && (value.below ? x >= hi : x > hi)) return false;
         return true;
       }
 
@@ -1611,13 +1844,16 @@
 
       function activeFilters() {
         if (!grid.table || !grid.table.getHeaderFilters) return [];
-        return grid.table.getHeaderFilters().filter(function (f) {
+        var picks = Object.keys(grid.picks || {}).filter(function (f) {
+          return grid.colMap[f];
+        }).map(function (f) { return {field: f, pick: grid.picks[f]}; });
+        return picks.concat(grid.table.getHeaderFilters().filter(function (f) {
           var v = f.value;
           if (v === "" || v === null || v === undefined) return false;
           if (Array.isArray(v)) return v.length > 0;
           if (typeof v === "object") return v.min !== "" || v.max !== "";
           return true;
-        });
+        }));
       }
 
       function updateStatus() {
@@ -1643,6 +1879,16 @@
       function chipText(f) {
         var c = grid.colMap[f.field] || {title: f.field};
         var v = f.value;
+        if (f.pick) {
+          var p = f.pick;
+          if (p.kind === "missing") return c.title + " is missing";
+          if (p.kind === "range") {
+            return p.below ? p.lo + " \u2264 " + c.title + " < " + p.hi :
+              c.title + " " + p.lo + "\u2013" + p.hi;
+          }
+          if (p.kind === "prefix") return c.title + " in " + p.value;
+          return c.title + " is " + p.value;
+        }
         if (Array.isArray(v)) {
           var vals = v.map(String);
           if (vals.length === 1) return c.title + " is " + vals[0];
@@ -1650,6 +1896,9 @@
             vals[vals.length - 1];
         }
         if (typeof v === "object") {
+          if (v.min !== "" && v.max !== "" && v.below) {
+            return v.min + " \u2264 " + c.title + " < " + v.max;
+          }
           if (v.min !== "" && v.max !== "") return c.title + " " + v.min + "\u2013" + v.max;
           if (v.min !== "") return c.title + " \u2265 " + v.min;
           return c.title + " \u2264 " + v.max;
@@ -1667,13 +1916,19 @@
           chip.className = "editr-chip";
           var text = document.createElement("span");
           text.textContent = chipText(f);
+          text.title = chipText(f);
           chip.appendChild(text);
           var x = document.createElement("button");
           x.type = "button";
           x.setAttribute("aria-label", "Remove filter " + chipText(f));
           x.innerHTML = ICONS.x;
           x.addEventListener("click", function () {
-            grid.table.setHeaderFilterValue(f.field, "");
+            if (f.pick) {
+              delete grid.picks[f.field];
+              grid.table.refreshFilter();
+            } else {
+              grid.table.setHeaderFilterValue(f.field, "");
+            }
           });
           chip.appendChild(x);
           box.appendChild(chip);
@@ -1684,6 +1939,8 @@
           clear.className = "editr-chip-clear";
           clear.textContent = "Clear filters";
           clear.addEventListener("click", function () {
+            grid.picks = {};
+            grid.table.refreshFilter();
             grid.table.clearHeaderFilter();
           });
           box.appendChild(clear);
@@ -1835,12 +2092,270 @@
             }
           });
         }
+        if (!el.__editrPanelBound) {
+          el.__editrPanelBound = true;
+          window.addEventListener("editr-panel", function (e) {
+            if (e.detail && e.detail.tab === "record" && grid.ui.record &&
+                e.detail.prefix && grid.ui.record.indexOf(e.detail.prefix) === 0) {
+              renderForm(selectedRowId() !== null ? selectedRowId() : grid.formRow);
+            }
+          });
+        }
+        var sum = byId(grid.ui.summary_btn);
+        if (sum) {
+          sum.hidden = grid.opts.summary === false;
+          sum.setAttribute("aria-pressed", grid.summaryOn ? "true" : "false");
+          if (!sum.__editrBound) {
+            sum.__editrBound = true;
+            sum.addEventListener("click", function () {
+              setSummaryOn(!el.__editr.summaryOn, true);
+            });
+          }
+        }
         var cols = byId(grid.ui.columns_btn);
         if (cols && !cols.__editrBound) {
           cols.__editrBound = true;
           cols.addEventListener("click", function () {
             el.__editr.openColumns(cols);
           });
+        }
+      }
+
+      /* ---------------------------------------------------------------- */
+      /* record form: one row as a form in the side panel                  */
+      /* ---------------------------------------------------------------- */
+
+      function formBox() { return byId(grid.ui.record); }
+
+      function formVisible() {
+        var box = formBox();
+        return !!box && !!box.offsetParent;
+      }
+
+      function selectedRowId() {
+        var ranges = grid.table && grid.table.getRanges ? grid.table.getRanges() : [];
+        if (ranges.length) {
+          var cells = ranges[0].getCells();
+          var first = Array.isArray(cells[0]) ? cells[0][0] : cells[0];
+          if (first) return first.getRow().getIndex();
+        }
+        return null;
+      }
+
+      function activeRows() {
+        return grid.table.getRows("active");
+      }
+
+      function formValue(c, v) {
+        if (v === null || v === undefined) return "";
+        if (c.option && c.option.type === "datetime") return String(v).replace(" ", "T").slice(0, 16);
+        return String(v);
+      }
+
+      function formInput(c, v) {
+        var o = c.option || {};
+        var input;
+        if (o.type === "dropdown" || c.kind === "logical" || o.type === "checkbox") {
+          input = document.createElement("select");
+          var opts = o.type === "dropdown" ? toArray(o.values).map(String) : ["TRUE", "FALSE"];
+          [""].concat(opts).forEach(function (x) {
+            var op = document.createElement("option");
+            op.value = x;
+            op.textContent = x === "" ? "\u2014" : x;
+            input.appendChild(op);
+          });
+          var current = v === null || v === undefined ? "" :
+            (typeof v === "boolean" ? (v ? "TRUE" : "FALSE") : String(v));
+          // a value that is not one of the options is still shown
+          if (current !== "" && opts.indexOf(current) === -1) {
+            var extra = document.createElement("option");
+            extra.value = current;
+            extra.textContent = current;
+            input.appendChild(extra);
+          }
+          input.value = current;
+        } else if (o.type === "textarea") {
+          input = document.createElement("textarea");
+          input.rows = 3;
+          input.value = formValue(c, v);
+        } else {
+          input = document.createElement("input");
+          input.type = o.type === "password" ? "password" :
+            c.kind === "date" || o.type === "date" ? "date" :
+            o.type === "datetime" ? "datetime-local" :
+            o.type === "time" ? "time" : "text";
+          if (c.kind === "numeric" || o.type === "number" || o.type === "slider" ||
+              o.type === "rating") input.inputMode = "decimal";
+          input.value = formValue(c, v);
+        }
+        input.className = "form-control form-control-sm editr-form-input";
+        input.disabled = !!c.readonly;
+        return input;
+      }
+
+      // read a form input as a cell value (the grid normalises it further)
+      function formRead(c, input) {
+        var x = input.value;
+        if (x === "") return null;
+        if (input.tagName === "SELECT" && (c.kind === "logical" ||
+            (c.option && c.option.type === "checkbox"))) return x === "TRUE";
+        if (c.option && c.option.type === "datetime") return x.replace("T", " ") + (x.length === 16 ? ":00" : "");
+        return x;
+      }
+
+      function renderForm(id) {
+        var box = formBox();
+        if (!box || !grid.table) return;
+        var table = grid.table;
+        var rows = activeRows();
+        var row = id !== null && id !== undefined ? table.getRow(id) : null;
+        if (!row) row = rows[0] || null;
+        box.innerHTML = "";
+        var head = document.createElement("div");
+        head.className = "editr-pane-head editr-form-head";
+        box.appendChild(head);
+        if (!row) {
+          grid.formRow = null;
+          head.innerHTML = '<h2>Record</h2>';
+          var empty = document.createElement("div");
+          empty.className = "editr-empty";
+          empty.textContent = "No rows to show.";
+          box.appendChild(empty);
+          return;
+        }
+        grid.formRow = row.getIndex();
+        var pos = rows.indexOf(row);
+        var data = row.getData();
+        var label = function () {
+          var rn = realColumns().filter(function (col) { return grid.colMap[col.getField()].frozen; })[0];
+          var v = rn ? data[rn.getField()] : null;
+          return v ? String(v) : "Row " + data[ID];
+        };
+        head.innerHTML = '<h2 class="editr-form-title">' + escapeHTML(label()) + '</h2>' +
+          '<span class="editr-muted small">' + (pos + 1) + ' of ' + rows.length + '</span>' +
+          '<span class="editr-spacer"></span>';
+        var nav = function (text, title, step, disabled) {
+          var b = document.createElement("button");
+          b.type = "button";
+          b.className = "btn btn-sm btn-outline-secondary";
+          b.textContent = text;
+          b.title = title;
+          b.disabled = disabled;
+          b.addEventListener("click", function () {
+            var next = rows[pos + step];
+            if (next) showRecord(next.getIndex());
+          });
+          head.appendChild(b);
+        };
+        nav("\u2039", "Previous row", -1, pos <= 0);
+        nav("\u203A", "Next row", 1, pos >= rows.length - 1);
+        if (grid.opts.row_edit) {
+          var add = document.createElement("button");
+          add.type = "button";
+          add.className = "btn btn-sm btn-primary";
+          add.textContent = "New";
+          add.title = "Add a row at the end";
+          add.addEventListener("click", function () {
+            var p = insertRow(null, true);
+            var nid = grid.nextId - 1;
+            Promise.resolve(p).then(function () {
+              updateStatus();
+              showRecord(nid, true);
+            });
+          });
+          head.appendChild(add);
+        }
+        var form = document.createElement("form");
+        form.className = "editr-form";
+        form.addEventListener("submit", function (e) { e.preventDefault(); });
+        realColumns().forEach(function (col) {
+          var field = col.getField();
+          var c = grid.colMap[field];
+          if (!col.isVisible()) return;
+          var wrap = document.createElement("div");
+          wrap.className = "editr-form-field";
+          wrap.setAttribute("data-field", field);
+          var lab = document.createElement("label");
+          var input = formInput(c, data[field]);
+          input.id = el.id + "-form-" + field;
+          lab.htmlFor = input.id;
+          lab.innerHTML = '<span class="editr-badge">' + (c.option && c.option.type === "time" ? "time" : BADGES[c.kind] || "abc") +
+            '</span> ' + escapeHTML(c.frozen ? "row name" : c.title);
+          wrap.appendChild(lab);
+          wrap.appendChild(input);
+          var msg = document.createElement("div");
+          msg.className = "editr-form-msg";
+          wrap.appendChild(msg);
+          var commit = function () {
+            var r = grid.table.getRow(grid.formRow);
+            if (!r) return;
+            var cell = r.getCell(field);
+            var v = formRead(c, input);
+            var old = cell.getValue();
+            if (v === old || ((old === null || old === undefined || old === "") && v === null)) return;
+            cell.setValue(v);
+            setTimeout(refreshForm, 0);
+          };
+          input.addEventListener("change", commit);
+          input.addEventListener("keydown", function (e) {
+            if (e.key === "Enter" && input.tagName !== "TEXTAREA") {
+              e.preventDefault();
+              commit();
+              var fields = form.querySelectorAll(".editr-form-input:not([disabled])");
+              var i = Array.prototype.indexOf.call(fields, input);
+              if (fields[i + 1]) fields[i + 1].focus();
+            }
+          });
+          form.appendChild(wrap);
+        });
+        box.appendChild(form);
+        refreshForm();
+      }
+
+      // put the current values and rule messages in the form (not into the
+      // box being typed in)
+      function refreshForm() {
+        var box = formBox();
+        if (!box || grid.formRow === null || grid.formRow === undefined) return;
+        var row = grid.table.getRow(grid.formRow);
+        if (!row) {
+          renderForm(null);
+          return;
+        }
+        var data = row.getData();
+        box.querySelectorAll(".editr-form-field").forEach(function (wrap) {
+          var field = wrap.getAttribute("data-field");
+          var c = grid.colMap[field];
+          if (!c) return;
+          var input = wrap.querySelector(".editr-form-input");
+          var v = data[field];
+          if (input && document.activeElement !== input) {
+            if (input.tagName === "SELECT") {
+              input.value = v === null || v === undefined ? "" :
+                (typeof v === "boolean" ? (v ? "TRUE" : "FALSE") : String(v));
+            } else {
+              input.value = formValue(c, v);
+            }
+          }
+          var key = data[ID] + "|" + field;
+          var bad = invalidReason(c, v);
+          var problem = grid.problems[key];
+          var msg = wrap.querySelector(".editr-form-msg");
+          msg.textContent = bad ? "\u201c" + v + "\u201d " + bad : (problem || "");
+          wrap.classList.toggle("editr-form-bad", !!(bad || problem));
+          wrap.classList.toggle("editr-form-changed", !!grid.changed[key]);
+        });
+      }
+
+      function showRecord(id, focus) {
+        renderForm(id);
+        if (grid.formRow !== null && grid.formRow !== undefined) {
+          var first = realColumns().filter(function (col) { return col.isVisible(); })[0];
+          if (first) selectCell(grid.formRow, first.getField());
+        }
+        if (focus) {
+          var input = formBox() && formBox().querySelector(".editr-form-input:not([disabled])");
+          if (input) input.focus();
         }
       }
 
@@ -1902,17 +2417,22 @@
             });
             var upd = Object.keys(byRow).map(function (k) { return byRow[k]; });
             if (upd.length) table.updateData(upd);
+            if (formVisible()) setTimeout(refreshForm, 0);
           } else if (method === "replace_data") {
             if (args.columns) table.setColumns(sameLayout(args.columns));
             table.replaceData(rowsFromColumns(args.data)).then(function () {
               updateStatus();
               renderChips();
               reportView();
+              if (formVisible()) renderForm(grid.formRow);
             });
           } else if (method === "scroll_to") {
             selectCell(args.id, args.field || (realColumns()[0] || {getField: function () { return null; }}).getField());
           } else if (method === "set_title") {
             setTitle(args.field, args.title);
+          } else if (method === "set_summary") {
+            grid.summary = args.summary || {};
+            fillSummaries();
           } else if (method === "set_problems") {
             var nextP = problemMap(args);
             var touchedP = {};
@@ -1921,6 +2441,7 @@
             });
             grid.problems = nextP;
             reformatRows(Object.keys(touchedP).map(Number));
+            if (formVisible()) refreshForm();
           } else if (method === "set_changed") {
             var next = {};
             toArray(args.keys).forEach(function (k) { next[k] = true; });
@@ -1951,6 +2472,26 @@
         grid.changed = {};
         toArray(opts.changed).forEach(function (k) { grid.changed[k] = true; });
         grid.problems = problemMap(opts.problems);
+        grid.summary = opts.summary_data || {};
+        grid.picks = {};
+        var pref = null;
+        try { pref = window.localStorage.getItem("DataEditR.summary"); } catch (e) {}
+        grid.summaryOn = opts.summary !== false && pref !== "off";
+        el.classList.toggle("editr-summaries-off", !grid.summaryOn);
+        if (opts.summary !== false && !grid.summaryOn && shinyOpen()) {
+          Shiny.setInputValue(el.id + "_summary", false, {priority: "event"});
+        }
+        // summaries handle their own clicks (no column selection or rename)
+        if (!el.__editrSummaryBound) {
+          el.__editrSummaryBound = true;
+          ["mousedown", "dblclick", "click"].forEach(function (type) {
+            el.addEventListener(type, function (e) {
+              if (!e.target.closest || !e.target.closest(".editr-summary")) return;
+              e.stopPropagation();
+              if (type === "click") summaryClick(e.target);
+            }, true);
+          });
+        }
         if (opts.track_color) {
           el.style.setProperty("--editr-track-color", opts.track_color);
         }
@@ -2002,10 +2543,12 @@
 
         table.on("tableBuilt", function () {
           grid.ready = true;
+          table.addFilter(pickFilter);
           var queued = pending[el.id] || [];
           delete pending[el.id];
           queued.forEach(function (m) { grid.handle(m.method, m.args || {}); });
           patchRowDisplayed(table);
+          patchScrollToRow(table);
           var add = holder.querySelector(".editr-addrow");
           if (add) add.addEventListener("click", addRowAtEnd);
           bindUI();
@@ -2026,6 +2569,14 @@
           }
         });
 
+        table.on("cellClick", function (e, cell) {
+          if (formVisible() && cell.getRow().getIndex() !== grid.formRow) {
+            renderForm(cell.getRow().getIndex());
+          }
+        });
+        table.on("cellEdited", function () {
+          if (formVisible()) setTimeout(refreshForm, 0);
+        });
         table.on("dataFiltered", function () {
           if (!grid.ready) return;
           setTimeout(function () {

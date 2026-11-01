@@ -292,7 +292,10 @@ the rows that break them, one per rule and row, so you can keep the
 <p>Column actions (formulas, find and replace, recoding, type changes
 and sorting) are offered in the column menu; formulas can only use
 column names and common functions, so users cannot run other R code on
-your server. Set <code>col_actions = FALSE</code> to remove them.</p>
+your server. Set <code>col_actions = FALSE</code> to remove them. Column
+summaries are worked out on the server from all rows, only for the
+columns that changed and not while they are hidden; set
+<code>col_summary = FALSE</code> to leave them out.</p>
 <p><code><a href="../reference/dataEditCommit.html">dataEditCommit()</a></code> returns the same counts and the
 <code>log</code> of the changes it saved: one row per changed cell (or
 added, removed or renamed row and column) with the <code>time</code>,

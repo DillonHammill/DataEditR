@@ -188,15 +188,25 @@ column_filter <- function(x, option = NULL, rownames = FALSE) {
   }
   n <- length(unique(x[!is.na(x)]))
   if (is.numeric(x) && !inherits(x, c("Date", "POSIXt"))) {
-    # A FEW WHOLE-NUMBER CODES (cyl, gear) OR VALUES REPEATED A LOT
-    whole <- all(x[!is.na(x)] == round(x[!is.na(x)]))
-    few <- n > 0 && ((whole && n <= 6) || (n <= 12 && n <= length(x) / 4))
+    few <- few_numbers(x[!is.na(x)], n, length(x))
     return(list(type = if (few) "values" else "range"))
   }
   if (is.character(x) && n > 0 && n <= 20 && n < length(x)) {
     return(list(type = "values"))
   }
   list(type = "text")
+}
+
+#' A few whole-number codes (cyl, gear) or values repeated a lot
+#'
+#' @param v the values that are not missing.
+#' @param n_unique number of distinct values.
+#' @param n number of values, including missing ones.
+#'
+#' @noRd
+few_numbers <- function(v, n_unique, n) {
+  whole <- all(v == round(v))
+  n_unique > 0 && ((whole && n_unique <= 6) || (n_unique <= 12 && n_unique <= n / 4))
 }
 
 #' @noRd

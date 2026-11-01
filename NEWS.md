@@ -53,6 +53,24 @@
   no longer converted to numbers. Dates stay dates, and matrices, tibbles and
   data.tables are returned with their original class.
 
+## Column summaries and a record form
+
+* Each column header shows a summary of the column, worked out in R from all
+  rows: a histogram of numbers and dates or the most common values, the share
+  of missing values and the number of distinct values. Clicking a bar filters
+  the rows (a range for numbers, a period for dates, a value for the rest),
+  clicking the missing share shows the rows where the value is missing (a new
+  "is missing" filter), and the number of distinct values opens the details
+  (smallest, largest, mean, median, standard deviation). Summaries are kept
+  up to date as you edit, only recomputing the columns that changed. A toolbar
+  button hides them, and `col_summary = FALSE` leaves them out.
+* A new `Record` tab (and toolbar button) shows the selected row as a form,
+  for entering or checking data one record at a time. Its fields use the
+  column inputs and checks of the grid, show broken rules under the fields
+  and move with the grid; `New` adds a row at the end.
+* Double-click a column's name (rather than anywhere in its header) to rename
+  it.
+
 ## Column actions and validation rules
 
 * A column's menu (the new `⋮` button in its header, or a right-click) has

@@ -87,6 +87,24 @@ res <- switch(
     data_edit(samples, viewer = noview, quiet = TRUE,
               rules = list("pH is between 0 and 14" = ~ ph >= 0 & ph <= 14))
   },
+  summary = {
+    set.seed(7)
+    n <- 40
+    samples <- data.frame(
+      sample = sprintf("S-%02d", seq_len(n)),
+      site = sample(c("north", "south", "east", "west"), n, TRUE,
+                    prob = c(0.4, 0.3, 0.2, 0.1)),
+      collected = as.Date("2024-03-01") + sort(sample(0:120, n, TRUE)),
+      ph = round(rnorm(n, 7.2, 0.5), 1),
+      mass = round(rlnorm(n, 0, 0.3), 2),
+      passed = sample(c(TRUE, FALSE), n, TRUE, prob = c(0.8, 0.2)),
+      stringsAsFactors = FALSE
+    )
+    samples$ph[c(5, 17, 33)] <- NA
+    samples$site[12] <- NA
+    data_edit(samples, viewer = noview, quiet = TRUE,
+              col_options = list(site = c("north", "south", "east", "west")))
+  },
   restore = {
     # the draft left by an editor that was closed without pressing Done
     p <- DataEditR:::editr_prepare(mtcars, quiet = TRUE)

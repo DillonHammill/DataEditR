@@ -247,6 +247,13 @@
   gap: 6px;
 }
 
+/* long filters are cut short (the full text is shown on hover) */
+.editr-chips .editr-chip > span {
+  max-width: 15em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .editr-chips:empty {
   display: none;
 }
@@ -309,6 +316,33 @@
   .editr-find kbd,
   .editr-find-count:empty + kbd {
     display: none;
+  }
+  /* "Review changes" and "Code" keep their icons (and the count) */
+  .editr-tool-collapse .editr-tool-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .editr-toolbar .btn.editr-tool.editr-tool-collapse {
+    padding: 0 10px;
+  }
+}
+
+/* filter chips need the room in wider editors too */
+@container (max-width: 1300px) {
+  .editr-toolbar:has(.editr-chips:not(:empty)) .editr-tool-collapse .editr-tool-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .editr-toolbar:has(.editr-chips:not(:empty)) .btn.editr-tool.editr-tool-collapse {
+    padding: 0 10px;
   }
 }
 
@@ -912,4 +946,73 @@ button.editr-change-title:hover {
 .editr-rules-code ul {
   margin: 4px 0 10px;
   padding-left: 18px;
+}
+
+/* record form -------------------------------------------------------------- */
+
+.editr-form-head {
+  flex-wrap: wrap;
+}
+
+.editr-form-head .btn {
+  height: 28px;
+  min-width: 30px;
+  padding: 0 8px;
+  font-size: 13px;
+}
+
+.editr-form-title {
+  max-width: 55%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.editr-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.editr-form-field label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 2px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #52606D;
+}
+
+.editr-form-field .editr-badge {
+  font-size: 10px;
+}
+
+.editr-form-field.editr-form-changed .editr-form-input {
+  background-color: #EFF5FF;
+}
+
+.editr-form-field.editr-form-bad .editr-form-input {
+  border-color: #DC2626;
+}
+
+.editr-form-msg {
+  color: #B91C1C;
+  font-size: 12px;
+  white-space: pre-line;
+}
+
+.editr-form-msg:empty {
+  display: none;
+}
+
+.editr-panel-head {
+  gap: 0;
+  padding-left: 8px;
+  padding-right: 6px;
+}
+
+.editr-tab {
+  padding: 0 8px;
+  font-size: 13px;
 }

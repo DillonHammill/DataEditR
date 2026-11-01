@@ -134,7 +134,8 @@ see the keyboard shortcuts;</li>
 a type badge (<code>abc</code> for text, <code>123</code> for numbers,
 <code>date</code> for dates, <code>dttm</code> for date-times,
 <code>time</code> for times, <code>T/F</code> for logicals) next to each
-column name, and a filter box under each column name;</li>
+column name, a summary of each column (see <a href="#column-summaries">Column summaries</a>) and a filter box under
+each column name;</li>
 <li>the <strong>status bar</strong> showing how many rows and columns
 are on screen, a summary of the selected cells and a summary of your
 changes.</li>
@@ -160,6 +161,31 @@ will be returned. If you wish to discard all changes made to the data,
 select the <code>Cancel</code> button in the top left corner and the
 unedited data will be returned instead (or the value supplied to the
 <code>cancel</code> argument).</p>
+<div class="section level3">
+<h3 id="column-summaries">1.1 Column summaries<a class="anchor" aria-label="anchor" href="#column-summaries"></a>
+</h3>
+<p>Under each column name is a small summary of the column, worked out
+from all of its rows (not only those on screen):</p>
+<ul>
+<li>a <strong>histogram</strong> for numbers and dates (dates are
+counted by year, month, day or hour, depending on how far apart they
+are);</li>
+<li>the <strong>most common values</strong> for text,
+<code>TRUE</code>/<code>FALSE</code> columns and columns with a few
+distinct values, as a bar split by how often each value appears;</li>
+<li>the <strong>share of missing values</strong> (in red) and the
+<strong>number of distinct values</strong>.</li>
+</ul>
+<p>Hover over a bar to see what it counts. Click a bar to show only
+those rows, click the share of missing values to show the rows where the
+value is missing, or click the number of distinct values for the
+details: the smallest, largest, mean and median values and the standard
+deviation of numbers, or the earliest and latest dates.</p>
+<p><img src="images/summaries.png" width="100%" style="display: block; margin: auto;"></p>
+<p>The summaries are updated as you edit. Hide them with the chart
+button in the toolbar (the editor remembers your choice), or set
+<code>col_summary = FALSE</code> to leave them out.</p>
+</div>
 </div>
 <div class="section level2">
 <h2 id="data-import">2. Data Import<a class="anchor" aria-label="anchor" href="#data-import"></a>
@@ -330,7 +356,7 @@ respectively.</p>
 <h3 id="rename-rows-or-columns">3.6 Rename rows or columns<a class="anchor" aria-label="anchor" href="#rename-rows-or-columns"></a>
 </h3>
 <p><code><a href="../reference/data_edit.html">data_edit()</a></code> has full support for editing row and column
-names. Double-click a column header (or choose
+names. Double-click the name of a column (or choose
 <code>Rename column</code> from its menu) to rename it; the new name
 must be unique and cannot be empty. Row names are edited like any other
 cell in the <code>row names</code> column. The row indices cannot be
@@ -491,6 +517,32 @@ undone like any other change, and appear in the <code>History</code> tab
 with their code. Set <code>col_actions = FALSE</code> to remove them
 from the column menu.</p>
 </div>
+<div class="section level3">
+<h3 id="edit-one-record-at-a-time">3.13 Edit one record at a time<a class="anchor" aria-label="anchor" href="#edit-one-record-at-a-time"></a>
+</h3>
+<p>Wide tables are easier to fill in one record (row) at a time. Click
+the form button in the toolbar, or the <code>Record</code> tab of the
+side panel, to see the selected row as a form with a labelled field for
+each visible column:</p>
+<p><img src="images/record.png" width="100%" style="display: block; margin: auto;"></p>
+<ul>
+<li>The fields use the same inputs as the grid (dropdown menus, dates,
+<code>TRUE</code>/<code>FALSE</code>, …) and the same checks, so a value
+that does not fit its column asks whether to store <code>NA</code>.</li>
+<li>Press <code>Enter</code> to save a field and move to the next
+one.</li>
+<li>Broken <a href="#validation-rules">validation rules</a> are shown
+under the fields they concern, and changed fields are marked.</li>
+<li>The arrows move to the previous or next row on screen (filters
+apply), and the grid follows; selecting a cell in the grid shows its row
+in the form.</li>
+<li>
+<code>New</code> adds a row at the end and puts the cursor in its
+first field.</li>
+</ul>
+<p>Changes made in the form are ordinary edits: they can be undone, are
+listed in the review panel and appear in the code.</p>
+</div>
 </div>
 <div class="section level2">
 <h2 id="data-creation">4. Data Creation<a class="anchor" aria-label="anchor" href="#data-creation"></a>
@@ -552,10 +604,12 @@ more values (<code>Any</code> means no filter);</li>
 <strong>text</strong> columns keep values that contain what you
 type.</li>
 </ul>
-<p>Rows must match every filter to be shown. Active filters are listed
-as chips in the toolbar; click the <code>x</code> on a chip to remove
-that filter or <code>Clear filters</code> to remove them all. The status
-bar shows how many of the rows are on screen.</p>
+<p>Clicking a bar of a column’s summary (see <a href="#column-summaries">Column summaries</a>) sets its filter for you,
+and clicking the share of missing values shows only the rows where the
+value is missing. Rows must match every filter to be shown. Active
+filters are listed as chips in the toolbar; click the <code>x</code> on
+a chip to remove that filter or <code>Clear filters</code> to remove
+them all. The status bar shows how many of the rows are on screen.</p>
 <p><img src="images/filter-rows.gif" width="100%" style="display: block; margin: auto;"></p>
 </div>
 <div class="section level3">
@@ -1248,7 +1302,7 @@ drafts for each user of the app:</p>
 </tr>
 <tr class="even">
 <td>Rename column</td>
-<td>Double-click header</td>
+<td>Double-click column name</td>
 </tr>
 <tr class="odd">
 <td>Row and column menus</td>

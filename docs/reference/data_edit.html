@@ -110,6 +110,7 @@ database.</p>
 <span>  autosave <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  col_actions <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  rules <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  col_summary <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -338,6 +339,16 @@ added from a column's menu (<em>Rules...</em>). See the <em>Validation</em>
 section.</p></dd>
 
 
+<dt>col_summary</dt>
+<dd><p>logical indicating whether a summary of each column is
+shown under its header: a histogram of numbers and dates or the most
+common values, the share of missing values and the number of distinct
+values. Click a bar to show only those rows, the missing share to show
+the rows where the value is missing, or the number of values for the
+details (smallest, largest, mean, ...). Set to <code>TRUE</code> by default;
+the toolbar button hides the summaries.</p></dd>
+
+
 <dt>...</dt>
 <dd><p>not in use.</p></dd>
 
@@ -357,7 +368,7 @@ committed.</p>
 <p>Double-click a cell to edit it. Click and drag to select a range of cells,
 then copy (Ctrl+C), paste (Ctrl+V), clear (Delete) or fill down (Ctrl+D).
 Right click a row to insert or delete rows, and right click a column header
-to insert, rename, hide or delete columns. Double-click a column header to
+to insert, rename, hide or delete columns. Double-click a column's name to
 rename it. Ctrl+Z and Ctrl+Y undo and redo changes; press ? for the full
 list of shortcuts.</p>
     </div>
@@ -365,13 +376,16 @@ list of shortcuts.</p>
     <h2 id="layout">Layout<a class="anchor" aria-label="anchor" href="#layout"></a></h2>
     
 
-<p>The toolbar opens other data (<em>Open</em>), shows or hides columns, lists
-active filters, searches the data (Ctrl+F), and opens the review panel,
-which lists every change with a button to revert it and shows the code that
-reproduces the edits. Type in the boxes under the column headers to filter
-rows. The status bar shows how many rows and columns are on screen and
-summarises the selected cells. The menu next to <em>Done</em> chooses whether
-all data or only what is on screen is returned.</p>
+<p>The toolbar opens other data (<em>Open</em>), shows or hides column
+summaries and columns, lists active filters, searches the data (Ctrl+F),
+and opens the side panel. The panel shows the selected row as a form
+(<em>Record</em>), lists every change with a button to revert it, the
+history of changes, broken rules and the code that reproduces the edits.
+Under each column name is a summary of the column: click its bars to filter
+the rows, or type in the boxes under it. The status bar shows how many rows
+and columns are on screen and summarises the selected cells. The menu next
+to <em>Done</em> chooses whether all data or only what is on screen is
+returned.</p>
     </div>
     <div class="section level2">
     <h2 id="databases">Databases<a class="anchor" aria-label="anchor" href="#databases"></a></h2>
