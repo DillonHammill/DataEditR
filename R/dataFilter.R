@@ -10,6 +10,10 @@
 #'   should be hidden from the user, set to FALSE by default.
 #' @param hover_text text to display on download button when user hovers cursor
 #'   over button, set to NULL by default to turn off hover text.
+#' @param reset optional reactive expression that resets the filters whenever
+#'   it changes. By default filters are reset whenever \code{data} changes; supply
+#'   a separate trigger (e.g. the data input) to keep filters active while the
+#'   data is being edited.
 #'
 #' @return a list of reactive objects containing the filtered \code{data} and
 #'   indices for filtered \code{rows}.
@@ -26,14 +30,13 @@
 #' @examples
 #' if (interactive()) {
 #'   library(shiny)
-#'   library(rhandsontable)
 #'   library(shinyjs)
 #'
 #'   ui <- fluidPage(
 #'     useShinyjs(),
 #'     dataInputUI("input1"),
 #'     dataFilterUI("filter1"),
-#'     rHandsontableOutput("data1")
+#'     tableOutput("data1")
 #'   )
 #'
 #'   server <- function(input,
@@ -46,10 +49,8 @@
 #'       data = data_input
 #'     )
 #'
-#'     output$data1 <- renderRHandsontable({
-#'       if (!is.null(data_filter$data())) {
-#'         rhandsontable(data_filter$data())
-#'       }
+#'     output$data1 <- renderTable({
+#'       data_filter$data()
 #'     })
 #'     
 #'   }
@@ -84,7 +85,8 @@ dataFilterUI <- function(id) {
 dataFilterServer <- function(id,
                              data = reactive(NULL),
                              hide = FALSE,
-                             hover_text = NULL) {
+                             hover_text = NULL,
+                             reset = NULL) {
   
   # SERVER
   moduleServer(id, function(input, output, session) {
@@ -120,10 +122,20 @@ dataFilterServer <- function(id,
       } else {
         values$data <- data()
       }
-      # RESET FILTERS - NEW DATA
+    })
+    
+    # RESET FILTERS - NEW DATA
+    reset_trigger <- if (!is.null(reset)) {
+      reset
+    } else if (is.reactive(data)) {
+      data
+    } else {
+      reactive(data)
+    }
+    observeEvent(reset_trigger(), {
       values$filters <- list()
       values$rows <- NULL
-    })
+    }, ignoreNULL = FALSE)
     
     # FILTER UI
     observeEvent(input$filter, {
@@ -170,6 +182,13 @@ dataFilterServer <- function(id,
         filter_name <- "filter-1"
         filter_ns_name <- ns(filter_name)
         
+        # FILTER PLACEHOLDER
+        values$filters[[filter_name]] <- list(
+          column = NULL,
+          logic = NULL,
+          levels = NULL
+        )
+        
         # ARGUMENTS
         column_label <- "Column"
         logic_label <- "Logic"
@@ -183,6 +202,9 @@ dataFilterServer <- function(id,
             
             # COLUMN
             column = observeEvent(input[[paste0(filter_name, "-col")]], {
+              
+              # IGNORE REMOVED FILTERS
+              if (!filter_name %in% names(values$filters)) return()
               
               # VALUES
               values$filters[[filter_name]]$column <-
@@ -250,6 +272,8 @@ dataFilterServer <- function(id,
             
             # LOGIC
             logic = observeEvent(input[[paste0(filter_name, "-logic")]], {
+              # IGNORE REMOVED FILTERS
+              if (!filter_name %in% names(values$filters)) return()
               # VALUES
               values$filters[[filter_name]]$logic <-
                 input[[paste0(filter_name, "-logic")]]
@@ -257,6 +281,8 @@ dataFilterServer <- function(id,
             
             # LEVELS
             levels = observeEvent(input[[paste0(filter_name, "-levels")]], {
+              # IGNORE REMOVED FILTERS
+              if (!filter_name %in% names(values$filters)) return()
               # VALUES
               values$filters[[filter_name]]$levels <-
                 input[[paste0(filter_name, "-levels")]]
@@ -463,6 +489,9 @@ dataFilterServer <- function(id,
         # COLUMN
         column = observeEvent(input[[paste0(filter_name, "-col")]], {
           
+          # IGNORE REMOVED FILTERS
+          if (!filter_name %in% names(values$filters)) return()
+          
           # VALUES
           values$filters[[filter_name]]$column <-
             input[[paste0(filter_name, "-col")]]
@@ -530,6 +559,8 @@ dataFilterServer <- function(id,
         
         # LOGIC
         logic = observeEvent(input[[paste0(filter_name, "-logic")]], {
+          # IGNORE REMOVED FILTERS
+          if (!filter_name %in% names(values$filters)) return()
           # VALUES
           values$filters[[filter_name]]$logic <-
             input[[paste0(filter_name, "-logic")]]
@@ -537,6 +568,8 @@ dataFilterServer <- function(id,
         
         # LEVELS
         levels = observeEvent(input[[paste0(filter_name, "-levels")]], {
+          # IGNORE REMOVED FILTERS
+          if (!filter_name %in% names(values$filters)) return()
           # VALUES
           values$filters[[filter_name]]$levels <-
             input[[paste0(filter_name, "-levels")]]

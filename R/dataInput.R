@@ -28,11 +28,10 @@
 #' @examples
 #' if (interactive()) {
 #'   library(shiny)
-#'   library(rhandsontable)
 #'
 #'   ui <- fluidPage(
 #'     dataInputUI("input1"),
-#'     rHandsontableOutput("data1")
+#'     tableOutput("data1")
 #'   )
 #'
 #'   server <- function(input,
@@ -40,10 +39,8 @@
 #'                      session) {
 #'     data_input1 <- dataInputServer("input1")
 #'
-#'     output$data1 <- renderRHandsontable({
-#'       if (!is.null(data_input1())) {
-#'         rhandsontable(data_input1())
-#'       }
+#'     output$data1 <- renderTable({
+#'       data_input1()
 #'     })
 #'   }
 #'
@@ -193,6 +190,10 @@ dataInputServer <- function(id,
           return(NULL)
         }
       )
+      # DATABASE TABLES - PASSED THROUGH TO DATAEDIT
+      if(is_db_input(data_input)) {
+        return(data_input)
+      }
       # CHECK EMPTY DATA
       if(!is.null(data_input)) {
         # DATA - VECTOR -> ROW

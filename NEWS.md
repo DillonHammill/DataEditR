@@ -1,3 +1,62 @@
+# DataEditR 1.9.0.9000 (development version of 2.0.0)
+
+## Tabulator grid replaces rhandsontable
+
+* The data grid is now a thin htmlwidget around the MIT-licensed 'Tabulator'
+  JavaScript library (6.7.1, bundled). `rhandsontable` is no longer a
+  dependency, so the forked `rhandsontable` is no longer required and the
+  CRAN version works as intended.
+* Edits are sent to R as cell-level changes (deltas) instead of whole tables.
+  On a 100,000 row table an edit round trip takes ~50 ms and only the visible
+  rows are rendered in the browser.
+* Rows and columns carry stable identifiers. Filtered rows and selected
+  columns are views onto the full data, so edits apply directly to the master
+  copy (no synchronisation step), and renaming a column no longer touches the
+  data.
+* Undo and redo (Ctrl+Z / Ctrl+Y, or the toolbar buttons). A paste, fill or
+  range clear is a single undo step.
+* Spreadsheet-style range selection, copy/paste, Delete to clear a range and
+  Ctrl+D to fill down. Double-click a header to rename a column; right-click
+  rows or headers to insert/delete rows and columns.
+* `col_options` no longer disables adding or removing columns, and
+  `col_readonly` columns are locked in the grid rather than reverted after
+  editing.
+* A change counter is shown above the grid, and `track` now highlights cells
+  with a tinted fill that is distinct from the range selection.
+* Column types are preserved: only empty template/new columns are passed
+  through `type.convert()` on return, so character columns such as `"001"` are
+  no longer converted to numbers. Dates stay dates, and matrices, tibbles and
+  data.tables are returned with their original class.
+
+## Database tables
+
+* `data_edit()` and `dataEditServer()` accept `dbplyr` lazy tables (e.g.
+  `data_edit(tbl(con, "artists"))`, optionally filtered), or a `db_table()`.
+  Rows are matched by primary key (detected for SQLite, DuckDB and
+  PostgreSQL), edits are staged until *Done*, the user confirms a summary, and
+  changes are written in a single transaction with optimistic concurrency
+  checks (the commit is rolled back if any row changed in the database since it
+  was loaded). Columns that are not part of the table are read-only and schema
+  changes are disabled.
+* `code = TRUE` generates `rows_update()`, `rows_append()` and `rows_delete()`
+  code for database edits.
+
+## Other changes
+
+* `data_code()` now inserts added rows at their edited positions using
+  `tibble::add_row(.before = )`, so the generated code reproduces row order.
+* `dataFilterServer()` and `dataSelectServer()` gain a `reset` argument so
+  filters are kept while data is edited; `dataSelectServer()` also returns the
+  selected column `names`.
+* Fix `dataFilter` filters being re-created by stale observers after
+  "Remove Filters".
+* A filter that matches no rows now shows an empty table rather than all rows.
+* `row_bind` adds typed empty rows, so numeric columns stay numeric.
+* `dataEditServer()` gains `rows` and `columns` arguments to display a subset
+  of the data; `row_index` is no longer needed.
+* Add unit tests (testthat) for the editing engine, database backend and code
+  generation.
+
 # DataEditR 1.0.0
 
 ## Major New Features

@@ -1,0 +1,10 @@
+dependencies:
+  - name: tabulator
+    version: 6.7.1
+    src: htmlwidgets/lib/tabulator-6.7.1
+    script: tabulator.min.js
+    stylesheet: tabulator_bootstrap3.min.css
+  - name: editr-grid-css
+    version: 2.0.0
+    src: htmlwidgets/lib/editr-grid
+    stylesheet: editr_grid.css

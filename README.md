@@ -20,9 +20,11 @@ status](https://www.r-pkg.org/badges/version/DataEditR)](https://CRAN.R-project.
 Manual data entry and editing in R can be tedious, especially if you
 have limited coding experience and are accustomed to using software with
 a Graphical User Interface (GUI). **DataEditR** is an R package built on
-shiny and rhandsontable that makes it easy to interactively view, enter,
-filter and edit data. If you are new to **DataEditR** visit
-<https://dillonhammill.github.io/DataEditR/> to get started.
+shiny and the MIT-licensed [Tabulator](https://tabulator.info)
+JavaScript library that makes it easy to interactively view, enter,
+filter and edit data, including tables stored in databases. If you are
+new to **DataEditR** visit <https://dillonhammill.github.io/DataEditR/>
+to get started.
 
 ## Installation
 
@@ -57,7 +59,10 @@ prefer to interact with it in this way.
 - RStudio add-in
 - flexible display options (either `dialog` box, `browser` or RStudio
   `viewer` pane)
-- fast rendering to quickly view datasets
+- fast rendering to quickly view datasets, with virtual scrolling for
+  large data (100,000+ rows)
+- edit tables in a database directly (`dplyr::tbl()` or `db_table()`),
+  with changes written in a single transaction
 - ability to interactively create data.frames from scratch
 - load tabular data saved to file using any reading function
   (e.g. `read.csv()`)
@@ -76,14 +81,15 @@ prefer to interact with it in this way.
 
 - column selection using the `dataSelect` module
 - row selection using the `dataFilter` module
-- automatic synchronisation of edits to filtered or selected data
-  subsets with the master dataset
+- edits to filtered or selected data subsets are applied directly to the
+  master dataset
+- undo and redo (Ctrl+Z / Ctrl+Y)
 - change tracking to visually highlight edited and added cells (`track`
   parameter)
 - edit row or column names
 - addition or removal of rows or columns
 - manual column resizing
-- drag to fill cells
+- range selection, fill down (Ctrl+D) and clearing of selected cells
 - copy or paste data to and from external software
 - custom column types to simplify user input (e.g. checkboxes and
   dropdown menus)
@@ -108,16 +114,15 @@ mtcars_new <- data_edit(mtcars,
                         save_as = "mtcars_new.csv")
 ```
 
-<img src="https://raw.githubusercontent.com/DillonHammill/DataEditR/master/man/figures/DataEditR/DataEditR-README.gif" alt="" width="100%" style="display: block; margin: auto;" />
+<img src="https://raw.githubusercontent.com/DillonHammill/DataEditR/master/man/figures/DataEditR/DataEditR-README.gif" width="100%" style="display: block; margin: auto;" />
 
 ## Credits
 
 **DataEditR** is built using the fantastic
-[rhandsontable](https://github.com/jrowen/rhandsontable) package.
-**DataEditR** makes use of many features for entering and editing data,
-but **rhandsontable** has support for much more sophisticated
-interactive representations of data should you need them. The user
-interface of **DataEditR** has been inspired by the
+[Tabulator](https://tabulator.info) JavaScript library by Oli Folkerd
+(MIT licence). Earlier versions of **DataEditR** were built on the
+[rhandsontable](https://github.com/jrowen/rhandsontable) package. The
+user interface of **DataEditR** has been inspired by the
 [editData](https://github.com/cardiomoon/editData) package which is a
 great alternative to **DataEditR**.
 
@@ -138,8 +143,8 @@ citation("DataEditR")
 #> To cite package 'DataEditR' in publications use:
 #> 
 #>   Hammill D (2026). _DataEditR: An Interactive Editor for Viewing,
-#>   Entering, Filtering & Editing Data_. R package version 1.0.0,
-#>   <https://github.com/DillonHammill/DataEditR>.
+#>   Entering, Filtering & Editing Data_. R package version 1.9.0.9000,
+#>   <https://dillonhammill.github.io/DataEditR/>.
 #> 
 #> A BibTeX entry for LaTeX users is
 #> 
@@ -147,7 +152,7 @@ citation("DataEditR")
 #>     title = {DataEditR: An Interactive Editor for Viewing, Entering, Filtering & Editing Data},
 #>     author = {Dillon Hammill},
 #>     year = {2026},
-#>     note = {R package version 1.0.0},
-#>     url = {https://github.com/DillonHammill/DataEditR},
+#>     note = {R package version 1.9.0.9000},
+#>     url = {https://dillonhammill.github.io/DataEditR/},
 #>   }
 ```

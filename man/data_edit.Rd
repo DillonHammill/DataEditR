@@ -39,10 +39,10 @@ data_edit(
 }
 \arguments{
 \item{x}{a matrix, data.frame, data.table or the name of a csv file to edit.
-Tibbles are also supported but will be coerced to data.frames. An empty
-table can be created by specifying the dimensions in a vector of the form
-\code{c(nrow, ncol)} or the names of the columns to include in the
-template.}
+Tibbles are also supported. An empty table can be created by specifying
+the dimensions in a vector of the form \code{c(nrow, ncol)} or the names
+of the columns to include in the template. Database tables can be edited
+by supplying a \code{dbplyr} lazy table or a \code{\link{db_table}()}.}
 
 \item{col_bind}{additional columns to add to the data prior to loading into
 editor, can be either an array containing the new data, a vector containing
@@ -66,9 +66,8 @@ default.}
 vector of column names that cannot be edited, set to TRUE by default to
 allow editing of column names.}
 
-\item{col_readonly}{names of columns that cannot be edited. Users will be
-able to edit values but these will be reverted to the original values.
-Column names for these column cannot be edited either.}
+\item{col_readonly}{names of columns that cannot be edited. Values and
+names of these columns are locked in the grid.}
 
 \item{col_hide}{names of columns to hide from the editor. Hidden columns will
 not be visible or editable but will be retained in the returned data.}
@@ -97,7 +96,7 @@ default.}
 \item{viewer}{can be either \code{"dialog"}, \code{"browser"} or
 \code{"pane"} to open the application in a dialog box, browser or RStudio
 viewer pane. First letter abbreviations are allowed, set to \code{"dialog"}
-by default.}
+by default. A function accepting the application URL can also be supplied.}
 
 \item{viewer_height}{numeric to control the height of the viewer in pixels
 when \code{viewer} is set to \code{"dialog"}, set 800 by default.}
@@ -132,10 +131,10 @@ edited data will be written to file after the application is closed.}
 \item{code}{logical indicating whether tidyverse code required to replicate
 the data edits should be printed to the console, set to \code{FALSE} by
 default. Alternatively, users can supply the name of an R script to write
-the code to. The generated code uses \code{dplyr} verbs such as
-\code{rename()}, \code{select()}, \code{mutate()}, \code{slice()}, and
-\code{tibble::add_row()} to replicate column renames, column
-additions/removals, cell value changes, and row additions/removals.}
+the code to. For data frames the generated code uses \code{dplyr} verbs
+such as \code{rename()}, \code{select()}, \code{mutate()}, \code{slice()},
+and \code{tibble::add_row()}; for database tables it uses
+\code{rows_update()}, \code{rows_append()} and \code{rows_delete()}.}
 
 \item{cancel}{optional value to return when the user hits the \code{cancel}
 button, set to the supplied data by default.}
@@ -148,14 +147,38 @@ color. Set to \code{NULL} by default to disable highlighting.}
 \item{...}{not in use.}
 }
 \value{
-the edited data as a matrix or data.frame.
+the edited data as a matrix or data.frame. For database tables the
+edited rows are returned as a data.frame after the changes have been
+committed.
 }
 \description{
-\code{data_edit} is a shiny application built on \code{rhandsontable} that is
-designed to make it easy to interactively view, enter or edit data without
-any coding. \code{data_edit} is also a wrapper for any reading or writing
-function to make it easy to interactively update data saved to file.
+\code{data_edit} is a shiny application built on the MIT-licensed
+'Tabulator' JavaScript library that is designed to make it easy to
+interactively view, enter or edit data without any coding. \code{data_edit}
+is also a wrapper for any reading or writing function to make it easy to
+interactively update data saved to file, and can edit tables stored in a
+database.
 }
+\section{Editing}{
+
+Double-click a cell to edit it. Click and drag to select a range of cells,
+then copy (Ctrl+C), paste (Ctrl+V) or clear (Delete) the selection. Right
+click a row to insert or delete rows, and right click a column header to
+insert, rename or delete columns. Double-click a column header to rename it.
+Ctrl+Z and Ctrl+Y undo and redo changes.
+}
+
+\section{Databases}{
+
+Supply a \code{dbplyr} lazy table (e.g. \code{dplyr::tbl(con, "artists")})
+or a \code{\link{db_table}()} to edit a database table. Rows are matched by
+primary key, changes are staged until you press \emph{Done}, and you are
+asked to confirm before anything is written. Writes happen in a single
+transaction and are rolled back if any row was changed by someone else in
+the meantime. Adding, removing and renaming columns is disabled for
+database tables.
+}
+
 \examples{
 if(interactive()) {
 

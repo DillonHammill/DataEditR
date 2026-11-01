@@ -8,7 +8,13 @@
 \usage{
 dataFilterUI(id)
 
-dataFilterServer(id, data = reactive(NULL), hide = FALSE, hover_text = NULL)
+dataFilterServer(
+  id,
+  data = reactive(NULL),
+  hide = FALSE,
+  hover_text = NULL,
+  reset = NULL
+)
 }
 \arguments{
 \item{id}{unique identifier for the module to prevent namespace clashes when
@@ -22,6 +28,11 @@ should be hidden from the user, set to FALSE by default.}
 
 \item{hover_text}{text to display on download button when user hovers cursor
 over button, set to NULL by default to turn off hover text.}
+
+\item{reset}{optional reactive expression that resets the filters whenever
+it changes. By default filters are reset whenever \code{data} changes; supply
+a separate trigger (e.g. the data input) to keep filters active while the
+data is being edited.}
 }
 \value{
 a list of reactive objects containing the filtered \code{data} and
@@ -33,14 +44,13 @@ Shiny module for filtering data
 \examples{
 if (interactive()) {
   library(shiny)
-  library(rhandsontable)
   library(shinyjs)
 
   ui <- fluidPage(
     useShinyjs(),
     dataInputUI("input1"),
     dataFilterUI("filter1"),
-    rHandsontableOutput("data1")
+    tableOutput("data1")
   )
 
   server <- function(input,
@@ -53,10 +63,8 @@ if (interactive()) {
       data = data_input
     )
 
-    output$data1 <- renderRHandsontable({
-      if (!is.null(data_filter$data())) {
-        rhandsontable(data_filter$data())
-      }
+    output$data1 <- renderTable({
+      data_filter$data()
     })
     
   }

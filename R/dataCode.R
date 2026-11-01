@@ -225,9 +225,14 @@ data_code <- function(x, x_edit, name = "data") {
     }
   }
 
-  # ROW ADDITIONS
+  # ROW ADDITIONS - INSERTED AT THEIR FINAL POSITIONS (ASCENDING)
   if (length(added_rows) > 0) {
-    for (row in added_rows) {
+    final_pos <- match(added_rows, edit_rows)
+    added_rows <- added_rows[order(final_pos)]
+    final_pos <- sort(final_pos)
+    n_rows <- length(remaining_rows[remaining_rows %in% edit_rows])
+    for (k in seq_along(added_rows)) {
+      row <- added_rows[k]
       row_data <- x_edit[row, , drop = FALSE]
       vals <- c()
       # Include row name column if row names are meaningful
@@ -239,6 +244,11 @@ data_code <- function(x, x_edit, name = "data") {
       vals <- c(vals, vapply(edit_cols, function(col) {
         paste0(data_code_quote(col), " = ", data_code_value(row_data[1, col]))
       }, character(1)))
+      # POSITION - APPEND UNLESS INSERTED BEFORE EXISTING ROWS
+      if (final_pos[k] <= n_rows) {
+        vals <- c(vals, paste0(".before = ", final_pos[k]))
+      }
+      n_rows <- n_rows + 1
       pipes <- c(pipes, paste0(
         "tibble::add_row(", paste(vals, collapse = ", "), ")"
       ))

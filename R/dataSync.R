@@ -30,7 +30,6 @@
 #' @examples
 #' if(interactive()){
 #'  library(shiny)
-#'  library(rhandsontable)
 #'  library(shinyjs)
 #'
 #'  ui <- fluidPage(

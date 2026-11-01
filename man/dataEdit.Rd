@@ -6,7 +6,7 @@
 \alias{dataEditServer}
 \title{Shiny module for data editing}
 \usage{
-dataEditUI(id)
+dataEditUI(id, height = "65vh", toolbar = TRUE)
 
 dataEditServer(
   id,
@@ -22,6 +22,8 @@ dataEditServer(
   row_bind = NULL,
   row_edit = TRUE,
   row_index = reactive(NULL),
+  rows = NULL,
+  columns = NULL,
   quiet = FALSE,
   read_fun = "read.csv",
   read_args = NULL,
@@ -33,11 +35,17 @@ dataEditServer(
 \item{id}{unique identifier for the module to prevent namespace clashes when
 making multiple calls to this shiny module.}
 
+\item{height}{height of the grid as a valid CSS unit, set to \code{"65vh"}
+by default.}
+
+\item{toolbar}{logical indicating whether undo/redo buttons and a change
+counter should be shown above the grid, set to \code{TRUE} by default.}
+
 \item{data}{a reactive expression containing an array (e.g. data.frame,
-matrix or data.table) or a vector indicating the dimensions of the array
-(e.g. c(10,10)) or column names to construct a new template for editing. If
-no data is supplied a template with 10 rows and columns will be generated
-for editing.}
+matrix or data.table), a database table (see \code{\link{db_table}}) or a
+vector indicating the dimensions of the array (e.g. c(10,10)) or column
+names to construct a new template for editing. If no data is supplied a
+template with 10 rows and columns will be generated for editing.}
 
 \item{col_bind}{additional columns to add to the data prior to loading into
 editor, can be either an array containing the new data, a vector containing
@@ -49,7 +57,9 @@ set to TRUE by default.}
 
 \item{col_options}{a list named with valid columns names and either
 \code{c(TRUE, FALSE)} for checkboxes, a vector of options for dropdowns,
-\code{"date"} for date input or \code{"password"} for password input.}
+\code{"date"} for date input or \code{"password"} for password input.
+Unlike earlier versions, using \code{col_options} no longer disables
+adding or removing columns.}
 
 \item{col_stretch}{logical indicating whether columns should be stretched to
 fill the full width of the display, set to FALSE by default.}
@@ -58,9 +68,8 @@ fill the full width of the display, set to FALSE by default.}
 vector of column names that cannot be edited, set to TRUE by default to
 allow editing of column names.}
 
-\item{col_readonly}{names of columns that cannot be edited. Users will be
-able to edit values but these will be reverted to the original values.
-Column names for these column cannot be edited either.}
+\item{col_readonly}{names of columns that cannot be edited. Values and
+names of these columns are locked in the grid.}
 
 \item{col_hide}{names of columns to hide from the editor. Hidden columns
 will not be visible or editable but will be retained in the data returned
@@ -78,12 +87,19 @@ each new column.}
 \item{row_edit}{logical indicating whether rows can be added or removed, set
 to TRUE by default.}
 
-\item{row_index}{indicates the starting index for new rows when the data
-supplied to \code{DataEdit()} is a subset of a larger dataset, i.e.
-\code{row_index} indicates the number of rows present in the parental
-dataset.}
+\item{row_index}{retained for backwards compatibility and no longer
+required. Rows now carry stable identifiers, so new rows are numbered
+automatically.}
 
-\item{quiet}{logical to suppress warnings when using \code{col_options}.}
+\item{rows}{a reactive expression returning the row indices (positions in
+the data returned by this module) to display, or \code{NULL} to display
+all rows. Edits made to the displayed subset are applied directly to the
+full data.}
+
+\item{columns}{a reactive expression returning the names of the columns to
+display, or \code{NULL} to display all columns.}
+
+\item{quiet}{logical to suppress messages and notifications.}
 
 \item{read_fun}{name of the function to use to read in the data when a file
 is selected, set to \code{read.csv} by default.}
@@ -96,17 +112,25 @@ been edited or added to the original data with a default blue border, or a
 valid CSS color (e.g. \code{"#FF0000"} or \code{"red"}) to use a custom
 border color. Set to \code{NULL} by default to disable highlighting.}
 
-\item{...}{additional arguments passed to
-\code{\link[rhandsontable:rhandsontable]{rhandsontable}}.}
+\item{...}{not in use.}
 }
 \value{
-reactive expression containing the edited data.
+reactive expression containing the edited data. The reactive also
+carries the attributes \code{"view"} (a reactive returning only the rows
+and columns on display) and \code{"editor"} (a reactive returning the
+internal editor state, used by \code{data_edit()} for database commits).
 }
 \description{
-Shiny module for data editing
+\code{dataEdit} renders an editable, spreadsheet-like grid built on the
+MIT-licensed 'Tabulator' JavaScript library. Edits are sent to R as
+cell-level changes rather than whole tables, which keeps large datasets
+responsive and makes undo/redo, change tracking and database commits
+possible.
 }
 \examples{
 if (interactive()) {
+  library(shiny)
+
   ui <- fluidPage(
     dataInputUI("input-1"),
     dataOutputUI("output-1"),

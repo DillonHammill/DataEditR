@@ -49,14 +49,13 @@ Shiny module for data output
 \examples{
 if (interactive()) {
   library(shiny)
-  library(rhandsontable)
   library(shinyjs)
 
   ui <- fluidPage(
     useShinyjs(),
     dataInputUI("input1"),
     dataOutputUI("output1"),
-    rHandsontableOutput("data1")
+    tableOutput("data1")
   )
 
   server <- function(input,
@@ -64,10 +63,8 @@ if (interactive()) {
                      session) {
     data_input1 <- dataInputServer("input1")
 
-    output$data1 <- renderRHandsontable({
-      if (!is.null(data_input1())) {
-        rhandsontable(data_input1())
-      }
+    output$data1 <- renderTable({
+      data_input1()
     })
 
     dataOutputServer("output1",

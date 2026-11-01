@@ -34,7 +34,7 @@ html <- htmltools::doRenderTags(img)
 readr::write_lines(html, path = "logo.html")
 ```
 
-**DataEditR** is an R package built on shiny and rhandsontable that makes it easy to interactively view, enter, filter and edit data. In this vignette we will explore some of the key features that are available through the `data_edit()` function. 
+**DataEditR** is an R package built on shiny and the Tabulator JavaScript library that makes it easy to interactively view, enter, filter and edit data. In this vignette we will explore some of the key features that are available through the `data_edit()` function. 
 
 ## Preparation
 

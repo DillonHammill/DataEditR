@@ -1,0 +1,37 @@
+/* DataEditR grid styling on top of the Tabulator bootstrap3 theme */
+.editr_grid .tabulator,
+.tabulator {
+  font-size: 13px;
+}
+
+/* edited cells: tinted fill + thin outline, distinct from range selection */
+.tabulator .tabulator-cell.editr-changed {
+  background-color: rgba(2, 117, 216, 0.10);
+  background-color: color-mix(in srgb, var(--editr-track-color, #0275d8) 12%, transparent);
+  box-shadow: inset 0 0 0 1px var(--editr-track-color, #0275d8);
+}
+
+.tabulator .tabulator-cell.editr-readonly {
+  background-color: rgba(0, 0, 0, 0.04);
+  color: #6c757d;
+}
+
+.tabulator .tabulator-cell.editr-rowheader,
+.tabulator .tabulator-row .tabulator-cell.editr-rowheader {
+  color: #6c757d;
+  font-variant-numeric: tabular-nums;
+}
+
+.tabulator .tabulator-col .tabulator-col-title {
+  white-space: nowrap;
+}
+
+input.editr-rename {
+  position: absolute;
+  z-index: 10000;
+  box-sizing: border-box;
+  text-align: center;
+  font-weight: bold;
+  border: 2px solid #0275d8;
+  outline: none;
+}

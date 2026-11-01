@@ -1,15 +1,20 @@
 Package: DataEditR
 Title: An Interactive Editor for Viewing, Entering, Filtering & Editing Data
-Version: 1.0.0
-Date: 2026-03-13
-Authors@R: 
+Version: 1.9.0.9000
+Date: 2026-11-01
+Authors@R: c(
     person(given = "Dillon",
            family = "Hammill",
            role = c("aut", "cre"),
            email = "dillon.hammill21@gmail.com",
-           comment = c(ORCID = "0000-0002-1407-7223"))
-Description: An interactive editor built on 'rhandsontable' to allow the 
-  interactive viewing, entering, filtering and editing of data in R 
+           comment = c(ORCID = "0000-0002-1407-7223")),
+    person(given = "Oli",
+           family = "Folkerd",
+           role = c("ctb", "cph"),
+           comment = "Author of the included Tabulator library"))
+Description: An interactive editor built on the 'Tabulator' JavaScript 
+  library to allow the interactive viewing, entering, filtering and editing of 
+  data in R, including tables stored in databases 
   <https://dillonhammill.github.io/DataEditR/>.
 URL: https://dillonhammill.github.io/DataEditR/
 BugReports: https://github.com/DillonHammill/DataEditR/issues
@@ -20,10 +25,11 @@ Imports:
   shinyBS,
   shinyjs,
   bslib,
-  rhandsontable (>= 0.3.8),
+  htmlwidgets (>= 1.5.0),
   rstudioapi,
   htmltools, 
   miniUI,
+  stats,
   utils
 License: GPL-2
 Encoding: UTF-8
@@ -31,6 +37,14 @@ Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
 Language: en-GB
 Suggests: 
+    data.table,
+    DBI,
+    dbplyr (>= 2.3.0),
+    dplyr (>= 1.1.0),
     knitr,
-    rmarkdown
+    rmarkdown,
+    RSQLite,
+    testthat (>= 3.0.0),
+    tibble
+Config/testthat/edition: 3
 VignetteBuilder: knitr

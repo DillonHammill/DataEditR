@@ -10,9 +10,13 @@
 #'   should be hidden from the user, set to FALSE by default.
 #' @param hover_text text to display on download button when user hovers cursor
 #'   over button, set to NULL by default to turn off hover text.
+#' @param reset optional reactive expression that resets the selection whenever
+#'   it changes. By default the selection is reset whenever \code{data}
+#'   changes.
 #'
-#' @return a list of reactive objects containing the filtered \code{data} and
-#'   indices for selected \code{columns}.
+#' @return a list of reactive objects containing the filtered \code{data},
+#'   indices for selected \code{columns} and the \code{names} of the selected
+#'   columns.
 #'
 #' @importFrom shiny icon is.reactive actionButton NS reactive moduleServer
 #'   reactiveValues observe observeEvent showModal modalDialog tagList insertUI
@@ -27,14 +31,13 @@
 #' @examples
 #' if (interactive()) {
 #'   library(shiny)
-#'   library(rhandsontable)
 #'   library(shinyjs)
 #'
 #'   ui <- fluidPage(
 #'     useShinyjs(),
 #'     dataInputUI("input1"),
 #'     dataSelectUI("select1"),
-#'     rHandsontableOutput("data1")
+#'     tableOutput("data1")
 #'   )
 #'
 #'   server <- function(input,
@@ -46,10 +49,8 @@
 #'       data = data_input
 #'     )
 #'
-#'     output$data1 <- renderRHandsontable({
-#'       if (!is.null(data_select$data())) {
-#'         rhandsontable(data_select$data())
-#'       }
+#'     output$data1 <- renderTable({
+#'       data_select$data()
 #'     })
 #'
 #'   }
@@ -83,7 +84,8 @@ dataSelectUI <- function(id) {
 dataSelectServer <- function(id,
                              data = reactive(NULL),
                              hide = FALSE,
-                             hover_text = NULL) {
+                             hover_text = NULL,
+                             reset = NULL) {
   
   # SERVER
   moduleServer(id, function(input, output, session) {
@@ -109,7 +111,8 @@ dataSelectServer <- function(id,
       data = NULL,
       subset = NULL,
       select = list(),
-      columns = NULL
+      columns = NULL,
+      names = NULL
     )
     
     # DATA
@@ -119,10 +122,21 @@ dataSelectServer <- function(id,
       } else {
         values$data <- data()
       }
-      # RESET FILTERS - NEW DATA
+    })
+    
+    # RESET SELECTION - NEW DATA
+    reset_trigger <- if (!is.null(reset)) {
+      reset
+    } else if (is.reactive(data)) {
+      data
+    } else {
+      reactive(data)
+    }
+    observeEvent(reset_trigger(), {
       values$select <- list()
       values$columns <- NULL
-    })
+      values$names <- NULL
+    }, ignoreNULL = FALSE)
     
     # SELECT UI
     observeEvent(input$select, {
@@ -264,12 +278,15 @@ dataSelectServer <- function(id,
         
       }
       
-      # COLUMN INDICES
-      if(!is.null(values$select)) {
-        values$columns <- which(unlist(values$select))
-      }
-      if(length(values$columns) == ncol(values$data)) {
+      # COLUMN INDICES & NAMES - IN DATA ORDER
+      selected <- names(values$select)[unlist(values$select)]
+      selected <- colnames(values$data)[colnames(values$data) %in% selected]
+      values$columns <- match(selected, colnames(values$data))
+      values$names <- selected
+      if(length(values$columns) == ncol(values$data) ||
+         length(values$columns) == 0) {
         values$columns <- NULL
+        values$names <- NULL
       }
       
       # CLOSE POPUP
@@ -281,7 +298,8 @@ dataSelectServer <- function(id,
     return(
       list(
         data = reactive({values$subset}),
-        columns = reactive({values$columns})
+        columns = reactive({values$columns}),
+        names = reactive({values$names})
       )
     )
   })
