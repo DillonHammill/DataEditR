@@ -44,6 +44,22 @@
 #'   Cells that break a rule are marked and listed in the \emph{Problems}
 #'   tab (see \code{\link{dataEditProblems}()}). Users can add rules to a
 #'   column from its menu (\emph{Rules...}).
+#' @param formats conditional formats: how to colour cells, without
+#'   changing the data. A list of formats, each a one-sided formula or a list:
+#'   \itemize{
+#'   \item \code{list(~ mpg > 25, fill = "#DCFCE7", color = "#166534",
+#'   bold = TRUE)}: cells where the formula is \code{TRUE} get the fill, text
+#'   colour and/or bold text (a formula alone gets a yellow fill). The cells
+#'   of the columns the formula uses are coloured; give \code{columns} to
+#'   colour other columns, or \code{columns = "all"} for whole rows;
+#'   \item \code{list(scale = c("white", "#EF4444"), columns = "hp")}: a
+#'   colour scale shading numbers from the lowest to the highest value (two
+#'   colours, or three for low, middle and high). \code{limits = c(0, 300)}
+#'   fixes the values of the end colours and \code{mid} the middle one.
+#'   }
+#'   Names of the list are labels. When several formats colour a cell, the
+#'   later one wins. Users can add formats to a column from its menu
+#'   (\emph{Conditional formatting...}).
 #' @param user name of the person editing, recorded in the change log (see
 #'   \code{\link{dataEditLog}()}). By default the user signed in to the app
 #'   (\code{session$user}), the \code{DataEditR.user} option or the system
@@ -150,10 +166,10 @@
 #'   is selected, set to \code{read.csv} by default.
 #' @param read_args a named list of additional arguments to pass to
 #'   \code{read_fun} when reading in files.
-#' @param track can be set to \code{TRUE} to highlight cells that have
-#'   been edited or added to the original data with a default blue border, or a
-#'   valid CSS color (e.g. \code{"#FF0000"} or \code{"red"}) to use a custom
-#'   border color. Set to \code{NULL} by default to disable highlighting.
+#' @param track \code{TRUE} (the default) highlights cells that have been
+#'   edited or added with a blue tint and border. Give a CSS colour (e.g.
+#'   \code{"#DC2626"} or \code{"red"}) to use another colour, or \code{FALSE}
+#'   to turn the highlighting off.
 #' @param ... not in use.
 #'
 #' @return reactive expression containing the edited data. Pass it to
@@ -366,12 +382,13 @@ dataEditServer <- function(id,
                            quiet = FALSE,
                            read_fun = "read.csv",
                            read_args = NULL,
-                           track = NULL,
+                           track = TRUE,
                            code_name = "data",
                            autosave = FALSE,
                            user = NULL,
                            col_actions = TRUE,
                            rules = NULL,
+                           formats = NULL,
                            col_summary = TRUE,
                            history = NULL,
                            row_names = TRUE,
@@ -530,6 +547,11 @@ dataEditServer <- function(id,
           db_rows = if (!is.null(cfg$db)) {
             list(loaded = nrow(store$state$data), total = cfg$db$total,
                  filtered = !is.null(cfg$db$filter), readonly = isTRUE(cfg$db$readonly))
+          },
+          formats = {
+            f <- isolate(formatted())
+            sent_formats <<- if (!is.null(f)) f$grid else list()
+            sent_formats
           },
           problems = {
             p <- isolate(problems())
@@ -823,6 +845,143 @@ dataEditServer <- function(id,
       bump(rules_tick)
     })
 
+    # CONDITIONAL FORMATTING ---------------------------------------------------
+
+    code_formats <- formats_prepare(formats)
+    formats_tick <- reactiveVal(0) # formats set in the editor changed
+    formats_cid <- reactiveVal(NULL) # column whose formats dialog is open
+
+    formatted <- reactive({
+      data_tick()
+      formats_tick()
+      ed <- editor()
+      if (is.null(ed)) return(NULL)
+      if (length(code_formats) == 0 && length(ed$store$format_specs) == 0) {
+        return(formats_eval(data.frame(), integer(0), character(0), list()))
+      }
+      data <- action_data(ed$store, ed$cfg)
+      cids <- action_cids(ed$store, ed$cfg, data)
+      formats_eval(data, ed$store$state$ids, cids,
+                   c(code_formats, user_formats(ed$store$format_specs, data, cids)))
+    })
+
+    sent_formats <- list() # what the grid draws
+    observe({
+      f <- formatted()
+      shiny::req(f)
+      if (!identical(f$grid, sent_formats)) {
+        grid_send(session, "grid", "set_formats", list(formats = f$grid))
+        sent_formats <<- f$grid
+      }
+    })
+
+    # the column of the open dialog: data, column ids, position and name
+    formats_column <- function(ed, cid) {
+      data <- action_data(ed$store, ed$cfg)
+      cids <- action_cids(ed$store, ed$cfg, data)
+      pos <- match(cid, cids)
+      list(data = data, cids = cids, pos = pos,
+           name = if (!is.na(pos)) names(data)[pos])
+    }
+
+    # the format as set in the dialog
+    formats_dialog_spec <- function() {
+      list(type = input$fm_type %||% "rule", op = input$fm_op %||% "",
+           value = input$fm_value %||% "", value2 = input$fm_value2 %||% "",
+           n = input$fm_n %||% NA, formula = input$fm_formula %||% "",
+           apply = input$fm_apply %||% "cell", style = input$fm_style %||% "",
+           fill = input$fm_fill %||% "", color = input$fm_color %||% "",
+           bold = isTRUE(input$fm_bold), scale = input$fm_scale %||% "",
+           min = input$fm_min %||% "", max = input$fm_max %||% "")
+    }
+
+    output$formats_list <- shiny::renderUI({
+      cid <- formats_cid()
+      shiny::req(cid)
+      f <- formatted()
+      ed <- isolate(editor())
+      shiny::req(f, ed)
+      col <- formats_column(ed, cid)
+      shiny::req(!is.na(col$pos))
+      mine <- function(x) format_touches(x, col$name, cid)
+      formats_list_ui(
+        Filter(mine, code_formats),
+        Filter(mine, user_formats(ed$store$format_specs, col$data, col$cids)),
+        f$info, ns, col$name
+      )
+    })
+
+    output$formats_preview <- shiny::renderUI({
+      cid <- formats_cid()
+      shiny::req(cid)
+      spec <- formats_dialog_spec()
+      ed <- isolate(editor())
+      shiny::req(ed)
+      col <- formats_column(ed, cid)
+      shiny::req(!is.na(col$pos))
+      res <- tryCatch({
+        spec$id <- "preview"
+        f <- format_from_spec(spec, cid, col$name, col$data[[col$pos]])
+        formats_eval(col$data, ed$store$state$ids, col$cids, list(f))
+      }, error = function(e) e)
+      if (inherits(res, "error")) {
+        msg <- conditionMessage(res)
+        # NOTHING TYPED YET
+        if (grepl("^Type ", msg)) return(NULL)
+        return(tags$div(class = "editr-preview editr-preview-error", msg))
+      }
+      err <- res$info$error[!is.na(res$info$error)]
+      if (length(err)) {
+        return(tags$div(class = "editr-preview editr-preview-error", err[1]))
+      }
+      g <- res$grid
+      tags$div(class = "editr-preview", if (identical(spec$type, "scale")) {
+        if (length(g) == 0) "There are no numbers to shade." else {
+          paste0("Shades ", res$info$count[1], " values from ",
+                 format(g[[1]]$min), " to ", format(g[[1]]$max), ".")
+        }
+      } else {
+        n <- if (length(g)) length(g[[1]]$ids) else 0
+        if (n == 0) "No rows match now." else {
+          paste0(n, if (n == 1) " row matches" else " rows match", " now.")
+        }
+      })
+    })
+
+    observeEvent(input$format_add, {
+      ed <- editor()
+      cid <- formats_cid()
+      if (is.null(ed) || is.null(cid)) return()
+      col <- formats_column(ed, cid)
+      if (is.na(col$pos)) return()
+      spec <- formats_dialog_spec()
+      used <- vapply(ed$store$format_specs, function(s) as.character(s$id), "")
+      spec$id <- paste0("u", max(c(0L, suppressWarnings(
+        as.integer(sub("^u", "", used)))), na.rm = TRUE) + 1L)
+      spec$cid <- cid
+      ok <- tryCatch({
+        format_from_spec(spec, cid, col$name, col$data[[col$pos]])
+        TRUE
+      }, error = function(e) {
+        showNotification(conditionMessage(e), type = "error")
+        FALSE
+      })
+      if (!ok) return()
+      ed$store$format_specs <- c(ed$store$format_specs, list(spec))
+      formats_cid(NULL)
+      shiny::removeModal()
+      bump(formats_tick)
+    })
+
+    observeEvent(input$format_remove, {
+      ed <- editor()
+      if (is.null(ed)) return()
+      id <- as.character(as_scalar(input$format_remove$value) %||% "")
+      ed$store$format_specs <- Filter(function(s) !identical(s$id, id),
+                                      ed$store$format_specs)
+      bump(formats_tick)
+    })
+
     # COLUMN SUMMARIES ---------------------------------------------------------
 
     summary_on <- reactiveVal(isTRUE(col_summary))
@@ -929,6 +1088,12 @@ dataEditServer <- function(id,
         mine <- Filter(function(r) name %in% all.vars(r$expr), code_rules)
         showModal(rules_modal(name, data[[name]],
                               rules_spec(ed$store$rule_specs, cid), mine, ns))
+        return()
+      }
+      if (kind == "formats") {
+        formats_cid(cid)
+        showModal(formats_modal(name, data[[name]],
+                                format_spec_default(data[[name]]), ns))
         return()
       }
       if (kind == "labels") {
@@ -1094,7 +1259,7 @@ dataEditServer <- function(id,
     if (isTRUE(autosave)) {
       draft_prune()
       draft_due <- shiny::debounce(reactive(c(data_tick(), notes_tick(),
-                                              rules_tick())), 1000)
+                                              rules_tick(), formats_tick())), 1000)
       observeEvent(draft_due(), {
         ed <- editor()
         if (!is.null(ed)) draft_sync(ed$store, draft_label())

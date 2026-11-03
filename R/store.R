@@ -554,6 +554,7 @@ editr_store <- function(state) {
   store$user <- ""
   store$label_cids <- NULL # columns that name rows in the log
   store$rule_specs <- list() # cid -> rules set in the editor (R/rules.R)
+  store$format_specs <- list() # formats added in the editor (R/formats.R)
   store
 }
 

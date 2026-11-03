@@ -73,6 +73,7 @@ draft_save <- function(store, label = NULL,
     notes = store$notes,
     comments = store$comments,
     rule_specs = store$rule_specs,
+    format_specs = store$format_specs,
     step = store$step,
     session = store$session
   )
@@ -157,6 +158,7 @@ draft_restore <- function(store, draft) {
   store$notes <- draft$notes %||% character(0)
   if (!is.null(draft$comments)) store$comments <- draft$comments
   store$rule_specs <- draft$rule_specs %||% list()
+  store$format_specs <- draft$format_specs %||% list()
   store$step <- as.integer(draft$step %||% 0L)
   store$step_open <- FALSE
   store$changed <- changed_cells(store$state, store$original)

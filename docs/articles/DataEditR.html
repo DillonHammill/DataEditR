@@ -423,9 +423,11 @@ are also available from the right-click menus.</p>
 <h3 id="addition-or-removal-of-rows-or-columns">3.5 Addition or removal of rows or columns<a class="anchor" aria-label="anchor" href="#addition-or-removal-of-rows-or-columns"></a>
 </h3>
 <p>Rows or columns can be added to the data from within the data editor
-by right clicking on a cell or a column header. This will display a
-context menu with the options to insert rows above or below, delete the
-selected rows, fill down, or rename, insert, hide or delete columns.</p>
+by right clicking on a cell or a column header. Right-clicking a cell
+offers to insert rows above or below, delete the selected rows, fill
+down and insert a column to the left or right of the cell;
+right-clicking a column header offers to rename, insert, hide or delete
+columns.</p>
 <p><img src="images/rows-columns.gif" width="100%" style="display: block; margin: auto;"></p>
 <p><img src="images/column-menu.png" width="100%" style="display: block; margin: auto;"></p>
 <p>New rows can also be added to the end of the data with the
@@ -1213,6 +1215,46 @@ data anyway or keep editing. In shiny apps,
 <code><a href="../reference/dataEditCommit.html">dataEditProblems()</a></code> returns the problems, for example to
 disable a <em>Save</em> button until they are fixed.</p>
 </div>
+<div class="section level3">
+<h3 id="conditional-formatting">7.7 Conditional formatting<a class="anchor" aria-label="anchor" href="#conditional-formatting"></a>
+</h3>
+<p>Conditional formats colour cells by their values, to make the data
+easier to read. They change how cells look, not the data. Supply them to
+<code>formats</code>:</p>
+<div class="sourceCode" id="cb39"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="va">mtcars</span>,</span>
+<span>          formats <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>            <span class="co"># cells of mpg above 22 in green</span></span>
+<span>            <span class="st">"Fast"</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">~</span> <span class="va">mpg</span> <span class="op">&gt;</span> <span class="fl">22</span>, fill <span class="op">=</span> <span class="st">"#DCFCE7"</span>, color <span class="op">=</span> <span class="st">"#166534"</span><span class="op">)</span>,</span>
+<span>            <span class="co"># whole rows of V8 cars in yellow</span></span>
+<span>            <span class="st">"V8"</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">~</span> <span class="va">cyl</span> <span class="op">==</span> <span class="fl">8</span>, fill <span class="op">=</span> <span class="st">"lightyellow"</span>, columns <span class="op">=</span> <span class="st">"all"</span><span class="op">)</span>,</span>
+<span>            <span class="co"># hp shaded from white (lowest) to red (highest)</span></span>
+<span>            <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>scale <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"white"</span>, <span class="st">"#F87171"</span><span class="op">)</span>, columns <span class="op">=</span> <span class="st">"hp"</span><span class="op">)</span></span>
+<span>          <span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p><img src="images/formats.png" width="100%" style="display: block; margin: auto;"></p>
+<p>A rule is a one-sided formula that is <code>TRUE</code> for the rows
+to colour, with a <code>fill</code>, a text <code>color</code> and/or
+<code>bold = TRUE</code> (a formula on its own gets a yellow fill). It
+colours the cells of the columns the formula uses; give
+<code>columns</code> to colour other columns, or
+<code>columns = "all"</code> to colour whole rows. A colour scale shades
+the numbers of its <code>columns</code> from the first colour (the
+lowest value) to the last (the highest); give three colours for a middle
+colour, <code>limits = c(0, 300)</code> to fix the values of the end
+colours and <code>mid</code> for the value of the middle one. Colours
+can be R colour names or hex codes. When several formats colour a cell,
+the later one wins.</p>
+<p>Formats are updated after every change. You can also add them from a
+column’s menu (<code>Conditional formatting...</code>): highlight the
+cells of the column, or whole rows, where the value is greater or less
+than a value, between two values, equal to a value, contains some text,
+is blank, duplicated, above or below average, among the highest or
+lowest, or makes a formula <code>TRUE</code>; or shade the column with a
+colour scale. The dialog shows how many rows match before the format is
+added, and lists the column’s formats with the code to add each one to
+<code>formats</code>, so that it can be kept in your script.</p>
+<p><img src="images/formats-dialog.png" width="100%" style="display: block; margin: auto;"></p>
+</div>
 </div>
 <div class="section level2">
 <h2 id="customisation">8. Customisation<a class="anchor" aria-label="anchor" href="#customisation"></a>
@@ -1227,7 +1269,7 @@ the menus.</p>
 <p>If you would like to make full use of the space available to you, you
 can set <code>col_stretch = TRUE</code> to stretch the columns to fill
 the full width of the display.</p>
-<div class="sourceCode" id="cb39"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb40"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="va">iris</span>,</span>
 <span>          col_stretch <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
 <p><img src="images/stretch.png" width="100%" style="display: block; margin: auto;"></p>
@@ -1243,7 +1285,7 @@ instructions to the user through <code>title</code>. Use
 <code>logo_size</code> to set the width of the logo in pixels and
 <code>logo_side</code> to place it on the <code>"left"</code> or
 <code>"right"</code> of the title.</p>
-<div class="sourceCode" id="cb40"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb41"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">logo</span> <span class="op">&lt;-</span> <span class="st">"https://raw.githubusercontent.com/DillonHammill/DataEditR/master/man/figures/logo.png"</span></span>
 <span><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="va">mtcars</span>,</span>
 <span>          logo <span class="op">=</span> <span class="va">logo</span>,</span>
@@ -1259,7 +1301,7 @@ supplying the name of a <a href="https://bootswatch.com/" class="external-link">
 theme to the <code>theme</code> argument. Alternatively, you can create
 your own custom <code>bs_theme</code> and supply that object to
 <code>theme</code> instead.</p>
-<div class="sourceCode" id="cb41"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb42"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Preset theme</span></span>
 <span><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span></span>
 <span>  <span class="va">mtcars</span>,</span>
@@ -1287,7 +1329,7 @@ your own custom <code>bs_theme</code> and supply that object to
 button, for example when <code><a href="../reference/data_edit.html">data_edit()</a></code> is used to collect
 data from users. When <code>save_as</code> is supplied the data is still
 written to file when <code>Done</code> is pressed.</p>
-<div class="sourceCode" id="cb42"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb43"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Name"</span>, <span class="st">"Email"</span>, <span class="st">"Attending"</span><span class="op">)</span>,</span>
 <span>          col_options <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>Attending <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="cn">TRUE</span>, <span class="cn">FALSE</span><span class="op">)</span><span class="op">)</span>,</span>
 <span>          save_as <span class="op">=</span> <span class="st">"rsvp.csv"</span>,</span>
@@ -1317,18 +1359,16 @@ be undone with <code>Ctrl+Z</code> like any other change.</p>
 <div class="section level3">
 <h3 id="highlight-changed-cells">9.2 Highlight changed cells<a class="anchor" aria-label="anchor" href="#highlight-changed-cells"></a>
 </h3>
-<p>Set <code>track = TRUE</code> to highlight cells that have been
-edited or added compared to the original data with a blue tint. Any cell
-whose value differs from the original, as well as all cells in newly
-added rows or columns, will be highlighted. Highlights follow undo, redo
-and reverts, and inserting rows or columns does not cause other cells to
-appear changed.</p>
-<div class="sourceCode" id="cb43"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="va">mtcars</span>,</span>
-<span>          track <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
+<p>Cells that have been edited or added compared to the original data
+are highlighted with a blue tint and border. Any cell whose value
+differs from the original, as well as all cells in newly added rows or
+columns, is highlighted. Highlights follow undo, redo and reverts, and
+inserting rows or columns does not cause other cells to appear
+changed.</p>
 <p><img src="images/track.png" width="100%" style="display: block; margin: auto;"></p>
 <p>You can pass any valid CSS color to <code>track</code> to customise
-the highlight colour. For example, to use red:</p>
+the highlight colour, or <code>track = FALSE</code> to turn the
+highlighting off. For example, to use red:</p>
 <div class="sourceCode" id="cb44"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="va">mtcars</span>,</span>
 <span>          track <span class="op">=</span> <span class="st">"red"</span><span class="op">)</span></span></code></pre></div>

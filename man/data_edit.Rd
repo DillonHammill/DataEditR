@@ -33,11 +33,12 @@ data_edit(
   hide = FALSE,
   code = FALSE,
   cancel,
-  track = NULL,
+  track = TRUE,
   log = NULL,
   autosave = TRUE,
   col_actions = TRUE,
   rules = NULL,
+  formats = NULL,
   col_summary = TRUE,
   row_names = TRUE,
   col_widths = NULL,
@@ -200,10 +201,10 @@ and \code{tibble::add_row()}; for database tables it uses
 \item{cancel}{optional value to return when the user hits the \code{cancel}
 button, set to the supplied data by default.}
 
-\item{track}{can be set to \code{TRUE} to highlight cells that have been
-edited or added to the original data with a default blue border, or a valid
-CSS color (e.g. \code{"#FF0000"} or \code{"red"}) to use a custom border
-color. Set to \code{NULL} by default to disable highlighting.}
+\item{track}{\code{TRUE} (the default) highlights cells that have been
+edited or added with a blue tint and border. Give a CSS colour (e.g.
+\code{"#DC2626"} or \code{"red"}) to use another colour, or \code{FALSE}
+to turn the highlighting off.}
 
 \item{log}{name of a csv file to which the change log (who changed what
 and when, see \code{\link{dataEditLog}()}) is added when \emph{Done} is
@@ -235,6 +236,23 @@ rule are marked in the grid and listed in the \emph{Problems} tab, and
 \emph{Done} asks before returning data with problems. Rules can also be
 added from a column's menu (\emph{Rules...}). See the \emph{Validation}
 section.}
+
+\item{formats}{conditional formats: how to colour cells, without
+changing the data. A list of formats, each a one-sided formula or a list:
+\itemize{
+\item \code{list(~ mpg > 25, fill = "#DCFCE7", color = "#166534",
+  bold = TRUE)}: cells where the formula is \code{TRUE} get the fill, text
+colour and/or bold text (a formula alone gets a yellow fill). The cells
+of the columns the formula uses are coloured; give \code{columns} to
+colour other columns, or \code{columns = "all"} for whole rows;
+\item \code{list(scale = c("white", "#EF4444"), columns = "hp")}: a
+colour scale shading numbers from the lowest to the highest value (two
+colours, or three for low, middle and high). \code{limits = c(0, 300)}
+fixes the values of the end colours and \code{mid} the middle one.
+}
+Names of the list are labels. When several formats colour a cell, the
+later one wins. Formats can also be added to a column from its menu
+(\emph{Conditional formatting...}).}
 
 \item{col_summary}{logical indicating whether a summary of each column is
 shown under its header: a histogram of numbers and dates or the most

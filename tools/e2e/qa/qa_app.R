@@ -198,6 +198,17 @@ if (scenario == "df") {
                                      photo = "html", size = "integer",
                                      grade = "dropdown")))
 
+} else if (scenario == "formats") {
+  # conditional formatting; column inserts from the cell menu; edited cells
+  # highlighted without track = TRUE
+  x <- mtcars[1:8, 1:6]
+  keep(x, quietly(x, code = code_file, formats = list(
+    "Fast" = list(~ mpg > 22, fill = "#DCFCE7", color = "#166534"),
+    "V8" = list(~ cyl == 8, fill = "lightyellow", columns = "all"),
+    list(scale = c("white", "#F87171"), columns = "hp"),
+    list(~ nope > 1)
+  )))
+
 } else if (scenario == "cancel") {
   x <- mtcars[1:3, 1:3]
   keep(x, quietly(x))

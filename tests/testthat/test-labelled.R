@@ -322,8 +322,9 @@ test_that("the module opens the Labels dialog and applies it", {
     expect_match(output$action_preview$html, "structure(sex", fixed = TRUE)
     session$setInputs(action_apply = 1)
     expect_identical(attr(out()$sex, "labels"), c(Man = 1, Woman = 2))
-    msg <- sent$msgs[[length(sent$msgs)]]
-    expect_identical(msg$method, "replace_data")
+    # the data, then the highlight of changed cells
+    expect_identical(vapply(utils::tail(sent$msgs, 2), `[[`, "", "method"),
+                     c("replace_data", "set_changed"))
     # labels of plain columns
     action(kind = "labels", cid = "c1")
     session$setInputs(lb_label = "Respondent", lb_values = "")

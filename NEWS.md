@@ -112,6 +112,31 @@ shiny modals and with data that changes), these were fixed or added:
 * No code relies on partial argument matching, so the editor works with
   `options(warnPartialMatchArgs = TRUE, warn = 2)` (#64).
 
+## Conditional formatting
+
+* `formats` colours cells by their values, without changing the data: rules
+  (one-sided formulas) give the cells of the columns they use, other
+  `columns` or whole rows a fill, a text colour and/or bold text, and colour
+  scales shade the numbers of a column from a low to a high colour (two or
+  three colours, with optional `limits` and `mid`). Formats are updated after
+  every change; when several colour a cell, the later one wins.
+* `Conditional formatting...` in a column's menu adds formats in the editor:
+  highlight the column's cells or whole rows where the value is above, below,
+  between or equal to values, contains text, is blank, duplicated, above or
+  below average, among the highest or lowest, or makes a formula `TRUE`, in
+  one of several styles; or shade the column with a colour scale. The dialog
+  previews how many rows match, lists the column's formats (with the code to
+  add each to `formats`) and removes them. Formats added in the editor are
+  kept in drafts.
+* Edited and added cells are highlighted by default (`track = TRUE`); set
+  `track = FALSE` to turn the highlight off.
+* A cell being edited is no longer closed when the highlight, problems,
+  comments or formats of its row are updated; the row is redrawn when the
+  edit ends.
+* Right-clicking a cell offers to insert a column to its left or right.
+* The `Load`, `Upload...` and `Create` buttons of the `Open` menu have their
+  text centred and match the height of the fields next to them.
+
 ## Comments, drag to fill and a colour picker
 
 * Cells can carry comments: right-click a cell (or press `Shift+F2`) to add,

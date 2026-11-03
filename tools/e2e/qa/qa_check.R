@@ -241,6 +241,15 @@ if (scenario == "df") {
   same(result, e, "dropdown values, shifted cells, columns named by a paste")
   reproduces(code_text(), input, result)
 
+} else if (scenario == "formats") {
+  e <- input
+  e$mpg[1] <- 30
+  e$cyl[2] <- 8
+  e <- data.frame(V1 = NA, e[, 1:2], V2 = NA, e[, 3:6])
+  rownames(e) <- rownames(input)
+  same(result, e, "edits returned, formats leave the data alone, inserted columns")
+  reproduces(code_text(), input, result)
+
 } else if (scenario == "shiny_modal") {
   seen <- read("seen.rds")
   last <- seen[[length(seen)]]

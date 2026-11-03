@@ -105,11 +105,12 @@ database.</p>
 <span>  hide <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  code <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  <span class="va">cancel</span>,</span>
-<span>  track <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  track <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  log <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  autosave <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  col_actions <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  rules <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  formats <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  col_summary <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  row_names <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  col_widths <span class="op">=</span> <span class="cn">NULL</span>,</span>
@@ -328,10 +329,10 @@ button, set to the supplied data by default.</p></dd>
 
 
 <dt>track</dt>
-<dd><p>can be set to <code>TRUE</code> to highlight cells that have been
-edited or added to the original data with a default blue border, or a valid
-CSS color (e.g. <code>"#FF0000"</code> or <code>"red"</code>) to use a custom border
-color. Set to <code>NULL</code> by default to disable highlighting.</p></dd>
+<dd><p><code>TRUE</code> (the default) highlights cells that have been
+edited or added with a blue tint and border. Give a CSS colour (e.g.
+<code>"#DC2626"</code> or <code>"red"</code>) to use another colour, or <code>FALSE</code>
+to turn the highlighting off.</p></dd>
 
 
 <dt>log</dt>
@@ -371,6 +372,22 @@ rule are marked in the grid and listed in the <em>Problems</em> tab, and
 <em>Done</em> asks before returning data with problems. Rules can also be
 added from a column's menu (<em>Rules...</em>). See the <em>Validation</em>
 section.</p></dd>
+
+
+<dt>formats</dt>
+<dd><p>conditional formats: how to colour cells, without
+changing the data. A list of formats, each a one-sided formula or a list:</p><ul><li><p><code>list(~ mpg &gt; 25, fill = "#DCFCE7", color = "#166534",
+  bold = TRUE)</code>: cells where the formula is <code>TRUE</code> get the fill, text
+colour and/or bold text (a formula alone gets a yellow fill). The cells
+of the columns the formula uses are coloured; give <code>columns</code> to
+colour other columns, or <code>columns = "all"</code> for whole rows;</p></li>
+<li><p><code>list(scale = c("white", "#EF4444"), columns = "hp")</code>: a
+colour scale shading numbers from the lowest to the highest value (two
+colours, or three for low, middle and high). <code>limits = c(0, 300)</code>
+fixes the values of the end colours and <code>mid</code> the middle one.</p></li>
+</ul><p>Names of the list are labels. When several formats colour a cell, the
+later one wins. Formats can also be added to a column from its menu
+(<em>Conditional formatting...</em>).</p></dd>
 
 
 <dt>col_summary</dt>

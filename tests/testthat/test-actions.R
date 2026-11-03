@@ -361,7 +361,9 @@ test_that("the module opens dialogs, previews and applies actions", {
     # sorting applies at once
     action(kind = "sort", cid = "c2", desc = TRUE)
     expect_identical(rownames(out())[1], "Datsun 710")
-    expect_identical(sent$msgs[[length(sent$msgs)]]$method, "replace_data")
+    # the data, then the highlight of changed cells
+    expect_identical(vapply(utils::tail(sent$msgs, 2), `[[`, "", "method"),
+                     c("replace_data", "set_changed"))
     # a formula in a dialog with a preview
     action(kind = "formula", cid = "c2")
     session$setInputs(fx_target = "new", fx_name = "kpl", fx_expr = "")
