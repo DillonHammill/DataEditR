@@ -1777,6 +1777,23 @@ formulas, find and replace, recoding, type changes and sorting (see <a href="#ch
 <code>dplyr</code> verb each; other edits are listed as the values that
 changed.</p>
 <p><img src="images/code.png" width="100%" style="display: block; margin: auto;"></p>
+<p>When rows are filtered or columns hidden, the code continues with the
+rows and columns on screen, written as <code><a href="https://rdrr.io/pkg/dplyr/man/filter.html" class="external-link">filter()</a></code> and
+<code><a href="https://rdrr.io/pkg/dplyr/man/select.html" class="external-link">select()</a></code> so that you can take the subset into your script.
+The filters under the column headers, those from column summaries and
+those of the <code>Filters</code> panel (matching all or any of them)
+are all included:</p>
+<div class="sourceCode" id="cb49"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># The rows and columns on screen</span></span>
+<span><span class="va">mtcars_view</span> <span class="op">&lt;-</span> <span class="va">mtcars</span> <span class="op"><a href="https://rdrr.io/pkg/magrittr/man/pipe.html" class="external-link">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/pkg/dplyr/man/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/pkg/dplyr/man/between.html" class="external-link">between</a></span><span class="op">(</span><span class="va">mpg</span>, <span class="fl">15</span>, <span class="fl">25</span><span class="op">)</span>, <span class="va">cyl</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">4</span>, <span class="fl">6</span><span class="op">)</span>,</span>
+<span>         <span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grepl</a></span><span class="op">(</span><span class="st">"merc"</span>, <span class="fu"><a href="https://rdrr.io/r/base/chartr.html" class="external-link">tolower</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">rownames</a></span><span class="op">(</span><span class="va">.</span><span class="op">)</span><span class="op">)</span>, fixed <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="https://rdrr.io/pkg/magrittr/man/pipe.html" class="external-link">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/pkg/dplyr/man/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">mpg</span>, <span class="va">cyl</span>, <span class="va">disp</span>, <span class="va">hp</span><span class="op">)</span></span></code></pre></div>
+<p>The code is checked by running it on the data before it is shown.
+When the filters cannot explain the rows on screen (rows added while the
+data was filtered stay on screen until the filters change), the rows are
+picked by their position with <code><a href="https://rdrr.io/pkg/dplyr/man/slice.html" class="external-link">slice()</a></code> instead, and the code
+says so.</p>
 </div>
 <div class="section level3">
 <h3 id="print-code-to-console">14.2 Print code to console<a class="anchor" aria-label="anchor" href="#print-code-to-console"></a>
@@ -1787,13 +1804,15 @@ code uses <code>dplyr</code> verbs such as <code><a href="https://rdrr.io/pkg/dp
 <code><a href="https://rdrr.io/pkg/dplyr/man/select.html" class="external-link">select()</a></code>, <code><a href="https://rdrr.io/pkg/dplyr/man/mutate.html" class="external-link">mutate()</a></code>, <code><a href="https://rdrr.io/pkg/dplyr/man/slice.html" class="external-link">slice()</a></code>, and
 <code><a href="https://rdrr.io/pkg/tibble/man/add_row.html" class="external-link">tibble::add_row()</a></code> to replicate your edits. Copying and
 pasting this code into the console will recreate the edited version of
-your data.</p>
-<div class="sourceCode" id="cb49"><pre class="downlit sourceCode r">
+your data. If you return only what’s on screen (see <a href="#return-or-export-data-subsets">Return or export data
+subsets</a>), the code ends with the <code><a href="https://rdrr.io/pkg/dplyr/man/filter.html" class="external-link">filter()</a></code> and
+<code><a href="https://rdrr.io/pkg/dplyr/man/select.html" class="external-link">select()</a></code> that give those rows and columns.</p>
+<div class="sourceCode" id="cb50"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="va">mtcars</span>,</span>
 <span>          code <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
 <p>For example, renaming a column, modifying a cell value, removing a
 row and adding a new row might produce code like:</p>
-<div class="sourceCode" id="cb50"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb51"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dplyr.tidyverse.org" class="external-link">dplyr</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">mtcars</span> <span class="op">&lt;-</span> <span class="va">mtcars</span> <span class="op"><a href="https://rdrr.io/pkg/magrittr/man/pipe.html" class="external-link">%&gt;%</a></span></span>
@@ -1823,7 +1842,7 @@ create a new R script to store this code by providing a name for the R
 script to <code>code</code>. For example, the below code creates a new R
 script called <code>mtcars_edit.R</code> and inserts the code required
 to programmatically generate the final edited version of your data.</p>
-<div class="sourceCode" id="cb51"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb52"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="va">mtcars</span>,</span>
 <span>          code <span class="op">=</span> <span class="st">"mtcars_edit.R"</span><span class="op">)</span></span></code></pre></div>
 </div>
@@ -1833,7 +1852,7 @@ to programmatically generate the final edited version of your data.</p>
 <p>The <code><a href="../reference/data_code.html">data_code()</a></code> function can also be used outside of
 <code><a href="../reference/data_edit.html">data_edit()</a></code> to generate code from any pair of original and
 edited data frames:</p>
-<div class="sourceCode" id="cb52"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb53"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dillonhammill.github.io/DataEditR/">DataEditR</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Original data</span></span>
@@ -1865,7 +1884,7 @@ edited data frames:</p>
 <p>The data editor is also available as a shiny module, so you can add
 an editable table to your own shiny applications with
 <code><a href="../reference/dataEdit.html">dataEditUI()</a></code> and <code><a href="../reference/dataEdit.html">dataEditServer()</a></code>:</p>
-<div class="sourceCode" id="cb53"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb54"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://shiny.posit.co/" class="external-link">shiny</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dillonhammill.github.io/DataEditR/">DataEditR</a></span><span class="op">)</span></span>
 <span></span>
