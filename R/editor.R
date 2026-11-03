@@ -28,7 +28,9 @@ editr_prepare <- function(x,
                           read_fun = "read.csv",
                           read_args = NULL,
                           track = NULL,
-                          quiet = FALSE) {
+                          quiet = FALSE,
+                          row_names = TRUE,
+                          col_widths = NULL) {
 
   # COMMENTS ON CELLS (SEE R/comments.R)
   comments_in <- if (!is_db_input(x)) attr(x, "comments", exact = TRUE)
@@ -57,12 +59,23 @@ editr_prepare <- function(x,
     col_names <- FALSE
   }
 
+  # A GEOMETRY COLUMN ON ITS OWN (sfc) OPENS AS AN sf OBJECT
+  if (inherits(x, "sfc")) {
+    if (!requireNamespace("sf", quietly = TRUE)) {
+      stop("Package 'sf' is required to edit geometries.", call. = FALSE)
+    }
+    x <- sf::st_sf(geometry = x)
+  }
+
   # MATRICES WITHOUT ROW NAMES ARE RETURNED WITHOUT ROW NAMES
   matrix_rownames <- !is.matrix(x) || !is.null(rownames(x))
 
   # TEMPLATE / FILE / DIMENSIONS / COLUMN NAMES
   x <- data_template(x, read_fun = read_fun, read_args = read_args)
   data_class <- class(x)
+
+  # sf OBJECTS: THE GEOMETRY COLUMN (RETURNED AS sf AGAIN)
+  sf_column <- if (inherits(x, "sf")) attr(x, "sf_column", exact = TRUE)
 
   # TIBBLES & DATA.TABLES
   if (!is.matrix(x)) {
@@ -74,8 +87,9 @@ editr_prepare <- function(x,
   # ATTRIBUTES OF PLAIN COLUMNS (VARIABLE LABELS, ...) THAT ROW CHANGES DROP
   col_attrs <- if (is.data.frame(x)) Filter(Negate(is.null), lapply(x, column_attrs)) else list()
 
-  # EMPTY DATA
-  if (nrow(x) == 0 && is.null(row_bind)) {
+  # EMPTY DATA - ONE ROW TO TYPE IN (LEFT OUT OF THE RESULT WHILE IT IS EMPTY)
+  blank_row <- nrow(x) == 0 && is.null(row_bind)
+  if (blank_row) {
     row_bind <- 1
   }
   if (ncol(x) == 0 && is.null(col_bind)) {
@@ -91,14 +105,26 @@ editr_prepare <- function(x,
   if (any(duplicated(colnames(x)))) {
     warning("Column names must be unique!")
   }
-  if (!is.null(col_readonly) && !all(col_readonly %in% colnames(x))) {
-    stop("'col_readonly' must contain valid column names.")
+  # COLUMNS THAT ARE NOT IN THE DATA ARE IGNORED, SO THE SAME SETTINGS CAN BE
+  # USED FOR DIFFERENT DATA (E.G. IN A SHINY APP)
+  known <- function(nms, arg) {
+    bad <- setdiff(nms, colnames(x))
+    if (length(bad) > 0 && !quiet) {
+      message("Ignoring '", arg, "' for columns that are not in the data: ",
+              paste(bad, collapse = ", "), ".")
+    }
+    nms[nms %in% colnames(x)]
   }
-  if (!is.null(col_hide) && !all(col_hide %in% colnames(x))) {
-    stop("'col_hide' must contain valid column names.")
+  if (!is.null(col_readonly)) col_readonly <- known(col_readonly, "col_readonly")
+  if (!is.null(col_hide)) col_hide <- known(col_hide, "col_hide")
+  if (length(col_options) > 0) {
+    if (is.null(names(col_options)) || any(!nzchar(names(col_options)))) {
+      stop("'col_options' must be named by column.", call. = FALSE)
+    }
+    col_options <- col_options[known(names(col_options), "col_options")]
   }
-  if (!is.null(col_options) && !all(names(col_options) %in% colnames(x))) {
-    stop("'col_options' must be named with valid column names.")
+  if (!is.null(names(col_widths))) {
+    col_widths <- col_widths[known(names(col_widths), "col_widths")]
   }
 
   # FACTORS -> CHARACTER FOR EDITING (RETURNED AS FACTORS WITH THEIR LEVELS)
@@ -114,6 +140,16 @@ editr_prepare <- function(x,
   # COLUMN OPTIONS - CONVERT COLUMNS TO THE TYPE THEIR INPUT NEEDS
   if (!is.null(col_options)) {
     for (z in names(col_options)) {
+      # "dropdown" WITHOUT VALUES: THE FACTOR LEVELS OR VALUES OF THE COLUMN
+      col_options[[z]] <- col_option_values(col_options[[z]], x[[z]],
+                                            factors[[z]]$levels)
+      if (is.null(col_options[[z]])) {
+        if (!quiet) {
+          message("Column '", z, "' has no values for its dropdown, so it ",
+                  "is not one.")
+        }
+        next
+      }
       spec <- col_option_spec(col_options[[z]])
       x[[z]] <- col_option_convert(x[[z]], spec, z)
       n_out <- col_option_outside(x[[z]], spec)
@@ -126,15 +162,29 @@ editr_prepare <- function(x,
           "). They are kept and marked in the editor."
         )
       }
+      n_step <- col_option_off_step(x[[z]], spec)
+      if (n_step > 0 && !quiet) {
+        message(
+          "Column '", z, "' has ", n_step, " value", if (n_step > 1) "s",
+          " that ", if (n_step > 1) "are" else "is", " not ",
+          step_phrase(spec, plural = n_step > 1),
+          ". They are kept and marked in the editor."
+        )
+      }
     }
+    col_options <- Filter(Negate(is.null), col_options)
   }
 
-  # AUTO-TYPED COLUMNS - EMPTY TEMPLATE / BOUND COLUMNS
+  # AUTO-TYPED COLUMNS - EMPTY TEMPLATE ("") / ALL-NA LOGICAL / BOUND COLUMNS.
+  # ALL-NA TEXT COLUMNS (NA_character_) KEEP THEIR TYPE
   auto <- vapply(x, function(col) {
-    (is.character(col) && all(is.na(col) | !nzchar(col))) ||
+    (is.character(col) && any(!is.na(col)) && all(is.na(col) | !nzchar(col))) ||
       (is.logical(col) && all(is.na(col)))
   }, logical(1))
   auto[bound_cols] <- TRUE
+  # COLUMNS WITH AN INPUT HAVE THE TYPE OF THEIR INPUT (A DROPDOWN OF CODES
+  # SUCH AS "01" IS TEXT)
+  auto[names(x) %in% names(col_options)] <- FALSE
 
   # ROW NAMES
   rn <- rownames(x)
@@ -172,11 +222,31 @@ editr_prepare <- function(x,
     protected <- name_to_cid(intersect(col_names, names(x)))
   }
   readonly <- name_to_cid(col_readonly)
+  # LIST COLUMNS (E.G. THE GEOMETRY OF sf OBJECTS) ARE SHOWN BUT NOT EDITED
+  readonly <- unique(c(readonly, cids[vapply(x, is.list, logical(1))]))
   protected <- unique(c(protected, readonly, rownames_cid))
 
   # COLUMN OPTIONS BY ID
   opts <- grid_col_options(col_options)
   names(opts) <- name_to_cid(names(opts))
+
+  # COLUMN WIDTHS (PIXELS): ONE FOR ALL COLUMNS OR BY COLUMN NAME
+  widths <- NULL
+  if (!is.null(col_widths)) {
+    if (!is.numeric(col_widths) || anyNA(col_widths) || any(col_widths <= 0)) {
+      stop("'col_widths' must be widths in pixels.", call. = FALSE)
+    }
+    if (is.null(names(col_widths))) {
+      if (length(col_widths) != 1) {
+        stop("'col_widths' must be one width or widths named by column.",
+             call. = FALSE)
+      }
+      widths <- stats::setNames(as.list(rep(col_widths, length(cids))), cids)
+    } else {
+      widths <- stats::setNames(as.list(unname(col_widths)),
+                                name_to_cid(names(col_widths)))
+    }
+  }
 
   # DATABASE - COLUMNS THAT DO NOT EXIST IN THE TABLE CANNOT BE WRITTEN
   if (!is.null(db)) {
@@ -186,6 +256,10 @@ editr_prepare <- function(x,
 
   store <- editr_store(state)
   store$hidden <- name_to_cid(col_hide)
+  # ROW NAMES CAN BE KEPT OUT OF SIGHT (THEY ARE STILL RETURNED)
+  if (isFALSE(row_names) && !is.null(rownames_cid)) {
+    store$hidden <- c(store$hidden, rownames_cid)
+  }
   # FACTOR COLUMNS THAT ARE STILL TEXT (NOT TURNED INTO E.G. CHECKBOXES)
   factors <- factors[vapply(names(factors), function(nm) {
     nm %in% names(x) && is.character(x[[nm]])
@@ -215,7 +289,10 @@ editr_prepare <- function(x,
     track = !is.null(track) && !isFALSE(track),
     track_color = if (isTRUE(track)) "#0275d8" else if (is.character(track)) track else NULL,
     quiet = quiet,
-    db = db
+    db = db,
+    blank_rows = if (blank_row) state$ids,
+    sf_column = sf_column,
+    col_widths = widths
   )
 
   list(store = store, cfg = cfg)
@@ -302,6 +379,22 @@ process_ops <- function(store, ops, cfg, label = NULL) {
         p <- cells_patch(store, list(type = "update", cid = cid, ids = ids))
         if (!is.null(p)) add_patch("update_cells", p)
         next
+      }
+      # ROW NAMES MUST BE UNIQUE: NAMES ALREADY USED BY OTHER ROWS ARE UNDONE
+      if (identical(cid, cfg$rownames_cid)) {
+        dup <- duplicate_row_names(state, cid, ids, values)
+        if (any(dup)) {
+          messages <- c(messages, paste0(
+            "Row names must be unique: ",
+            paste0("'", unique(unlist(values[dup])), "'", collapse = ", "),
+            if (sum(dup) == 1) " is" else " are", " already used."
+          ))
+          p <- cells_patch(store, list(type = "update", cid = cid, ids = ids[dup]))
+          if (!is.null(p)) add_patch("update_cells", p)
+          ids <- ids[!dup]
+          values <- values[!dup]
+          if (length(ids) == 0) next
+        }
       }
       apply_one(list(type = "update", cid = cid, ids = ids, values = values))
       # ECHO NORMALISED VALUES (E.G. "3.50" -> 3.5)
@@ -415,11 +508,27 @@ process_ops <- function(store, ops, cfg, label = NULL) {
   list(patches = patches, messages = messages, changed = changed)
 }
 
+#' Which of the new row names would be used by more than one row
+#'
+#' @return logical, one per updated row.
+#'
+#' @noRd
+duplicate_row_names <- function(state, cid, ids, values) {
+  rn <- as.character(state$data[[match(cid, state$cids)]])
+  new <- vapply(values, function(v) {
+    if (is.null(v) || length(v) == 0 || is.na(v[[1]])) NA_character_ else trimws(as.character(v[[1]]))
+  }, character(1))
+  others <- rn[-match(ids, state$ids)]
+  named <- !is.na(new) & nzchar(new)
+  # USED BY A ROW THAT KEEPS ITS NAME, OR EARLIER IN THE SAME PASTE
+  named & (new %in% others[!is.na(others)] | duplicated(ifelse(named, new, NA)) & named)
+}
+
 #' How a batch of ops from the grid was made, for the change log
 #' @noRd
 ops_how <- function(ops, label = NULL) {
   label <- as_scalar(label)
-  if (!is.null(label) && label %in% c("paste", "fill")) {
+  if (!is.null(label) && label %in% c("paste", "fill", "shift")) {
     return(label)
   }
   types <- vapply(ops, function(o) as.character(as_scalar(o$type) %||% ""),
@@ -1015,6 +1124,11 @@ editr_result <- function(store, cfg, view = FALSE) {
              requireNamespace("tibble", quietly = TRUE)) {
     data <- tibble::as_tibble(data)
   }
+  # sf OBJECTS (WHILE THEIR GEOMETRY COLUMN IS THERE)
+  if (!is.null(cfg$sf_column) && cfg$sf_column %in% names(data) &&
+      requireNamespace("sf", quietly = TRUE)) {
+    data <- sf::st_as_sf(data, sf_column_name = cfg$sf_column)
+  }
   data
 }
 
@@ -1027,6 +1141,18 @@ result_index <- function(store, cfg, view = FALSE) {
   state <- store$state
   rows <- seq_along(state$ids)
   cols <- seq_along(state$cids)
+  # THE ROW ADDED TO EMPTY DATA IS LEFT OUT UNTIL SOMETHING IS TYPED IN IT
+  if (length(cfg$blank_rows) > 0) {
+    blank <- which(state$ids %in% cfg$blank_rows)
+    empty <- vapply(blank, function(r) {
+      all(vapply(state$data, function(col) {
+        if (is.list(col)) return(length(col[[r]]) == 0)
+        v <- col[r]
+        is.na(v) || (is.character(v) && !nzchar(v))
+      }, logical(1)))
+    }, logical(1))
+    rows <- setdiff(rows, blank[empty])
+  }
   if (view) {
     # SERVER VIEW (rows/columns arguments) AND WHAT THE GRID REPORTS AS VISIBLE
     keep <- rep(TRUE, length(state$ids))

@@ -321,7 +321,25 @@ editr_read <- function(path, read_fun = "read.csv", read_args = NULL,
     args <- if (f %in% c("read_sav", "read_por")) list(user_na = TRUE)
     return(do.call(getExportedValue("haven", f), c(list(path), args)))
   }
-  do.call(read_fun, c(list(path), read_args))
+  do.call(editr_fun(read_fun), c(list(path), read_args))
+}
+
+#' A function given by name, including "pkg::fun" (e.g. "readxl::read_excel")
+#' @noRd
+editr_fun <- function(f) {
+  if (is.character(f) && length(f) == 1 && grepl("::", f, fixed = TRUE)) {
+    parts <- strsplit(f, ":{2,3}")[[1]]
+    if (length(parts) != 2 || !nzchar(parts[1]) || !nzchar(parts[2])) {
+      stop("'", f, "' is not a function name.", call. = FALSE)
+    }
+    editr_require(parts[1], paste0("use ", f))
+    return(if (grepl(":::", f, fixed = TRUE)) {
+      utils::getFromNamespace(parts[2], parts[1])
+    } else {
+      getExportedValue(parts[1], parts[2])
+    })
+  }
+  f
 }
 
 #' Write data with write_fun, or with haven to an SPSS, Stata or SAS
@@ -335,5 +353,14 @@ editr_write <- function(data, file, write_fun = "write.csv", write_args = NULL,
     return(invisible(do.call(getExportedValue("haven", f),
                              list(as.data.frame(data), file))))
   }
-  do.call(write_fun, c(list(data, file), write_args))
+  # DATA WITHOUT ROW NAMES (ROW NUMBERS ONLY) IS WRITTEN WITHOUT THEM
+  if (is.character(write_fun) && write_fun %in% c("write.csv", "write.csv2",
+                                                 "write.table", "utils::write.csv",
+                                                 "utils::write.csv2",
+                                                 "utils::write.table") &&
+      !"row.names" %in% names(write_args) && is.data.frame(data) &&
+      !is.character(attr(data, "row.names"))) {
+    write_args <- c(write_args, list(row.names = FALSE))
+  }
+  do.call(editr_fun(write_fun), c(list(data, file), write_args))
 }

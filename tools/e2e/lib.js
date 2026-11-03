@@ -168,6 +168,6 @@ async function changedKeys(page) {
 
 module.exports = {
   launch, settle, gridData, useGrid, columns, editCell, rowMenu, headerMenu, renameColumn,
-  selectCell, paste, key, changedKeys, check, sleep, cellCentre,
+  selectCell, paste, key, changedKeys, check, sleep, cellCentre, headerCentre,
   failures: () => failures,
 };

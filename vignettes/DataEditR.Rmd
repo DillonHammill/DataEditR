@@ -154,6 +154,18 @@ survey <- survey %>%
 
 `Change type` turns a labelled column into a factor or text using its labels (`haven::as_factor()`), or into plain numbers (`haven::zap_labels()`). The returned data keeps the variable labels, value labels and missing values, and so does the generated code. When `save_as` ends in `.sav`, `.dta` or `.xpt` the data is written with `haven`, and the `Export` menu can download the data as an SPSS or Stata file.
 
+### 2.3 Spatial data and list columns
+
+Columns that hold a list per row, such as the geometry of an `sf` object, are shown as text (e.g. `MULTIPOLYGON (((-81.47 36.23, ...`) and cannot be edited, while the other columns can. `sf` objects are returned as `sf` objects with their geometry, so the attributes of spatial data can be edited in place:
+
+```{r, eval = FALSE}
+library(sf)
+nc <- st_read(system.file("shape/nc.shp", package = "sf"))
+nc <- data_edit(nc)
+```
+
+Data without any rows opens with one empty row to type in. The row is only returned once something has been entered in it.
+
 ## 3. Data Manipulation
 
 `data_edit()` provides a variety of spreadsheet-style tools to edit your data. We will explore the use of each of these tools below, using `mtcars` as an example:
@@ -203,6 +215,7 @@ Copy cells in Excel, Google Sheets, LibreOffice or any other software that copie
 
 * The block is pasted from the selected cell. Selecting a larger range that is a multiple of the block (e.g. ten cells for a single value) fills the range by repeating the block.
 * If the block has more rows than there are below the selected cell, rows are added at the end of the data (unless `row_edit = FALSE`). If it has more columns than there are to the right, columns named `V1`, `V2`, ... are added at the end (unless `col_edit = FALSE`), in the same step.
+* Press `Ctrl+Shift+V` instead to use the first row of the block as column names: the columns the block lands in are renamed (unless their names cannot be edited) and the columns it adds are named after it.
 * Line endings from Windows, Mac or Linux, the line break that spreadsheets add after the last row, and cells containing line breaks, tabs or quotes are all handled.
 * Values are converted to the type of their column. Formatted numbers such as `1,234.5`, `$12.50` or `45%` become `1234.5`, `12.5` and `0.45`. Dates such as `15/03/2024`, `15.03.2024` or `2024/3/15` become `2024-03-15`: whether the day or the month comes first is worked out from values such as `15/03` that can only be read one way, and otherwise follows the language of your browser (month first for US English). `yes`/`no`, `TRUE`/`FALSE` and `1`/`0` become logicals.
 * If some values still do not fit their column (for example `n/a` in a numeric column, or a value that is not one of the options of a dropdown menu), the data editor asks once for the whole paste whether to store them as missing values, convert the column to text or cancel the paste.
@@ -233,6 +246,8 @@ screenshot("column-menu.png")
 
 New rows can also be added to the end of the data with the `+ Add row` button under the grid, and new columns with the `+` button after the last column header. New columns start empty and their type is worked out from the values you enter when the data is returned.
 
+To move cells rather than whole rows, select the cells and choose `Insert cells, shift down` from the right-click menu: empty cells are inserted and the cells below them, in the selected columns only, move down (a row is added at the end when values would otherwise fall off). `Delete cells, shift up` removes the selected cells and moves the cells below them up. Both are one step that can be undone; clear the filters first, so that cells are not moved past rows that are hidden.
+
 To prevent users from adding or removing rows or columns, set `row_edit = FALSE` or `col_edit = FALSE` respectively.
 
 ```{r, eval = FALSE}
@@ -243,7 +258,7 @@ data_edit(mtcars,
 
 ### 3.6 Rename rows or columns
 
-`data_edit()` has full support for editing row and column names. Double-click the name of a column (or choose `Rename column` from its menu) to rename it; the new name must be unique and cannot be empty. Row names are edited like any other cell in the `row names` column. The row indices cannot be edited.
+`data_edit()` has full support for editing row and column names. Double-click the name of a column (or choose `Rename column` from its menu) to rename it; the new name must be unique and cannot be empty. Row names are edited like any other cell in the `row names` column, and must be unique: a name that another row already has is refused and the cell goes back to its old name. The row indices cannot be edited. To keep the row names out of sight (they are still returned), set `row_names = FALSE`.
 
 ```{r, echo = FALSE, fig.align = "center", out.width = "100%"}
 screenshot("rename-resize.gif")
@@ -258,7 +273,12 @@ data_edit(mtcars,
 
 ### 3.7 Resize columns
 
-To resize columns, go to the right-hand border of the header of that column and drag the cursor to the desired width (shown at the end of the animation above). Columns keep their width while you edit, including when changes are undone or redone. To make the columns fill the width of the editor instead, see [Stretch columns to fill page](#stretch-columns-to-fill-page).
+To resize columns, go to the right-hand border of the header of that column and drag the cursor to the desired width (shown at the end of the animation above). Columns keep their width while you edit, including when changes are undone or redone. Columns start as wide as their values, but no wider than 320 pixels, so long text does not push the other columns off screen. Set the starting widths in pixels with `col_widths`, either one width for every column or widths by column name:
+
+```{r, eval = FALSE}
+data_edit(samples,
+          col_widths = c(notes = 400, id = 60))
+``` To make the columns fill the width of the editor instead, see [Stretch columns to fill page](#stretch-columns-to-fill-page).
 
 ### 3.8 Find values
 
@@ -447,7 +467,7 @@ Every column has a filter box under its name and the box depends on the type of 
 
 * **numbers** have `min` and `max` boxes to keep values within a range;
 * **columns with a few distinct values** (e.g. `cyl` or `gear`) have a list to pick one or more values (`Any` means no filter);
-* **text** columns keep values that contain what you type.
+* **text** columns keep values that contain what you type; start with `!` (e.g. `!set`) to keep the values that do not contain it.
 
 Clicking a bar of a column's summary (see [Column summaries](#column-summaries)) sets its filter for you, and clicking the share of missing values shows only the rows where the value is missing. Rows must match every filter to be shown. Active filters are listed as chips in the toolbar; click the `x` on a chip to remove that filter or `Clear filters` to remove them all. The status bar shows how many of the rows are on screen.
 
@@ -510,7 +530,7 @@ mtcars_new$car <- factor(mtcars_new$car)
 str(mtcars_new)
 ```
 
-The edited data can also be written to a file of any format by specifying the name of the file to the `save_as` argument and specifying the name of the writing function to use through `write_fun`. The default is to use `write.csv` from the `utils` package. You can also pass any additional arguments to your write function in a named list to `write_args`. The data will be written to file when the `Done` button is selected; untick `Also save to` in the `Done` menu to close the editor without saving.
+The edited data can also be written to a file of any format by specifying the name of the file to the `save_as` argument and specifying the name of the writing function to use through `write_fun`. The default is to use `write.csv` from the `utils` package. You can also pass any additional arguments to your write function in a named list to `write_args`. The data will be written to file when the `Done` button is selected, and a message says where it was saved; untick `Also save to` in the `Done` menu to close the editor without saving. Data that has no row names (only row numbers) is written without them unless `write_args` sets `row.names`. `read_fun` and `write_fun` can name functions of other packages, e.g. `read_fun = "readxl::read_excel"`, and `save_as` does not have to be a file: with `write_fun = "googlesheets4::write_sheet"` it can be a Google Sheet.
 
 ```{r, eval = FALSE}
 mtcars_new <- data_edit(mtcars,
@@ -532,8 +552,9 @@ screenshot("export-menu.png")
 
 | `col_options` entry | Input | Returned as |
 |---------------------|-------|-------------|
-| `c(TRUE, FALSE)` | checkbox | logical |
-| `c("A", "B", "C")` | dropdown menu of the values | character |
+| `c(TRUE, FALSE)` or `"checkbox"` | checkbox | logical |
+| `c("A", "B", "C")` | dropdown menu of the values | character (numeric for numbers in a numeric column) |
+| `"dropdown"` | dropdown menu of the values in the column (the levels of a factor) | as the column |
 | `"date"` | date picker | `Date` |
 | `"datetime"` | date and time picker | `POSIXct` |
 | `"time"` | time picker | character (`"HH:MM"`) |
@@ -541,11 +562,14 @@ screenshot("export-menu.png")
 | `"password"` | hidden text | character |
 | `"url"` | web address with a button to open it | character |
 | `"colour"` (or `"color"`) | colour with a swatch | character |
-| `c(min = 0, max = 10, step = 0.5)` | number within limits (any of the three) | numeric |
+| `c(min = 0, max = 10, step = 0.5)` | number within limits (any of the three), in steps of `step` from `min` | numeric |
+| `"integer"` or `list(type = "integer", min = 0, max = 10)` | whole number (within limits) | integer |
 | `"slider"` or `c(type = "slider", min = 0, max = 1, step = 0.05)` | slider and bar for numbers within limits (0 to 100 by default) | numeric |
 | `"rating"` or `c(type = "rating", stars = 10)` | star rating (5 stars by default) | numeric |
 
 Columns are converted to the type their input needs when the data editor opens, and values that do not fit a column's input, whether typed or pasted, are caught before they are stored. Values already in the data that do not fit (for example a value above the maximum of a slider, or a value that is not one of the options of a dropdown menu) are kept but marked with a red line, and hovering over them says why.
+
+Columns named in `col_options`, `col_readonly`, `col_hide` or `col_widths` that are not in the data are ignored, with a message, so the same settings can be used for different data (for example in a shiny app where the data changes).
 
 The limits of sliders and numbers and the number of stars of ratings can be customised by giving the type together with its settings:
 
@@ -620,6 +644,21 @@ screenshot("col-dropdown.gif")
 
 Typing in a dropdown cell narrows the list down to the matching options, and only the listed options can be entered.
 
+To show names that differ from the values that are stored, give the options as a named list (as for `shiny::selectInput()`). The cells, the menu and the filter show the names, the data keeps the values, and typing or pasting a name stores its value:
+
+```{r, eval = FALSE}
+data_edit(sites,
+          col_options = list(state = list(`New South Wales` = "NSW",
+                                          Victoria = "VIC",
+                                          Queensland = "QLD")))
+```
+
+To offer the values that are already in a column, give `"dropdown"` on its own. Factors offer their levels, other columns their distinct values:
+
+```{r, eval = FALSE}
+data_edit(iris, col_options = list(Species = "dropdown"))
+```
+
 ### 7.3 Dates
 
 Dates can be entered interactively by selecting the relevant day from a calendar. To convert a column to accept interactive date inputs, supply a list with the name of the column and `"date"` as the option to `col_options`. The column is returned as a `Date` column.
@@ -692,6 +731,7 @@ screenshot("col-types.gif")
 * **Numbers within limits** (`c(min = , max = , step = )`): values outside the limits are flagged, and the `step` sets how much the arrows of the number box change the value.
 * **Sliders and ratings** (`"slider"`, `"rating"`): a bar shows each value; double-click to drag the slider (or use the arrow keys) or to click a star. Clear a cell with `Delete` to store a missing value.
 * **Web addresses** (`"url"`): addresses starting with `http://`, `https://` or `mailto:` get a button that opens them in a new tab; double-click the cell to edit the address.
+* **HTML** (`"html"`): the cells are shown as HTML, e.g. `Photo:<br/><a href="https://...">details</a>` as a line break and a link that opens in a new tab. Text formatting, lists, links and images are shown; scripts, styles, forms and event handlers are removed. Double-click a cell to edit its HTML.
 * **Colours** (`"colour"`): a swatch is shown next to each colour, for R colour names such as `"grey50"` or `"steelblue"` and hex codes such as `"#1D4ED8"`; values that are not colours get a dashed swatch. Double-click a cell to type a colour or pick one: the swatches offer the colours already in the column, R's palette and the colour-blind-safe Okabe-Ito palette, and `Other colour...` opens the browser's colour picker. Set the swatches with e.g. `list(type = "colour", palette = c("steelblue", "darkorange", "#009E73"))`.
 
 ```{r, echo = FALSE, fig.align = "center", out.width = "100%"}

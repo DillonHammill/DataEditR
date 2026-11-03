@@ -228,6 +228,28 @@ if (scenario == "df") {
   check(length(unique(log$session)) == 2 && identical(log$user, c("ana", "qa")),
         "this session added to the log file")
 
+} else if (scenario == "issues") {
+  e <- input
+  e$state <- c("NSW", "VIC", "QLD", "VIC", "QLD")
+  e$n <- c(NA, 2, 3, 4, NA)
+  names(e)[names(e) == "species"] <- "kind"
+  names(e)[names(e) == "code"] <- "extra"
+  e$kind[1] <- "A"
+  e$extra[1] <- "B"
+  e$size[1] <- 4
+  e$grade[4] <- "c"
+  same(result, e, "dropdown values, shifted cells, columns named by a paste")
+  reproduces(code_text(), input, result)
+
+} else if (scenario == "shiny_modal") {
+  seen <- read("seen.rds")
+  last <- seen[[length(seen)]]
+  check(any(vapply(seen, function(s) "MPG" %in% s$names, logical(1))),
+        "a column renamed in the modal reached R")
+  check(any(vapply(seen, function(s) identical(s$rows, 20L) && "Species" %in% s$names,
+                   logical(1))), "iris loaded after switching")
+  check(identical(last$rows, 5L) && "mpg" %in% last$names, "mtcars loaded again")
+
 } else if (scenario == "cancel") {
   same(result, input, "Cancel returns the original data")
   check(length(list.files(file.path(out, "drafts"), "rds$")) == 0,
@@ -331,9 +353,9 @@ if (scenario == "df") {
   reproduces(paste(log[start:end], collapse = "\n"), input, result)
 
 } else if (scenario == "hide") {
-  e <- data.frame(name = c("a", "b"), attending = c(TRUE, NA))
-  same(result, e, "checkbox ticked in the simplified editor")
-  saved <- read.csv(file.path(out, "rsvp.csv"), row.names = 1)
+  e <- data.frame(name = c("a", "z"), attending = c(TRUE, FALSE))
+  same(result, e, "checkbox ticked and a trimmed paste in the simplified editor")
+  saved <- read.csv(file.path(out, "rsvp.csv"))  # no row number column (#71)
   same(saved, e, "save_as written by Done")
 
 } else if (scenario == "db_rows") {

@@ -115,32 +115,44 @@
 #'   for each new column.
 #' @param col_edit logical indicating whether columns can be added or removed,
 #'   set to TRUE by default.
-#' @param col_options a list named with valid column names and the input to
-#'   use for each column:
+#' @param col_options a list named by column with the input to use for each
+#'   column:
 #'   \itemize{
-#'   \item \code{c(TRUE, FALSE)}: checkboxes;
-#'   \item a vector of values, e.g. \code{c("A", "B", "C")}: a dropdown menu;
+#'   \item \code{c(TRUE, FALSE)} or \code{"checkbox"}: checkboxes;
+#'   \item a vector of values, e.g. \code{c("A", "B", "C")}: a dropdown menu.
+#'   Give the values names to show the names instead, as for
+#'   \code{shiny::selectInput()}:
+#'   \code{list("New South Wales" = "NSW", "Victoria" = "VIC")};
+#'   \item \code{"dropdown"}: a dropdown menu of the values in the column
+#'   (or the levels of a factor);
 #'   \item \code{"date"} or \code{"datetime"}: a date or date-time picker
 #'   (the column is returned as \code{Date} or \code{POSIXct});
 #'   \item \code{"time"}: a time picker (\code{"HH:MM"} text);
 #'   \item \code{"textarea"}: text over several lines;
 #'   \item \code{"password"}: hidden text;
 #'   \item \code{"url"}: web addresses with a button to open them;
+#'   \item \code{"html"}: cells shown as HTML (links, line breaks, bold,
+#'   images, ...) without scripts or styles; double-click to edit the HTML;
 #'   \item \code{"colour"} (or \code{"color"}): colours (R colour names such
 #'   as \code{"grey50"} or hex codes such as \code{"#1D4ED8"}) shown with a
 #'   swatch and edited with a colour picker. Set the colours the picker
 #'   offers with \code{list(type = "colour", palette = c("red", "#1D4ED8"))};
 #'   any colour can still be typed or picked;
 #'   \item \code{c(min = 0, max = 10, step = 1)} (any of the three): numbers
-#'   within limits;
+#'   within limits, in steps of \code{step} counted from \code{min};
+#'   \item \code{"integer"}: whole numbers, returned as integers (with limits:
+#'   \code{list(type = "integer", min = 0, max = 10)});
 #'   \item \code{"slider"}: a slider and bar for numbers from 0 to 100;
 #'   \item \code{"rating"}: a rating from 0 to 5 stars.
 #'   }
 #'   Set the limits of a slider with
 #'   \code{c(type = "slider", min = 0, max = 1, step = 0.05)} and the number
 #'   of stars of a rating with \code{c(type = "rating", stars = 10)} (a
-#'   \code{list()} works too). Values outside the limits are marked in the
-#'   editor and cannot be entered.
+#'   \code{list()} works too). Values outside the limits or off the steps are
+#'   marked in the editor and cannot be entered. Columns that are not in the
+#'   data are ignored (with a message), here and in \code{col_readonly},
+#'   \code{col_hide} and \code{col_widths}, so the same settings can be used
+#'   for different data.
 #' @param col_stretch logical indicating whether columns should be stretched to
 #'   fill the full width of the display, set to FALSE by default.
 #' @param col_factor logical indicating whether character columns should be
@@ -173,6 +185,9 @@
 #'   \code{"pane"} to open the application in a dialog box, browser or RStudio
 #'   viewer pane. First letter abbreviations are allowed, set to \code{"dialog"}
 #'   by default. A function accepting the application URL can also be supplied.
+#'   Outside RStudio the dialog opens in the browser. If code that runs after
+#'   \code{data_edit()} inside a function of yours stops when the RStudio
+#'   dialog closes, use \code{viewer = "pane"} or \code{"browser"} there.
 #' @param viewer_height numeric to control the height of the viewer in pixels
 #'   when \code{viewer} is set to \code{"dialog"}, set 800 by default.
 #' @param viewer_width numeric to control the width of the viewer in pixels when
@@ -185,7 +200,8 @@
 #'   (\code{.sav}, \code{.por}), Stata (\code{.dta}) and SAS
 #'   (\code{.sas7bdat}, \code{.xpt}) files are read with the haven package
 #'   unless another function is given (see the \emph{Labelled data}
-#'   section).
+#'   section). Functions of other packages can be named with
+#'   \code{"pkg::fun"}, e.g. \code{read_fun = "readxl::read_excel"}.
 #' @param read_args a named list of additional arguments to pass to
 #'   \code{read_fun}.
 #' @param write_fun name of the function to use to write the edited version of
@@ -193,7 +209,11 @@
 #'   that the first argument accepts the edited data and the second argument
 #'   accepts the file name supplied to \code{save_as}. When \code{save_as}
 #'   ends in \code{.sav}, \code{.dta} or \code{.xpt} the data is written with
-#'   haven, keeping variable and value labels.
+#'   haven, keeping variable and value labels. Data without row names (only
+#'   row numbers) is written by \code{write.csv()} without them, unless
+#'   \code{write_args} sets \code{row.names}. \code{"pkg::fun"} names a
+#'   function of another package, e.g. \code{"googlesheets4::write_sheet"},
+#'   whose \code{save_as} need not be a file name.
 #' @param write_args a named list of additional arguments to pass to
 #'   \code{write_fun}.
 #' @param quiet logical indicating whether messages should be suppressed, set to
@@ -241,6 +261,14 @@
 #'   the rows where the value is missing, or the number of values for the
 #'   details (smallest, largest, mean, ...). Set to \code{TRUE} by default;
 #'   the toolbar button hides the summaries.
+#' @param row_names logical indicating whether the row names of the data are
+#'   shown in the editor, set to \code{TRUE} by default. When \code{FALSE} the
+#'   row names are kept out of sight but still returned; rows added in the
+#'   editor are named by their row number.
+#' @param col_widths widths of the columns in pixels: one number for every
+#'   column, or numbers named by column, e.g. \code{c(notes = 400, id = 60)}.
+#'   Other columns are as wide as their values, up to 320 pixels; drag the
+#'   edge of a column header to resize it.
 #' @param rules a list of rules the data should follow, each a one-sided
 #'   formula that is \code{TRUE} for valid rows and named with the message
 #'   to show, e.g. \code{list("Age is between 0 and 120" = ~ age >= 0 & age <=
@@ -307,6 +335,8 @@ data_edit <- function(x = NULL,
                       col_actions = TRUE,
                       rules = NULL,
                       col_summary = TRUE,
+                      row_names = TRUE,
+                      col_widths = NULL,
                       ...) {
 
   # DATA ENVIRONMENT -----------------------------------------------------------
@@ -380,6 +410,10 @@ data_edit <- function(x = NULL,
     x_text
   }
 
+  # save_as NAMES A FILE (NOT E.G. A GOOGLE SHEET WRITTEN BY write_fun)
+  save_file <- if (is.character(save_as) && length(save_as) == 1 &&
+                   is.null(oldClass(save_as))) save_as
+
   # CHANGE LOG
   if (!is.null(log) && !is.function(log) &&
       !(is.character(log) && length(log) == 1 && nzchar(log))) {
@@ -438,7 +472,9 @@ data_edit <- function(x = NULL,
                 tags$hr(class = "dropdown-divider"),
                 checkboxInput(
                   "save_file",
-                  tagList("Also save to ", tags$code(basename(save_as))),
+                  tagList("Also save to ", tags$code(
+                    if (!is.null(save_file)) basename(save_file) else "save_as"
+                  )),
                   value = TRUE
                 )
               )
@@ -572,7 +608,9 @@ data_edit <- function(x = NULL,
       col_actions = col_actions,
       rules = rules,
       col_summary = col_summary,
-      history = history
+      history = history,
+      row_names = row_names,
+      col_widths = col_widths
     )
     data_active <- attr(data_update, "view")
     editor <- attr(data_update, "editor")
@@ -670,8 +708,8 @@ data_edit <- function(x = NULL,
     export_handler <- function(view) {
       downloadHandler(
         filename = function() {
-          base <- if (!is.null(save_as)) {
-            basename(save_as)
+          base <- if (!is.null(save_file)) {
+            basename(save_file)
           } else {
             paste0(format(Sys.Date(), "%Y%m%d"), "-data.csv")
           }
@@ -679,8 +717,13 @@ data_edit <- function(x = NULL,
         },
         content = function(file) {
           d <- if (view) data_active() else data_update()
-          editr_write(d, file, write_fun, write_args,
-                      name = if (!is.null(save_as)) save_as else file)
+          # save_as THAT IS NOT A FILE (E.G. A GOOGLE SHEET): DOWNLOAD A CSV
+          if (!is.null(save_as) && is.null(save_file)) {
+            editr_write(d, file)
+          } else {
+            editr_write(d, file, write_fun, write_args,
+                        name = if (!is.null(save_file)) save_file else file)
+          }
         }
       )
     }
@@ -689,8 +732,8 @@ data_edit <- function(x = NULL,
     haven_handler <- function(ext) {
       downloadHandler(
         filename = function() {
-          base <- if (!is.null(save_as)) {
-            sub("\\.[^.]+$", "", basename(save_as))
+          base <- if (!is.null(save_file)) {
+            sub("\\.[^.]+$", "", basename(save_file))
           } else {
             paste0(format(Sys.Date(), "%Y%m%d"), "-data")
           }
@@ -754,6 +797,11 @@ data_edit <- function(x = NULL,
       save <- !is.null(save_as) && !isFALSE(input$save_file)
       if (!is.null(result) && save) {
         editr_write(result, save_as, write_fun, write_args)
+        if (!quiet) {
+          message("Saved the edited data to ",
+                  if (is.character(save_as)) paste0("'", save_as, "'") else "save_as",
+                  ".")
+        }
       }
       if (!is.null(log)) {
         editr_write_log(isolate(dataEditLog(data_update)), log,
@@ -982,8 +1030,14 @@ editr_addin_selection <- function(envir = parent.frame()) {
     error = function(e) ""
   )
   text <- trimws(paste(text, collapse = ""))
-  if (!nzchar(text) || !exists(text, envir = envir)) {
+  if (!nzchar(text)) {
     return(NULL)
+  }
+  # THE ADD-IN IS RUN FROM RSTUDIO'S OWN CODE: LOOK IN THE GLOBAL ENVIRONMENT
+  # TOO (THE OBJECT WAS NOT FOUND FROM THE ADD-IN BEFORE)
+  if (!exists(text, envir = envir)) {
+    envir <- globalenv()
+    if (!exists(text, envir = envir)) return(NULL)
   }
   obj <- get(text, envir = envir)
   if (is.null(dim(obj)) && !is_db_input(obj)) {

@@ -41,6 +41,8 @@ dataEditServer(
   rules = NULL,
   col_summary = TRUE,
   history = NULL,
+  row_names = TRUE,
+  col_widths = NULL,
   ...
 )
 }
@@ -73,32 +75,44 @@ for each new column.}
 \item{col_edit}{logical indicating whether columns can be added or removed,
 set to TRUE by default.}
 
-\item{col_options}{a list named with valid column names and the input to
-use for each column:
+\item{col_options}{a list named by column with the input to use for each
+column:
 \itemize{
-\item \code{c(TRUE, FALSE)}: checkboxes;
-\item a vector of values, e.g. \code{c("A", "B", "C")}: a dropdown menu;
+\item \code{c(TRUE, FALSE)} or \code{"checkbox"}: checkboxes;
+\item a vector of values, e.g. \code{c("A", "B", "C")}: a dropdown menu.
+Give the values names to show the names instead, as for
+\code{shiny::selectInput()}:
+\code{list("New South Wales" = "NSW", "Victoria" = "VIC")};
+\item \code{"dropdown"}: a dropdown menu of the values in the column
+(or the levels of a factor);
 \item \code{"date"} or \code{"datetime"}: a date or date-time picker
 (the column is returned as \code{Date} or \code{POSIXct});
 \item \code{"time"}: a time picker (\code{"HH:MM"} text);
 \item \code{"textarea"}: text over several lines;
 \item \code{"password"}: hidden text;
 \item \code{"url"}: web addresses with a button to open them;
+\item \code{"html"}: cells shown as HTML (links, line breaks, bold,
+images, ...) without scripts or styles; double-click to edit the HTML;
 \item \code{"colour"} (or \code{"color"}): colours (R colour names such
 as \code{"grey50"} or hex codes such as \code{"#1D4ED8"}) shown with a
 swatch and edited with a colour picker. Set the colours the picker
 offers with \code{list(type = "colour", palette = c("red", "#1D4ED8"))};
 any colour can still be typed or picked;
 \item \code{c(min = 0, max = 10, step = 1)} (any of the three): numbers
-within limits;
+within limits, in steps of \code{step} counted from \code{min};
+\item \code{"integer"}: whole numbers, returned as integers (with limits:
+\code{list(type = "integer", min = 0, max = 10)});
 \item \code{"slider"}: a slider and bar for numbers from 0 to 100;
 \item \code{"rating"}: a rating from 0 to 5 stars.
 }
 Set the limits of a slider with
 \code{c(type = "slider", min = 0, max = 1, step = 0.05)} and the number
 of stars of a rating with \code{c(type = "rating", stars = 10)} (a
-\code{list()} works too). Values outside the limits are marked in the
-editor and cannot be entered.
+\code{list()} works too). Values outside the limits or off the steps are
+marked in the editor and cannot be entered. Columns that are not in the
+data are ignored (with a message), here and in \code{col_readonly},
+\code{col_hide} and \code{col_widths}, so the same settings can be used
+for different data.
 Unlike earlier versions, using \code{col_options} no longer disables
 adding or removing columns.}
 
@@ -199,6 +213,16 @@ database table, read back with \code{DBI::dbReadTable()}. The
 \code{session} column tells the sessions apart (entries of the current
 session are left out). \code{data_edit(log = "file.csv")} reads the
 earlier sessions of the data from its file.}
+
+\item{row_names}{logical indicating whether the row names of the data are
+shown in the editor, set to \code{TRUE} by default. When \code{FALSE} the
+row names are kept out of sight but still returned; rows added in the
+editor are named by their row number.}
+
+\item{col_widths}{widths of the columns in pixels: one number for every
+column, or numbers named by column, e.g. \code{c(notes = 400, id = 60)}.
+Other columns are as wide as their values, up to 320 pixels; drag the
+edge of a column header to resize it.}
 
 \item{...}{not in use.}
 }

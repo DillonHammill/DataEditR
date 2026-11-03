@@ -66,13 +66,17 @@ NULL
 dataFilterUI <- function(id) {
   
   # USER INTERFACE
-  hidden(
-    actionButton(
-      NS(id, "filter"),
-      label = NULL,
-      icon = icon("filter"),
-      title = "Filter rows",
-      style = "margin-left: 0px;"
+  # shinyjs is included so apps do not need useShinyjs()
+  tagList(
+    useShinyjs(),
+    hidden(
+      actionButton(
+        NS(id, "filter"),
+        label = NULL,
+        icon = icon("filter"),
+        title = "Filter rows",
+        style = "margin-left: 0px;"
+      )
     )
   )
 

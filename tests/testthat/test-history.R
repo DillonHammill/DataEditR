@@ -197,7 +197,7 @@ test_that("data_edit() shows earlier sessions of the data in its log file", {
 test_that("drafts carry on their session and comments follow database rows", {
   p <- prep(head(mtcars, 3))
   p$store$draft_key <- "history-test"
-  on.exit(DataEditR:::draft_delete("history-test"))
+  withr::defer(DataEditR:::draft_delete("history-test"))
   ops(p, op_update("c2", 1, "5"))
   DataEditR:::draft_sync(p$store)
   draft <- DataEditR:::draft_read("history-test")

@@ -67,7 +67,7 @@ test_that("comments are set, returned with the data and dropped with rows", {
 test_that("comments are kept in drafts", {
   p <- prep(head(mtcars, 3))
   p$store$draft_key <- "comments-test"
-  on.exit(DataEditR:::draft_delete("comments-test"))
+  withr::defer(DataEditR:::draft_delete("comments-test"))
   DataEditR:::store_comment(p$store, 1, "c2", "kept")
   # a comment alone is worth a draft
   expect_true(DataEditR:::draft_sync(p$store))

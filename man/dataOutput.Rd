@@ -43,6 +43,10 @@ be hidden from the user, set to FALSE by default.}
 \item{hover_text}{text to display on download button when user hovers cursor
 over button, set to NULL by default to turn off hover text.}
 }
+\value{
+\code{dataOutputServer} returns the data to be saved, wrapped in
+\code{reactive}.
+}
 \description{
 Shiny module for data output
 }

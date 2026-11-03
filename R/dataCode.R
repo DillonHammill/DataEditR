@@ -631,6 +631,12 @@ data_code_value <- function(val) {
     as.character(val)
   } else if (is.numeric(val)) {
     as.character(val)
+  } else if (inherits(val, "POSIXct") && !is.null(attr(val, "tzone")) &&
+             nzchar(attr(val, "tzone")[1])) {
+    # DATE-TIMES IN A TIME ZONE (E.G. UTC FROM readxl): TEXT WOULD BE READ IN
+    # THE LOCAL TIME ZONE
+    paste0('as.POSIXct("', as.character(val), '", tz = "',
+           attr(val, "tzone")[1], '")')
   } else {
     val_str <- as.character(val)
     val_str <- gsub("\\", "\\\\", val_str, fixed = TRUE)

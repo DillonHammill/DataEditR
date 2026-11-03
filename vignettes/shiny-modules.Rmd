@@ -86,7 +86,27 @@ ui <- bslib::page_fluid(
 * the name of a file to read with `read_fun`;
 * a `dbplyr` lazy table or `db_table()` (see `vignette("databases")`).
 
-Whenever `data` changes the editor loads the new data and its history is cleared. `code_name` sets the name of the data in the code shown in the `Code` tab.
+Whenever `data` changes the editor loads the new data and its history is cleared. `code_name` sets the name of the data in the code shown in the `Code` tab. This is also how the editor is updated from the server, for example to go back to an empty template after each record has been saved:
+
+```{r}
+server <- function(input, output, session) {
+  template <- data.frame(name = NA_character_, age = NA_integer_)
+  reset <- reactiveVal(0)
+  record <- dataEditServer("record",
+                           data = reactive({
+                             reset()
+                             template
+                           }),
+                           col_options = list(age = "integer"))
+  observeEvent(input$add, {
+    DBI::dbAppendTable(con, "people", record())
+    # load the template again
+    reset(reset() + 1)
+  })
+}
+```
+
+The settings such as `col_options`, `col_readonly`, `col_hide` and `col_widths` stay the same for new data; columns they name that are not in the new data are ignored.
 
 ### 1.3 The returned data
 
@@ -242,7 +262,7 @@ observeEvent(input$save, {
 
 ## 2. The other modules
 
-Earlier versions of **DataEditR** combined several modules inside `data_edit()`. These are still exported and can be combined with `dataEdit` in your own apps. They use `shinyjs`, so add `shinyjs::useShinyjs()` to your UI.
+Earlier versions of **DataEditR** combined several modules inside `data_edit()`. These are still exported and can be combined with `dataEdit` in your own apps. They use `shinyjs`, which their UI functions now load themselves, so `hide = TRUE` works without adding `shinyjs::useShinyjs()` to your UI.
 
 | Module       | What it does                                                                  |
 |--------------|-------------------------------------------------------------------------------|
@@ -256,11 +276,9 @@ Earlier versions of **DataEditR** combined several modules inside `data_edit()`.
 
 ```{r}
 library(shiny)
-library(shinyjs)
 library(DataEditR)
 
 ui <- bslib::page_fluid(
-  useShinyjs(),
   dataInputUI("input"),
   dataFilterUI("filter"),
   dataSelectUI("select"),

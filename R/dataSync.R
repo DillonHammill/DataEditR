@@ -20,7 +20,7 @@
 #'   sync button is not required. Set to \code{FALSE} by default for backward
 #'   compatibility.
 #'
-#' @importFrom shinyjs hidden show
+#' @importFrom shinyjs hidden show useShinyjs
 #' @importFrom shiny actionButton icon moduleServer eventReactive is.reactive
 #'   reactive observe
 #'
@@ -74,11 +74,15 @@ NULL
 #' @export
 dataSyncUI <- function(id) {
 
-  hidden(
-    actionButton(
-      NS(id, "sync"), 
-      label = NULL, 
-      icon = icon("rotate")
+  # shinyjs is included so apps do not need useShinyjs()
+  tagList(
+    useShinyjs(),
+    hidden(
+      actionButton(
+        NS(id, "sync"), 
+        label = NULL, 
+        icon = icon("rotate")
+      )
     )
   )
   

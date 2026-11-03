@@ -140,6 +140,12 @@ grid_values <- function(x) {
   if (is.logical(x) || is.character(x)) {
     return(x)
   }
+  # LIST COLUMNS (sf GEOMETRIES, ...) AS format() SHOWS THEM
+  if (is.list(x)) {
+    return(vapply(seq_along(x), function(i) {
+      paste(format(x[i]), collapse = " ")
+    }, character(1)))
+  }
   as.character(x)
 }
 
@@ -173,6 +179,8 @@ grid_columns <- function(store, cfg) {
     )
     # VARIABLE AND VALUE LABELS (R/labelled.R)
     spec$labels <- grid_labels(col, attrs[[cid]])
+    # WIDTH IN PIXELS (col_widths)
+    spec$width <- cfg$col_widths[[cid]]
     spec
   })
 }
@@ -248,7 +256,7 @@ grid_col_options <- function(col_options) {
 # NAMED COLUMN TYPES (col_options = list(x = "textarea"))
 EDITR_COL_TYPES <- c("date", "datetime", "time", "password", "textarea",
                      "url", "colour", "rating", "slider", "number",
-                     "checkbox", "dropdown")
+                     "checkbox", "dropdown", "html")
 
 #' Option spec for one column
 #'
@@ -277,9 +285,21 @@ col_option_spec <- function(o) {
   if (!is.list(o) && "type" %in% names(o)) {
     o <- as.list(o)
   }
+  # A LIST OF CHOICES (AS FOR shiny::selectInput()): A DROPDOWN, WHOSE NAMES
+  # ARE SHOWN IN THE MENU AND THE CELLS
+  if (is.list(o) && is.null(o$type) && length(o) > 0 &&
+      !(!is.null(names(o)) && all(names(o) %in% c("min", "max", "step")))) {
+    return(dropdown_spec(unlist(o, use.names = FALSE), names(o)))
+  }
   if (is.list(o)) {
     type <- tolower(as.character(o$type %||% "number")[1])
     if (type == "color") type <- "colour"
+    # WHOLE NUMBERS: A NUMBER IN STEPS OF 1, RETURNED AS INTEGERS
+    whole <- type == "integer"
+    if (whole) {
+      type <- "number"
+      o$step <- o$step %||% 1
+    }
     if (!type %in% EDITR_COL_TYPES) {
       stop("'col_options': unknown column type \"", type, "\".", call. = FALSE)
     }
@@ -289,12 +309,13 @@ col_option_spec <- function(o) {
                      min = if (type == "slider") 0,
                      max = if (type == "slider") 100,
                      step = if (type == "slider") 1)
+      if (whole) spec$integer <- TRUE
     } else if (type == "rating") {
       spec$min <- 0
       spec$max <- as.numeric(o$stars %||% o$max %||% 5)[1]
       spec$step <- 1
     } else if (type == "dropdown") {
-      spec$values <- I(as.character(unlist(o$values)))
+      spec <- dropdown_spec(unlist(o$values, use.names = FALSE), names(o$values))
     } else if (type == "colour" && !is.null(o$palette)) {
       spec$palette <- I(as.character(unlist(o$palette)))
     }
@@ -310,11 +331,72 @@ col_option_spec <- function(o) {
   if (is.character(o) && length(o) == 1) {
     type <- tolower(o)
     if (type == "color") type <- "colour"
-    if (type %in% setdiff(EDITR_COL_TYPES, c("checkbox", "dropdown"))) {
+    if (type %in% c(EDITR_COL_TYPES, "integer")) {
       return(col_option_spec(list(type = type)))
     }
   }
-  list(type = "dropdown", values = I(as.character(o)))
+  dropdown_spec(o, names(o))
+}
+
+#' A dropdown without values takes those of its column
+#'
+#' \code{"dropdown"} or \code{list(type = "dropdown")}: the factor levels of
+#' the column, or else its values (sorted). NULL when there are none.
+#'
+#' @noRd
+col_option_values <- function(o, x, levels = NULL) {
+  bare <- (is.character(o) && length(o) == 1 && is.null(names(o)) &&
+             tolower(o) == "dropdown") ||
+    (is.list(o) && identical(tolower(as.character(o$type)[1]), "dropdown") &&
+       is.null(o$values))
+  if (!bare) return(o)
+  values <- levels %||% {
+    v <- if (is.list(x)) character(0) else unique(x[!is.na(x)])
+    v <- v[nzchar(as.character(v))]
+    sort(v)
+  }
+  if (length(values) == 0) return(NULL)
+  if (is.list(o)) {
+    o$values <- values
+    o
+  } else {
+    list(type = "dropdown", values = values)
+  }
+}
+
+#' Number of values not on the steps of a number input (from its minimum)
+#' @noRd
+col_option_off_step <- function(x, spec) {
+  if (!is.numeric(x) || !identical(spec$type, "number") ||
+      is.null(spec$step) || spec$step <= 0) {
+    return(0L)
+  }
+  k <- (x - (spec$min %||% 0)) / spec$step
+  sum(abs(k - round(k)) > 1e-9 * pmax(1, abs(k)) & !is.na(x))
+}
+
+#' "whole numbers" or "in steps of 0.5 (from 1)"
+#' @noRd
+step_phrase <- function(spec, plural = TRUE) {
+  from <- spec$min %||% 0
+  if (spec$step == 1 && from == round(from)) {
+    if (plural) "whole numbers" else "a whole number"
+  } else {
+    paste0("in steps of ", spec$step, if (from != 0) paste0(" from ", from))
+  }
+}
+
+#' Dropdown of values, shown by their names (labels) when they have some
+#' @noRd
+dropdown_spec <- function(values, labels = NULL) {
+  values <- as.character(values)
+  spec <- list(type = "dropdown", values = I(values))
+  if (!is.null(labels) && length(labels) == length(values)) {
+    labels <- as.character(labels)
+    labels[is.na(labels) | !nzchar(labels)] <- values[is.na(labels) | !nzchar(labels)]
+    if (!identical(labels, values)) spec$labels <- I(labels)
+  }
+  spec
 }
 
 #' Convert a column to the type its input needs
@@ -349,7 +431,7 @@ col_option_convert <- function(x, spec, name) {
     return(x)
   }
   if (type %in% c("number", "slider", "rating")) {
-    if (empty) return(rep(NA_real_, n))
+    if (empty) return(rep(if (isTRUE(spec$integer)) NA_integer_ else NA_real_, n))
     if (!is.numeric(x)) {
       res <- suppressWarnings(as.numeric(as.character(x)))
       if (anyNA(res[!is.na(x) & nzchar(as.character(x))])) {
@@ -358,11 +440,24 @@ col_option_convert <- function(x, spec, name) {
       }
       x <- res
     }
+    # "integer" COLUMNS OF WHOLE NUMBERS ARE INTEGERS (AND STAY SO WHEN EDITED)
+    if (isTRUE(spec$integer) && is.double(x) && !inherits(x, "haven_labelled") &&
+        all(is.na(x) | (x == round(x) & abs(x) < .Machine$integer.max))) {
+      x <- as.integer(x)
+    }
     return(x)
+  }
+  # DROPDOWNS OF NUMBERS: NUMERIC COLUMNS STAY NUMERIC
+  if (type == "dropdown" && length(spec$values) > 0 && (is.numeric(x) || empty)) {
+    v <- as.character(spec$values)
+    num <- suppressWarnings(as.numeric(v))
+    if (!anyNA(num) && identical(as.character(num), v)) {
+      return(if (is.numeric(x)) x else rep(NA_real_, n))
+    }
   }
   # TEXT INPUTS (DROPDOWN, PASSWORD, TEXTAREA, TIME, URL, COLOUR)
   if (empty) {
-    return(rep("", n))
+    return(rep(NA_character_, n))
   }
   if (!is.character(x)) {
     x <- as.character(x)

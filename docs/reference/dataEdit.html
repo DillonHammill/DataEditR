@@ -108,6 +108,8 @@ possible.</p>
 <span>  rules <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  col_summary <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  history <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  row_names <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  col_widths <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -157,29 +159,41 @@ set to TRUE by default.</p></dd>
 
 
 <dt>col_options</dt>
-<dd><p>a list named with valid column names and the input to
-use for each column:</p><ul><li><p><code>c(TRUE, FALSE)</code>: checkboxes;</p></li>
-<li><p>a vector of values, e.g. <code>c("A", "B", "C")</code>: a dropdown menu;</p></li>
+<dd><p>a list named by column with the input to use for each
+column:</p><ul><li><p><code>c(TRUE, FALSE)</code> or <code>"checkbox"</code>: checkboxes;</p></li>
+<li><p>a vector of values, e.g. <code>c("A", "B", "C")</code>: a dropdown menu.
+Give the values names to show the names instead, as for
+<code><a href="https://rdrr.io/pkg/shiny/man/selectInput.html" class="external-link">shiny::selectInput()</a></code>:
+<code>list("New South Wales" = "NSW", "Victoria" = "VIC")</code>;</p></li>
+<li><p><code>"dropdown"</code>: a dropdown menu of the values in the column
+(or the levels of a factor);</p></li>
 <li><p><code>"date"</code> or <code>"datetime"</code>: a date or date-time picker
 (the column is returned as <code>Date</code> or <code>POSIXct</code>);</p></li>
 <li><p><code>"time"</code>: a time picker (<code>"HH:MM"</code> text);</p></li>
 <li><p><code>"textarea"</code>: text over several lines;</p></li>
 <li><p><code>"password"</code>: hidden text;</p></li>
 <li><p><code>"url"</code>: web addresses with a button to open them;</p></li>
+<li><p><code>"html"</code>: cells shown as HTML (links, line breaks, bold,
+images, ...) without scripts or styles; double-click to edit the HTML;</p></li>
 <li><p><code>"colour"</code> (or <code>"color"</code>): colours (R colour names such
 as <code>"grey50"</code> or hex codes such as <code>"#1D4ED8"</code>) shown with a
 swatch and edited with a colour picker. Set the colours the picker
 offers with <code>list(type = "colour", palette = c("red", "#1D4ED8"))</code>;
 any colour can still be typed or picked;</p></li>
 <li><p><code>c(min = 0, max = 10, step = 1)</code> (any of the three): numbers
-within limits;</p></li>
+within limits, in steps of <code>step</code> counted from <code>min</code>;</p></li>
+<li><p><code>"integer"</code>: whole numbers, returned as integers (with limits:
+<code>list(type = "integer", min = 0, max = 10)</code>);</p></li>
 <li><p><code>"slider"</code>: a slider and bar for numbers from 0 to 100;</p></li>
 <li><p><code>"rating"</code>: a rating from 0 to 5 stars.</p></li>
 </ul><p>Set the limits of a slider with
 <code>c(type = "slider", min = 0, max = 1, step = 0.05)</code> and the number
 of stars of a rating with <code>c(type = "rating", stars = 10)</code> (a
-<code><a href="https://rdrr.io/r/base/list.html" class="external-link">list()</a></code> works too). Values outside the limits are marked in the
-editor and cannot be entered.
+<code><a href="https://rdrr.io/r/base/list.html" class="external-link">list()</a></code> works too). Values outside the limits or off the steps are
+marked in the editor and cannot be entered. Columns that are not in the
+data are ignored (with a message), here and in <code>col_readonly</code>,
+<code>col_hide</code> and <code>col_widths</code>, so the same settings can be used
+for different data.
 Unlike earlier versions, using <code>col_options</code> no longer disables
 adding or removing columns.</p></dd>
 
@@ -322,6 +336,20 @@ database table, read back with <code><a href="https://rdrr.io/pkg/DBI/man/dbRead
 <code>session</code> column tells the sessions apart (entries of the current
 session are left out). <code>data_edit(log = "file.csv")</code> reads the
 earlier sessions of the data from its file.</p></dd>
+
+
+<dt>row_names</dt>
+<dd><p>logical indicating whether the row names of the data are
+shown in the editor, set to <code>TRUE</code> by default. When <code>FALSE</code> the
+row names are kept out of sight but still returned; rows added in the
+editor are named by their row number.</p></dd>
+
+
+<dt>col_widths</dt>
+<dd><p>widths of the columns in pixels: one number for every
+column, or numbers named by column, e.g. <code>c(notes = 400, id = 60)</code>.
+Other columns are as wide as their values, up to 320 pixels; drag the
+edge of a column header to resize it.</p></dd>
 
 
 <dt>...</dt>
