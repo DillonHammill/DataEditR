@@ -306,6 +306,10 @@
    toolbar on one line for longer */
 .editr-toolbar {
   container-type: inline-size;
+  /* a container can be a stacking context (Chromium 123 is, 153 is not), and
+     so is the grid, which comes later: keep the toolbar's menus over the grid */
+  position: relative;
+  z-index: 5;
 }
 
 @container (max-width: 1060px) {

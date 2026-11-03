@@ -33,6 +33,21 @@ async function done(page, what = "all") {
   await sleep(1500);
 }
 
+// is the whole of an open menu on top of the page (and so clickable)?
+const onTop = (page, sel) => page.evaluate((sel) => {
+  const menu = document.querySelector(sel);
+  if (!menu) return false;
+  const r = menu.getBoundingClientRect();
+  for (let i = 0; i <= 8; i++) {
+    for (let j = 0; j <= 8; j++) {
+      const hit = document.elementFromPoint(r.left + 10 + (r.width - 20) * i / 8,
+                                            r.top + 10 + (r.height - 20) * j / 8);
+      if (!menu.contains(hit)) return false;
+    }
+  }
+  return true;
+}, sel);
+
 async function canEdit(page, id, field) {
   const p = await L.cellCentre(page, id, field);
   await page.mouse.click(p.x, p.y, { clickCount: 2 });
@@ -937,8 +952,19 @@ const scenarios = {
   },
 
   async open(page) {
+    // browsers that make a size container a stacking context put the grid over
+    // the toolbar's menus; current Chrome does not, so ask for it here
+    await page.addStyleTag({ content: ".editr-toolbar { contain: layout; }" });
+    const exportBtn = await page.evaluateHandle(() => [...document.querySelectorAll("button.editr-tool")]
+      .find((b) => b.textContent.includes("Export")));
+    await exportBtn.click();
+    await sleep(500);
+    check(await onTop(page, ".editr-toolbar .dropdown-menu.show"), "Export menu over the grid");
+    await page.keyboard.press("Escape");
+    await sleep(300);
     await page.click("#open_toggle");
     await sleep(500);
+    check(await onTop(page, ".editr-open-menu.show"), "Open menu over the grid");
     await page.click("#open_object", { clickCount: 3 });
     await page.keyboard.type("iris");
     await page.click("#open_load");
