@@ -12,6 +12,7 @@ editr_icon <- function(name, size = 16) {
     undo = '<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',
     redo = '<path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/>',
     columns = '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M15 3v18"/>',
+    filter = '<path d="M3 4h18l-7 8.5V19l-4 2v-8.5z"/>',
     chart = '<path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/>',
     form = '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 8h4M7 12h10M7 16h10"/>',
     search = '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
@@ -108,6 +109,55 @@ editr_theme <- function(theme = NULL) {
   )
 }
 
+#' Filter dialog: every filter on one screen
+#'
+#' The rows of the dialog are built by the grid (see the filter dialog section
+#' of editr_grid.js), which holds the data and does the filtering. There is no
+#' fade: Bootstrap ignores hide() during the animation, so a quick Apply would
+#' leave the dialog open.
+#'
+#' @noRd
+editr_filter_dialog <- function(id) {
+  tags$div(
+    class = "modal editr-filter-dialog",
+    id = id,
+    tabindex = "-1",
+    `aria-labelledby` = paste0(id, "_title"),
+    `aria-hidden` = "true",
+    tags$div(
+      class = "modal-dialog modal-lg modal-dialog-scrollable",
+      tags$div(
+        class = "modal-content",
+        tags$div(
+          class = "modal-header",
+          tags$h2(class = "modal-title fs-6 fw-semibold",
+                  id = paste0(id, "_title"), "Filter rows"),
+          tags$button(type = "button", class = "btn-close editr-fd-cancel",
+                      `data-bs-dismiss` = "modal", `aria-label` = "Close")
+        ),
+        tags$div(
+          class = "modal-body",
+          tags$p(class = "form-text mt-0",
+                 "Rows must match every filter."),
+          tags$div(class = "editr-fd-rows")
+        ),
+        tags$div(
+          class = "modal-footer",
+          tags$button(type = "button", class = "btn btn-outline-secondary btn-sm editr-fd-add",
+                      "Add filter"),
+          tags$button(type = "button", class = "btn btn-link btn-sm editr-fd-clear",
+                      "Clear all"),
+          tags$span(class = "editr-fd-count", `aria-live` = "polite"),
+          tags$button(type = "button", class = "btn btn-outline-secondary btn-sm editr-fd-cancel",
+                      `data-bs-dismiss` = "modal", "Cancel"),
+          tags$button(type = "button", class = "btn btn-primary btn-sm editr-fd-apply",
+                      "Apply")
+        )
+      )
+    )
+  )
+}
+
 #' Keyboard shortcuts dialog
 #' @noRd
 editr_shortcuts <- function(id) {
@@ -121,6 +171,7 @@ editr_shortcuts <- function(id) {
     c("Fill down", "Ctrl D"),
     c("Find in data", "Ctrl F"),
     c("Rename column", "Double-click column name"),
+    c("Comment on a cell", "Shift F2"),
     c("Row and column menu", "Right-click"),
     c("Show this list", "?")
   )

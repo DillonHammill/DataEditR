@@ -147,7 +147,11 @@ use for each column:</p><ul><li><p><code>c(TRUE, FALSE)</code>: checkboxes;</p><
 <li><p><code>"textarea"</code>: text over several lines;</p></li>
 <li><p><code>"password"</code>: hidden text;</p></li>
 <li><p><code>"url"</code>: web addresses with a button to open them;</p></li>
-<li><p><code>"colour"</code> (or <code>"color"</code>): colours shown with a swatch;</p></li>
+<li><p><code>"colour"</code> (or <code>"color"</code>): colours (R colour names such
+as <code>"grey50"</code> or hex codes such as <code>"#1D4ED8"</code>) shown with a
+swatch and edited with a colour picker. Set the colours the picker
+offers with <code>list(type = "colour", palette = c("red", "#1D4ED8"))</code>;
+any colour can still be typed or picked;</p></li>
 <li><p><code>c(min = 0, max = 10, step = 1)</code> (any of the three): numbers
 within limits;</p></li>
 <li><p><code>"slider"</code>: a slider and bar for numbers from 0 to 100;</p></li>
@@ -313,9 +317,11 @@ color. Set to <code>NULL</code> by default to disable highlighting.</p></dd>
 and when, see <code><a href="dataEditCommit.html">dataEditLog</a>()</code>) is added when <em>Done</em> is
 pressed, with a first column <code>data</code> naming the data that was
 edited. The file is created if it does not exist, so the same file can
-keep the history of many editing sessions. A function can be supplied
-instead; it is called with the log as a data frame (for example to write
-it to a database). Set to <code>NULL</code> by default to not keep the log.</p></dd>
+keep the history of many editing sessions, and the <em>History</em> tab
+lists the earlier sessions of the same data kept in it. A function can be
+supplied instead; it is called with the log as a data frame (for example
+to write it to a database). Set to <code>NULL</code> by default to not keep the
+log.</p></dd>
 
 
 <dt>autosave</dt>
@@ -383,7 +389,8 @@ list of shortcuts.</p>
     
 
 <p>The toolbar opens other data (<em>Open</em>), shows or hides column
-summaries and columns, lists active filters, searches the data (Ctrl+F),
+summaries and columns, filters rows (<em>Filter</em>, a dialog listing every
+filter), lists active filters, searches the data (Ctrl+F),
 and opens the side panel. The panel shows the selected row as a form
 (<em>Record</em>), lists every change with a button to revert it, the
 history of changes, broken rules and the code that reproduces the edits.

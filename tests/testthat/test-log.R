@@ -10,8 +10,9 @@ test_that("each batch of ops is one step of the log", {
     op_update("c2", 5, "1"), op_update("c3", 5, "4")
   ), p$cfg, label = "paste")
   l <- log_of(p)
-  expect_named(l, c("time", "user", "step", "how", "code", "action", "row",
-                    "column", "old", "new", "note"))
+  expect_named(l, c("session", "time", "user", "step", "how", "code", "action",
+                    "row", "column", "old", "new", "note"))
+  expect_identical(unique(l$session), p$store$session)
   expect_s3_class(l$time, "POSIXct")
   expect_identical(unique(l$user), "ana")
   expect_identical(l$step, c(1L, 2L, 2L, 3L, 3L, 3L))
@@ -102,7 +103,7 @@ test_that("steps get short titles", {
   expect_identical(title(rbind(e("edit"), e("edit", column = "b"))),
                    "Edited 2 cells")
   expect_identical(title(rbind(e("edit", "fill"), e("edit", "fill"))),
-                   "Filled down 2 cells in a")
+                   "Filled 2 cells in a")
   expect_identical(title(rbind(e("add row", row = "4"), e("add row", row = "5"),
                                e("remove row"))),
                    "Added 2 rows, removed row 1")
@@ -225,4 +226,24 @@ test_that("History tags say how a step was made", {
   expect_identical(tag(e("edit", "remove column")), c("Remove", "removed"))
   expect_identical(tag(e("edit", "rename column")), c("Rename", "renamed"))
   expect_identical(tag(e("edit", c("edit", "add row"))), c("Edit", "edited"))
+})
+
+test_that("a paste wider than the table adds columns in the same step", {
+  p <- prep(data.frame(a = c("x", "y")))
+  DataEditR:::process_ops(p$store, list(
+    op_update("c1", 1:2, c("p", "1")),
+    list(type = "insert_col", cid = "c2", name = "V1", anchor = "c1", right = TRUE),
+    list(type = "insert_col", cid = "c3", name = "V2", anchor = "c2", right = TRUE),
+    op_update("c2", 1:2, c("2", "3")),
+    op_update("c3", 1:2, c("4.5", "6"))
+  ), p$cfg, label = "paste")
+  r <- result(p)
+  expect_named(r, c("a", "V1", "V2"))
+  # new columns get the type of what was pasted
+  expect_identical(r$V1, c(2L, 3L))
+  expect_identical(r$V2, c(4.5, 6))
+  l <- log_of(p)
+  expect_identical(unique(l$step), 1L)
+  expect_identical(DataEditR:::log_step_title(l),
+                   "Pasted 6 cells, added column V1, added column V2")
 })

@@ -651,10 +651,11 @@ code_apply <- function(x, verb, rowname_col = NULL) {
     out <- action_apply(df, verb)
     return(out)
   }
-  rn <- rownames(df)
-  df <- cbind(stats::setNames(data.frame(rn, stringsAsFactors = FALSE),
-                              rowname_col), df)
-  rownames(df) <- NULL
+  # THE ROW NAMES IN A COLUMN (BUILT DIRECTLY: cbind() CHECKS 100,000 ROW
+  # NAMES FOR DUPLICATES)
+  df <- structure(c(stats::setNames(list(rownames(df)), rowname_col), as.list(df)),
+                  names = c(rowname_col, names(df)),
+                  row.names = .set_row_names(nrow(df)), class = "data.frame")
   out <- action_apply(df, verb)
   rn <- out[[rowname_col]]
   out[[rowname_col]] <- NULL

@@ -44,8 +44,9 @@ test_that("the change log is added to a file or passed to a function", {
   data_edit(mtcars, log = file)
   data_edit(mtcars[1:3, ], log = file)
   log <- read.csv(file, stringsAsFactors = FALSE)
-  expect_named(log, c("data", "time", "user", "step", "how", "code", "action", "row",
-                      "column", "old", "new", "note"))
+  expect_named(log, c("data", "session", "time", "user", "step", "how", "code",
+                      "action", "row", "column", "old", "new", "note"))
+  expect_identical(length(unique(log$session)), 2L)
   expect_identical(log$data, c("mtcars", "mtcars[1:3, ]"))
   expect_identical(log$user, c("ana", "ana"))
   expect_identical(log$row, c("Mazda RX4", "Mazda RX4"))
@@ -235,6 +236,40 @@ test_that("Open loads R objects, files and new tables", {
     session$setInputs(done = 1)
   })
   expect_identical(dim(data_edit(mtcars)), c(3L, 1L))
+})
+
+test_that("Open works with settings for columns the data does not have", {
+  # the settings of the session stopped the editor when other data was opened
+  mock_gadget(function(session) {
+    session$setInputs(open_object = "iris", open_load = 1)
+    session$setInputs(done = 1)
+  })
+  res <- data_edit(mtcars, col_readonly = "mpg", col_hide = "hp",
+                   col_options = list(cyl = c(4, 6, 8)))
+  expect_identical(res, iris)
+  mock_gadget(function(session) {
+    session$setInputs(open_rows = 2, open_cols = 2, open_new = 1)
+    session$setInputs(done = 1)
+  })
+  res <- data_edit(mtcars, col_readonly = "mpg", col_hide = "hp",
+                   col_options = list(cyl = c(4, 6, 8)))
+  expect_identical(dim(res), c(2L, 2L))
+})
+
+test_that("Open keeps the current data when it cannot show the new data", {
+  no_name <- setNames(data.frame(1, 2), c("a", NA))
+  nested <- data.frame(a = 1:2)
+  nested$b <- data.frame(z = 1:2)
+  mock_gadget(function(session) {
+    session$setInputs(open_object = "no_name", open_load = 1)
+    session$setInputs(open_object = "nested", open_load = 2)
+    session$setInputs(done = 1)
+  })
+  expect_identical(data_edit(mtcars), mtcars)
+  expect_identical(DataEditR:::open_problem(no_name), "has columns without a name.")
+  expect_identical(DataEditR:::open_problem(nested), "has columns that hold tables.")
+  expect_null(DataEditR:::open_problem(mtcars))
+  expect_null(DataEditR:::open_problem(matrix(1:4, 2)))
 })
 
 test_that("code follows the data opened from the Open menu", {

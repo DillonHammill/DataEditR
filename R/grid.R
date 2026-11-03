@@ -295,6 +295,8 @@ col_option_spec <- function(o) {
       spec$step <- 1
     } else if (type == "dropdown") {
       spec$values <- I(as.character(unlist(o$values)))
+    } else if (type == "colour" && !is.null(o$palette)) {
+      spec$palette <- I(as.character(unlist(o$palette)))
     }
     return(spec)
   }
@@ -416,4 +418,21 @@ parse_datetime_strict <- function(x, tz = "") {
     }, numeric(1)), origin = "1970-01-01", tz = tz)
   }
   out
+}
+
+#' R's colour names and their hex codes, so the grid shows R colours (e.g.
+#' "grey50", "darkolivegreen3", and "green" as R draws it) with the right
+#' swatch
+#' @noRd
+r_colours <- function() {
+  nm <- grDevices::colours(distinct = FALSE)
+  rgb <- grDevices::col2rgb(nm)
+  list(names = I(nm),
+       hex = I(grDevices::rgb(rgb[1, ], rgb[2, ], rgb[3, ], maxColorValue = 255)))
+}
+
+#' Whether any column is shown as colours
+#' @noRd
+has_colour_column <- function(col_options) {
+  any(vapply(col_options, function(o) identical(o$type, "colour"), logical(1)))
 }

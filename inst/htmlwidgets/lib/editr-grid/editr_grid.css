@@ -41,6 +41,23 @@
   color: #1E3A8A;
 }
 
+/* fill handle: a small square at the corner of the selection, as in
+   spreadsheets; the preview of the cells it fills is dashed */
+.editr_grid .tabulator .tabulator-range-overlay .tabulator-range-fill-handle {
+  width: 9px;
+  height: 9px;
+  right: -5px;
+  bottom: -5px;
+  border: 1.5px solid #FFFFFF;
+  border-radius: 2px;
+  background: #2975DD;
+  box-sizing: border-box;
+}
+
+.editr_grid .tabulator .tabulator-range-overlay .tabulator-range.tabulator-range-fill-preview {
+  border: 1.5px dashed #2975DD;
+}
+
 .editr_grid .tabulator .tabulator-row {
   min-height: 32px;
 }
@@ -396,12 +413,93 @@ input.editr-rename {
   gap: 8px;
 }
 
-.editr-swatch {
+.editr_grid .editr-swatch {
   flex: none;
   width: 14px;
   height: 14px;
   border-radius: 3px;
+  background: transparent;
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15);
+}
+
+/* a value that is not a colour */
+.editr_grid .editr-swatch.editr-swatch-none {
+  background: transparent;
+  box-shadow: none;
+  border: 1px dashed #9AA5B1;
+  box-sizing: border-box;
+}
+
+/* colour editor: swatch and text box in the cell, swatches below it */
+.editr_grid .tabulator .tabulator-cell .editr-colour-edit {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 100%;
+  padding-left: 8px;
+}
+
+.editr_grid .tabulator .tabulator-cell .editr-colour-edit .editr-input {
+  flex: 1;
+  min-width: 0;
+  padding-left: 0;
+}
+
+.editr-colour-box {
+  display: grid;
+  grid-template-columns: repeat(8, 22px);
+  gap: 6px;
+  padding: 10px;
+}
+
+.editr-colour-pick {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.18);
+  cursor: pointer;
+}
+
+.editr-colour-pick:hover,
+.editr-colour-pick:focus-visible {
+  outline: 2px solid #2975DD;
+  outline-offset: 1px;
+}
+
+.editr-colour-pick[aria-selected="true"] {
+  outline: 2px solid #1F2933;
+  outline-offset: 1px;
+}
+
+.editr-colour-custom {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 2px 0 0;
+  color: #1D4ED8;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.editr-colour-custom input[type="color"],
+.editr-form-colour {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid #CBD2D9;
+  border-radius: 4px;
+  background: #FFFFFF;
+  cursor: pointer;
+}
+
+.editr-form-colour {
+  width: 32px;
+  height: 31px;
+  margin-left: 6px;
 }
 
 .editr_grid .tabulator .tabulator-cell .editr-input {
@@ -642,4 +740,46 @@ input.editr-rename {
   margin: -4px 0 6px;
   color: #52606D;
   font-size: 12px;
+}
+
+/* comments on cells: an amber corner (top left; problems use the top right) */
+.editr_grid .tabulator .tabulator-cell.editr-commented {
+  background-image: linear-gradient(135deg, #D97706 7px, transparent 7px);
+}
+
+.editr_grid .tabulator .tabulator-cell.editr-commented.editr-problem {
+  background-image: linear-gradient(135deg, #D97706 7px, transparent 7px),
+    linear-gradient(225deg, #DC2626 7px, transparent 7px);
+}
+
+.editr-comment-box {
+  width: 280px;
+  padding: 10px;
+}
+
+.editr-comment-title {
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.editr-comment-meta {
+  color: #7B8794;
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.editr-comment-box textarea {
+  margin: 6px 0 8px;
+  resize: vertical;
+}
+
+.editr-comment-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.editr-comment-actions .editr-comment-delete {
+  color: #B91C1C;
+  padding-left: 0;
 }

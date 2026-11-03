@@ -60,6 +60,10 @@ Every change made in the editor is recorded, one row per changed cell (or
 per row or column that was added, removed or renamed), in a data frame
 with the columns:
 \describe{
+\item{session}{when the editing session started (e.g.
+\code{"2026-11-02 09:27:27.123"}), which names the session when logs of
+many sessions are kept together. Restoring a draft carries on its
+session.}
 \item{time}{when the change was made.}
 \item{user}{who made it (see the \code{user} argument of
 \code{\link{dataEditServer}()}).}

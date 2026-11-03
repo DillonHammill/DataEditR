@@ -116,13 +116,17 @@ rows and columns and renamed columns.</li>
 <strong>Spreadsheet-style editing</strong>: range selection, copy
 and paste to and from Excel, Google Sheets and other software (rows are
 added when a pasted block is longer than the table, and formatted
-numbers and dates are converted), <code>Delete</code> to clear a range
-and <code>Ctrl+D</code> to fill down.</li>
+numbers and dates are converted), <code>Delete</code> to clear a range,
+and a fill handle to drag that copies values or carries on series such
+as <code>1, 2, 3</code>, dates or <code>Week 1, Week 2</code>
+(<code>Ctrl+D</code> fills down). Pastes wider than the table add
+columns.</li>
 <li>
 <strong>More column types</strong> in <code>col_options</code>:
-date-times, times, text over several lines, web addresses, colours,
-numbers within limits, sliders and star ratings, as well as checkboxes,
-dropdown menus, dates and passwords.</li>
+date-times, times, text over several lines, web addresses, colours (with
+a colour picker that knows R’s colour names), numbers within limits,
+sliders and star ratings, as well as checkboxes, dropdown menus, dates
+and passwords.</li>
 <li>
 <strong>Review changes</strong>: a panel listing every edited,
 added, removed or renamed cell, row and column with a button to revert
@@ -143,6 +147,10 @@ share to show the rows with missing values.</li>
 selected row as a form, to enter or check data one record at a
 time.</li>
 <li>
+<strong>Comments on cells</strong>: right-click a cell (or press
+<code>Shift+F2</code>) to leave a comment, returned with the data as
+<code>attr(x, "comments")</code>.</li>
+<li>
 <strong>Labelled data</strong>: SPSS, Stata and SAS files are read
 and written with <code>haven</code>, and their variable labels, value
 labels and missing values are shown, edited (<code>Labels...</code> in a
@@ -158,8 +166,8 @@ and <code>Done</code> asks before returning them.</li>
 <strong>History and change log</strong>: a <code>History</code> tab
 lists every change with when it was made and by whom, and each step can
 be given a note saying why. <code>data_edit(log = "changes.csv")</code>
-keeps this record in a file, and <code><a href="../reference/dataEditCommit.html">dataEditCommit()</a></code> returns
-it in shiny apps.</li>
+keeps this record in a file and lists the earlier sessions kept in it,
+and <code><a href="../reference/dataEditCommit.html">dataEditCommit()</a></code> returns it in shiny apps.</li>
 <li>
 <strong>Unsaved changes are kept</strong>: changes are saved as a
 draft while you edit, so if the editor is closed without pressing
@@ -168,8 +176,10 @@ time you open the same data. <code>Cancel</code> asks before changes are
 thrown away.</li>
 <li>
 <strong>Filters under the column headers</strong> (ranges for
-numbers, value lists and text search), shown as chips in the
-toolbar.</li>
+numbers, value lists and text search), and a <strong><code>Filter</code>
+dialog</strong> that lists every filter in one place for complex
+combinations, with all the logics of earlier versions. Active filters
+are shown as chips in the toolbar.</li>
 <li>
 <strong>Find</strong> (<code>Ctrl+F</code>), a <strong>status
 bar</strong> with the sum, mean and count of the selected cells, and a
@@ -228,7 +238,9 @@ where the controls of the old interface have moved to:</p>
 </tr>
 <tr class="even">
 <td>Filter button (funnel)</td>
-<td>filter boxes under the column headers</td>
+<td>
+<code>Filter</code> button, or the boxes under the column
+headers</td>
 </tr>
 <tr class="odd">
 <td>Select columns button (crosshairs)</td>
@@ -294,6 +306,11 @@ and <code><a href="../reference/data_edit.html">data_edit()</a></code> saves dra
 (<code>autosave = TRUE</code>).</li>
 <li>A filter that matches no rows shows an empty table rather than all
 rows.</li>
+<li>
+<code>between</code> and <code>not between</code> filters include
+their end points (they were left out before), and <code>contain</code>
+looks for plain text and ignores case. Use <code>matches regex</code>
+for patterns.</li>
 <li>Cancelling the RStudio add-in returns the highlighted data rather
 than <code>NULL</code>.</li>
 </ul>

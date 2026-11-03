@@ -120,11 +120,13 @@ reproduces your edits.
 - edit cells, row names and column names
 - add or remove rows and columns from the context menus
 - range selection, copy and paste to and from spreadsheets (Excel,
-  Google Sheets, LibreOffice), with rows added as needed and formatted
-  numbers and dates converted, fill down (`Ctrl+D`) and clearing of
+  Google Sheets, LibreOffice), with rows and columns added as needed and
+  formatted numbers and dates converted, a fill handle that copies
+  values or carries on series, fill down (`Ctrl+D`) and clearing of
   selected cells
+- comments on cells, returned with the data
 - filter rows by typing under the column headers (ranges, value lists,
-  text)
+  text) or build complex filters in the `Filter` dialog
 - show or hide columns from the `Columns` menu
 - find values in the data (`Ctrl+F`)
 - status bar with row/column counts and a sum/mean/count of the selected
@@ -134,7 +136,8 @@ reproduces your edits.
 - change tracking to visually highlight edited and added cells (`track`)
 - column types to simplify user input: checkboxes, dropdown menus,
   dates, date-times, times, text over several lines, passwords, web
-  addresses, colours, numbers within limits, sliders and star ratings
+  addresses, colours (with a colour picker), numbers within limits,
+  sliders and star ratings
 - read-only and hidden columns
 - support for factor columns: edited as text and returned as factors
   with their levels

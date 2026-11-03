@@ -8,6 +8,8 @@
 # data frame by store_log_df().
 #
 # Columns of the log:
+#   session when the editing session started ("2026-11-02 09:27:27.123"),
+#           which tells the sessions of a log kept over time apart
 #   time    when the change was made (POSIXct)
 #   user    who made it
 #   step    number of the action, counting from 1 in each session
@@ -19,6 +21,12 @@
 #   old,new values before and after (as text); a removed row's old value and
 #           an added row's new value list the whole row
 #   note    note added to the step in the History tab
+
+#' Name of a new editing session: when it started, to the millisecond
+#' @noRd
+log_session_id <- function(time = Sys.time()) {
+  format(time, "%Y-%m-%d %H:%M:%OS3")
+}
 
 #' Start a new step of the log
 #'
@@ -45,6 +53,7 @@ store_log <- function(store, entries) {
   }
   n <- nrow(entries)
   head <- data.frame(
+    session = rep(store$session %||% NA_character_, n),
     time = rep(Sys.time(), n),
     user = rep(store$user %||% "", n),
     step = rep(store$step, n),
@@ -80,6 +89,7 @@ store_log_df <- function(store) {
 #' @noRd
 empty_log <- function() {
   data.frame(
+    session = character(0),
     time = as.POSIXct(character(0)),
     user = character(0),
     step = integer(0),
@@ -289,7 +299,7 @@ log_step_title <- function(entries) {
     parts <- c(parts, if (how == "paste") {
       paste0("pasted ", plural(cells, "cell"), where)
     } else if (how == "fill") {
-      paste0("filled down ", plural(cells, "cell"), where)
+      paste0("filled ", plural(cells, "cell"), where)
     } else if (how == "clear") {
       paste0("cleared ", plural(cells, "cell"), where)
     } else if (cells == 1) {
@@ -382,78 +392,77 @@ log_entry_text <- function(entries) {
   }, character(1))
 }
 
-#' History tab markup: steps newest first, each with a note
+#' One step in the History tab
 #'
-#' @param log data frame from store_log_df().
-#' @param ns namespace function of the module.
-#' @param limit maximum number of steps to show.
-#' @param details maximum number of entries listed per step.
+#' @param e entries of the step.
+#' @param prefix namespace prefix of the module, or NULL when notes cannot be
+#'   edited (steps of earlier sessions).
+#' @param details maximum number of entries listed.
 #'
 #' @noRd
-history_ui <- function(log, ns, limit = 100, details = 5) {
-  if (nrow(log) == 0) {
-    return(tags$div(
-      class = "editr-empty",
-      "No changes yet. Each change you make is listed here with when it was ",
-      "made and by whom, and you can add a note saying why."
-    ))
-  }
+history_step <- function(e, prefix = NULL, details = 5) {
+  tag <- log_step_tag(e)
+  time <- e$time[1]
+  lines <- log_entry_text(utils::head(e, details))
+  more <- nrow(e) - length(lines)
+  note <- e$note[1]
+  user <- e$user[1]
+  tags$li(
+    class = "editr-step",
+    tags$div(
+      class = "editr-step-head",
+      tags$span(class = paste0("editr-tag editr-tag-", tag[2]), tag[1]),
+      if (!is.na(e$code[1])) {
+        tags$code(class = "editr-step-title editr-step-code", e$code[1])
+      } else {
+        tags$span(class = "editr-step-title", log_step_title(e))
+      },
+      if (!is.na(time)) {
+        tags$time(
+          class = "editr-step-time",
+          datetime = format(time, "%Y-%m-%dT%H:%M:%S%z"),
+          title = paste0(format(time, "%d %b %Y %H:%M:%S"),
+                         if (!is.na(user) && nzchar(user)) paste0(" \u00b7 ", user)),
+          format(time, "%H:%M")
+        )
+      }
+    ),
+    tags$div(
+      class = "editr-change-detail",
+      HTML(paste(lines, collapse = "<br>")),
+      if (more > 0) tags$div(class = "editr-muted",
+                             paste("and", more, "more"))
+    ),
+    if (!is.null(prefix)) {
+      tags$div(
+        class = "editr-step-note",
+        `data-note` = if (is.na(note)) "" else note,
+        if (!is.na(note)) tags$span(class = "editr-note-text", note),
+        tags$button(
+          type = "button", class = "editr-link editr-note-btn",
+          onclick = sprintf("DataEditR.note('%s', %d, this)", prefix, e$step[1]),
+          if (is.na(note)) "Add note" else "Edit"
+        )
+      )
+    } else if (!is.na(note) && nzchar(note)) {
+      tags$div(class = "editr-step-note",
+               tags$span(class = "editr-note-text", note))
+    }
+  )
+}
+
+#' Steps of a log, newest first
+#' @noRd
+history_steps <- function(log, prefix = NULL, limit = 100, details = 5) {
   by_step <- split(seq_len(nrow(log)), log$step)
   steps <- rev(as.integer(names(by_step)))
   shown <- utils::head(steps, limit)
-  prefix <- ns("")
   tagList(
-    tags$div(
-      class = "editr-pane-head",
-      tags$h2("History"),
-      tags$span(class = "editr-pill", length(steps)),
-      tags$span(class = "editr-spacer"),
-      tags$span(class = "text-muted small", "newest first")
-    ),
     tags$ol(
       class = "editr-history",
       lapply(shown, function(s) {
-        e <- log[by_step[[as.character(s)]], , drop = FALSE]
-        tag <- log_step_tag(e)
-        time <- e$time[1]
-        lines <- log_entry_text(utils::head(e, details))
-        more <- nrow(e) - length(lines)
-        note <- e$note[1]
-        tags$li(
-          class = "editr-step",
-          tags$div(
-            class = "editr-step-head",
-            tags$span(class = paste0("editr-tag editr-tag-", tag[2]), tag[1]),
-            if (!is.na(e$code[1])) {
-              tags$code(class = "editr-step-title editr-step-code", e$code[1])
-            } else {
-              tags$span(class = "editr-step-title", log_step_title(e))
-            },
-            tags$time(
-              class = "editr-step-time",
-              datetime = format(time, "%Y-%m-%dT%H:%M:%S%z"),
-              title = paste0(format(time, "%d %b %Y %H:%M:%S"),
-                             if (nzchar(e$user[1])) paste0(" \u00b7 ", e$user[1])),
-              format(time, "%H:%M")
-            )
-          ),
-          tags$div(
-            class = "editr-change-detail",
-            HTML(paste(lines, collapse = "<br>")),
-            if (more > 0) tags$div(class = "editr-muted",
-                                   paste("and", more, "more"))
-          ),
-          tags$div(
-            class = "editr-step-note",
-            `data-note` = if (is.na(note)) "" else note,
-            if (!is.na(note)) tags$span(class = "editr-note-text", note),
-            tags$button(
-              type = "button", class = "editr-link editr-note-btn",
-              onclick = sprintf("DataEditR.note('%s', %d, this)", prefix, s),
-              if (is.na(note)) "Add note" else "Edit"
-            )
-          )
-        )
+        history_step(log[by_step[[as.character(s)]], , drop = FALSE], prefix,
+                     details)
       })
     ),
     if (length(steps) > length(shown)) {
@@ -461,6 +470,252 @@ history_ui <- function(log, ns, limit = 100, details = 5) {
                paste("and", length(steps) - length(shown), "earlier steps"))
     }
   )
+}
+
+#' Earlier sessions in the History tab, newest first, each folded away
+#'
+#' @param earlier log of earlier sessions from log_tidy().
+#' @param open whether the newest session is shown unfolded.
+#' @param limit maximum number of sessions to show.
+#' @param steps maximum number of steps shown per session.
+#'
+#' @noRd
+history_sessions <- function(earlier, open = FALSE, limit = 20, steps = 50) {
+  plural <- function(k, w) {
+    paste0(format(k, big.mark = ","), " ", w, if (k == 1) "" else "s")
+  }
+  by_session <- split(seq_len(nrow(earlier)), earlier$.session)
+  # NEWEST FIRST (SESSIONS WITHOUT TIMES LAST, IN THE ORDER OF THE LOG)
+  last <- vapply(by_session, function(i) {
+    t <- earlier$time[i]
+    if (all(is.na(t))) -Inf else max(as.numeric(t), na.rm = TRUE)
+  }, numeric(1))
+  first_row <- vapply(by_session, min, integer(1))
+  by_session <- by_session[order(-last, -first_row)]
+  shown <- utils::head(by_session, limit)
+  tagList(
+    tags$div(
+      class = "editr-pane-head editr-sessions-head",
+      tags$h2("Earlier sessions"),
+      tags$span(class = "editr-pill", length(by_session))
+    ),
+    tags$div(
+      class = "editr-sessions",
+      lapply(seq_along(shown), function(k) {
+        e <- earlier[shown[[k]], , drop = FALSE]
+        times <- e$time[!is.na(e$time)]
+        when <- if (length(times) == 0) {
+          "Unknown date"
+        } else {
+          from <- min(times)
+          to <- max(times)
+          esc <- function(t, f) htmltools::htmlEscape(format(t, f))
+          HTML(paste0(
+            esc(from, "%a %d %b %Y, %H:%M"),
+            if (format(to, "%Y%m%d%H%M") != format(from, "%Y%m%d%H%M")) {
+              if (format(to, "%Y%m%d") == format(from, "%Y%m%d")) {
+                paste0("&ndash;", esc(to, "%H:%M"))
+              } else {
+                paste0(" &ndash; ", esc(to, "%a %d %b %Y, %H:%M"))
+              }
+            }
+          ))
+        }
+        users <- unique(e$user[!is.na(e$user) & nzchar(e$user)])
+        n_steps <- length(unique(e$step))
+        details <- tags$details(
+          class = "editr-session",
+          tags$summary(
+            tags$span(class = "editr-session-when", when),
+            if (length(users) > 0) {
+              tags$span(class = "editr-session-who", paste(users, collapse = ", "))
+            },
+            tags$span(class = "editr-spacer"),
+            tags$span(class = "editr-muted",
+                      HTML(paste0(plural(n_steps, "step"), " &middot; ",
+                                  plural(nrow(e), "change"))))
+          ),
+          history_steps(e, prefix = NULL, limit = steps, details = 3)
+        )
+        if (open && k == 1) details$attribs$open <- NA
+        details
+      })
+    ),
+    if (length(by_session) > length(shown)) {
+      tags$div(class = "editr-empty",
+               paste("and", length(by_session) - length(shown),
+                     "earlier sessions"))
+    }
+  )
+}
+
+#' History tab markup: steps newest first, each with a note, then the
+#' earlier sessions
+#'
+#' @param log data frame from store_log_df().
+#' @param ns namespace function of the module.
+#' @param earlier log of earlier sessions (see log_tidy()), or an error
+#'   reading it.
+#' @param limit maximum number of steps to show.
+#' @param details maximum number of entries listed per step.
+#'
+#' @noRd
+history_ui <- function(log, ns, earlier = NULL, limit = 100, details = 5) {
+  failed <- if (inherits(earlier, "error")) {
+    tags$div(class = "editr-empty",
+             paste("Earlier sessions could not be read:",
+                   conditionMessage(earlier)))
+  }
+  if (!is.data.frame(earlier) || nrow(earlier) == 0) {
+    earlier <- NULL
+  }
+  if (nrow(log) == 0 && is.null(earlier)) {
+    return(tagList(
+      tags$div(
+        class = "editr-empty",
+        "No changes yet. Each change you make is listed here with when it was ",
+        "made and by whom, and you can add a note saying why."
+      ),
+      failed
+    ))
+  }
+  steps <- length(unique(log$step))
+  tagList(
+    tags$div(
+      class = "editr-pane-head",
+      tags$h2(if (is.null(earlier)) "History" else "This session"),
+      if (steps > 0) tags$span(class = "editr-pill", steps),
+      tags$span(class = "editr-spacer"),
+      tags$span(class = "text-muted small", "newest first")
+    ),
+    if (nrow(log) == 0) {
+      tags$div(class = "editr-empty editr-session-none",
+               "No changes in this session yet.")
+    } else {
+      history_steps(log, prefix = ns(""), limit = limit, details = details)
+    },
+    if (!is.null(earlier)) history_sessions(earlier, open = nrow(log) == 0),
+    failed
+  )
+}
+
+## EARLIER SESSIONS ------------------------------------------------------------
+
+#' Times of a log read from a file or database (text, numbers or POSIXct)
+#' @noRd
+log_time <- function(x) {
+  if (inherits(x, "POSIXct")) {
+    return(x)
+  }
+  if (is.numeric(x)) {
+    return(.POSIXct(as.numeric(x)))
+  }
+  x <- as.character(x)
+  out <- .POSIXct(rep(NA_real_, length(x)))
+  for (f in c("%Y-%m-%d %H:%M:%OS%z", "%Y-%m-%dT%H:%M:%OS%z",
+              "%Y-%m-%d %H:%M:%OS", "%Y-%m-%dT%H:%M:%OS", "%Y-%m-%d %H:%M",
+              "%Y-%m-%d")) {
+    todo <- is.na(out) & !is.na(x)
+    if (!any(todo)) break
+    out[todo] <- as.POSIXct(x[todo], format = f)
+  }
+  out
+}
+
+#' Tidy a change log kept over several sessions
+#'
+#' Columns that are missing are added, times are read and each entry gets the
+#' session it belongs to (column \code{.session}). Logs written before the
+#' \code{session} column existed are split where the step numbers start
+#' again, the data or the user changes, or one step is spread over more than
+#' a minute.
+#'
+#' @param log data frame of entries (see dataEditLog()), as written by
+#'   data_edit(log = ).
+#' @param data name of the data whose entries to keep (column \code{data}),
+#'   or NULL for all.
+#'
+#' @return the log, or NULL when it has no entries.
+#'
+#' @noRd
+log_tidy <- function(log, data = NULL) {
+  if (is.null(log)) {
+    return(NULL)
+  }
+  if (!is.data.frame(log)) {
+    stop("the earlier change log must be a data frame.", call. = FALSE)
+  }
+  log <- as.data.frame(log, stringsAsFactors = FALSE)
+  if (!all(c("step", "action") %in% names(log))) {
+    stop("the earlier change log must have the columns 'step' and 'action' ",
+         "(see dataEditLog()).", call. = FALSE)
+  }
+  if (!is.null(data) && "data" %in% names(log)) {
+    log <- log[!is.na(log$data) & log$data == data, , drop = FALSE]
+  }
+  if (nrow(log) == 0) {
+    return(NULL)
+  }
+  for (nm in c("session", "user", "how", "code", "row", "column", "old", "new",
+               "note")) {
+    log[[nm]] <- if (nm %in% names(log)) {
+      as.character(log[[nm]])
+    } else {
+      rep(NA_character_, nrow(log))
+    }
+  }
+  log$user[is.na(log$user)] <- ""
+  log$how[is.na(log$how)] <- "edit"
+  log$action <- as.character(log$action)
+  log$time <- if ("time" %in% names(log)) {
+    log_time(log$time)
+  } else {
+    .POSIXct(rep(NA_real_, nrow(log)))
+  }
+  log$step <- suppressWarnings(as.integer(log$step))
+  log <- log[!is.na(log$step) & !is.na(log$action), , drop = FALSE]
+  n <- nrow(log)
+  if (n == 0) {
+    return(NULL)
+  }
+  # SESSIONS: NAMED IN THE LOG, OR WHERE THE STEPS START AGAIN
+  same <- function(x) {
+    a <- x[-1]
+    b <- x[-n]
+    (is.na(a) & is.na(b)) | (!is.na(a) & !is.na(b) & a == b)
+  }
+  gap <- abs(as.numeric(log$time[-1]) - as.numeric(log$time[-n]))
+  starts <- c(TRUE, !same(log$session) | log$step[-1] < log$step[-n] |
+                (if ("data" %in% names(log)) !same(as.character(log$data)) else FALSE) |
+                log$user[-1] != log$user[-n] |
+                (log$step[-1] == log$step[-n] & !is.na(gap) & gap > 60))
+  guess <- paste0("\r", cumsum(starts))
+  log$.session <- ifelse(is.na(log$session), guess, log$session)
+  rownames(log) <- NULL
+  log
+}
+
+#' Read the change log kept in a csv file by data_edit(log = )
+#'
+#' @param file name of the csv file.
+#' @param data name of the data whose entries to keep.
+#'
+#' @return the tidy log (see log_tidy()), NULL when there is none, or the
+#'   error when the file cannot be read.
+#'
+#' @noRd
+log_read <- function(file, data = NULL) {
+  if (!is.character(file) || length(file) != 1 || !file.exists(file) ||
+      !isTRUE(file.size(file) > 0)) {
+    return(NULL)
+  }
+  tryCatch({
+    log <- suppressWarnings(
+      utils::read.csv(file, colClasses = "character", check.names = FALSE,
+                      fileEncoding = "UTF-8")
+    )
+    log_tidy(log, data)
+  }, error = function(e) e)
 }
 
 #' Name of the person editing, for the change log

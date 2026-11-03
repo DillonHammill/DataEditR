@@ -31,6 +31,7 @@ record options options   # col-checkbox col-dropdown col-date col-password
 record db db             # db-commit
 record paste paste       # paste
 record types types       # col-types
+record polish polish     # fill
 record readme readme     # readme
 
 # frames -> GIF (800px wide, 900px for the README)

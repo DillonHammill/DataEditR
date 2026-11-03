@@ -35,7 +35,8 @@
 #'
 #' @section Layout:
 #' The toolbar opens other data (\emph{Open}), shows or hides column
-#' summaries and columns, lists active filters, searches the data (Ctrl+F),
+#' summaries and columns, filters rows (\emph{Filter}, a dialog listing every
+#' filter), lists active filters, searches the data (Ctrl+F),
 #' and opens the side panel. The panel shows the selected row as a form
 #' (\emph{Record}), lists every change with a button to revert it, the
 #' history of changes, broken rules and the code that reproduces the edits.
@@ -126,7 +127,11 @@
 #'   \item \code{"textarea"}: text over several lines;
 #'   \item \code{"password"}: hidden text;
 #'   \item \code{"url"}: web addresses with a button to open them;
-#'   \item \code{"colour"} (or \code{"color"}): colours shown with a swatch;
+#'   \item \code{"colour"} (or \code{"color"}): colours (R colour names such
+#'   as \code{"grey50"} or hex codes such as \code{"#1D4ED8"}) shown with a
+#'   swatch and edited with a colour picker. Set the colours the picker
+#'   offers with \code{list(type = "colour", palette = c("red", "#1D4ED8"))};
+#'   any colour can still be typed or picked;
 #'   \item \code{c(min = 0, max = 10, step = 1)} (any of the three): numbers
 #'   within limits;
 #'   \item \code{"slider"}: a slider and bar for numbers from 0 to 100;
@@ -215,9 +220,11 @@
 #'   and when, see \code{\link{dataEditLog}()}) is added when \emph{Done} is
 #'   pressed, with a first column \code{data} naming the data that was
 #'   edited. The file is created if it does not exist, so the same file can
-#'   keep the history of many editing sessions. A function can be supplied
-#'   instead; it is called with the log as a data frame (for example to write
-#'   it to a database). Set to \code{NULL} by default to not keep the log.
+#'   keep the history of many editing sessions, and the \emph{History} tab
+#'   lists the earlier sessions of the same data kept in it. A function can be
+#'   supplied instead; it is called with the log as a data frame (for example
+#'   to write it to a database). Set to \code{NULL} by default to not keep the
+#'   log.
 #' @param autosave logical indicating whether changes should be saved as a
 #'   draft while editing, set to \code{TRUE} by default. If the editor is
 #'   closed without pressing \emph{Done} or \emph{Cancel} (the window was
@@ -541,6 +548,9 @@ data_edit <- function(x = NULL,
     # DATA EDIT - FULL DATA
     # NAME OF THE DATA IN THE GENERATED CODE
     code_name <- reactiveVal(x_name)
+    # EARLIER SESSIONS OF THE DATA KEPT IN THE CHANGE LOG FILE
+    log_label <- reactiveVal(session_info$label)
+    history <- if (is.character(log)) reactive(log_read(log, log_label()))
     data_update <- dataEditServer(
       "edit1",
       data = data_source,
@@ -562,7 +572,8 @@ data_edit <- function(x = NULL,
       autosave = autosave,
       col_actions = col_actions,
       rules = rules,
-      col_summary = col_summary
+      col_summary = col_summary,
+      history = history
     )
     data_active <- attr(data_update, "view")
     editor <- attr(data_update, "editor")
@@ -618,9 +629,16 @@ data_edit <- function(x = NULL,
         )
         return()
       }
+      # KEEP THE CURRENT DATA RATHER THAN STOP THE EDITOR
+      why <- if (!is_db_input(obj)) open_problem(obj)
+      if (!is.null(why)) {
+        showNotification(paste0("'", name, "' ", why), type = "error")
+        return()
+      }
       data_source(obj)
       set_text("dataset_name", name)
       session_info$label <- name
+      log_label(name)
       # THE CODE NOW STARTS FROM THE OPENED DATA (A NEW TABLE IS CREATED)
       session_info$original <- if (!is_db_input(obj) && !identical(code, "")) obj
       session_info$name <- if (identical(code, "")) "data" else code
@@ -868,6 +886,20 @@ editr_write_log <- function(entries, log, data_name = "data") {
   }
   entries$time <- format(entries$time, "%Y-%m-%d %H:%M:%S%z")
   append <- file.exists(log) && isTRUE(file.size(log) > 0)
+  if (append) {
+    # KEEP THE COLUMNS OF THE FILE (LOGS WRITTEN BEFORE A COLUMN WAS ADDED)
+    cols <- names(utils::read.csv(log, nrows = 1, check.names = FALSE,
+                                  colClasses = "character",
+                                  fileEncoding = "UTF-8"))
+    if (!identical(cols, names(entries))) {
+      entries <- as.data.frame(
+        stats::setNames(lapply(cols, function(nm) {
+          if (nm %in% names(entries)) entries[[nm]] else rep(NA, nrow(entries))
+        }), cols),
+        stringsAsFactors = FALSE, check.names = FALSE
+      )
+    }
+  }
   utils::write.table(entries, log, sep = ",", row.names = FALSE,
                      col.names = !append, append = append, qmethod = "double",
                      fileEncoding = "UTF-8")
@@ -965,4 +997,19 @@ editr_addin_selection <- function(envir = parent.frame()) {
     return(NULL)
   }
   list(name = text, data = obj)
+}
+
+#' Why tabular data cannot be opened in a running editor (or NULL)
+#'
+#' @param x data with dimensions.
+#'
+#' @noRd
+open_problem <- function(x) {
+  if (anyNA(colnames(x))) {
+    return("has columns without a name.")
+  }
+  if (is.data.frame(x) && any(vapply(x, is.data.frame, logical(1)))) {
+    return("has columns that hold tables.")
+  }
+  NULL
 }

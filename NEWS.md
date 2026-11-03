@@ -53,6 +53,42 @@
   no longer converted to numbers. Dates stay dates, and matrices, tibbles and
   data.tables are returned with their original class.
 
+## Comments, drag to fill and a colour picker
+
+* Cells can carry comments: right-click a cell (or press `Shift+F2`) to add,
+  edit or delete one, or delete them all at once (after confirming). Commented cells get an amber corner, and the comment
+  shows when the pointer rests on the cell and in the record form. Comments
+  are kept in drafts and returned with the data as `attr(x, "comments")`, a
+  data frame of the `row`, `column`, `comment`, `user` and `time`; data
+  opened with that attribute shows its comments. Comments on database rows
+  follow the rows when changes are committed or other rows are loaded.
+* Selections have a fill handle: drag the corner of a selection down, up or
+  across to fill the cells it passes over. One value is copied; two or more
+  numbers, dates (days or months apart, month ends stay month ends) or text
+  ending in a number (`Week 1`, `Week 2`) carry on as a series, and anything
+  else is repeated. Hold `Ctrl` to copy without a series. A fill is one undo
+  step, and values that do not fit a column are asked about first, as for a
+  paste.
+* A paste wider than the columns to the right of the selected cell adds
+  columns (`V1`, `V2`, ...) unless `col_edit = FALSE`; extra values were
+  ignored.
+* Colour columns (`col_options = list(x = "colour")`) are edited with a
+  colour picker: type a colour, pick a swatch (the colours already in the
+  column, then R's palette and the Okabe-Ito palette) or any colour with the
+  browser's picker. `list(type = "colour", palette = c(...))` sets the
+  swatches offered. R colour names such as `"grey50"` now show the right
+  swatch (R's `"green"` and `"gray"` are not the CSS ones), and values that
+  are not colours get a dashed one.
+* The `History` tab lists earlier editing sessions of the same data, newest
+  first and folded away: `data_edit(log = "file.csv")` reads them from its
+  file, and `dataEditServer(history = )` takes a data frame (or a reactive)
+  of earlier log entries, for example read from a database table. The change
+  log has a new `session` column (when the editing session started) to tell
+  sessions apart; log files written before keep their columns.
+* The `Code` tab is much faster on big data: on 100,000 rows it takes about
+  0.6 s after column actions (was about 5 s) and 0.3 s after edits (was
+  1.5 s), with the same code.
+
 ## Tables too big to load
 
 * Database tables no longer have to fit in memory: at most 100,000 rows are
@@ -161,9 +197,23 @@
   Export and a keyboard shortcuts sheet (press `?`).
 * Filter rows by typing in the boxes under each column header: min/max for
   numbers, a multi-select list for columns with few distinct values and
-  "contains" for text. Active filters appear as chips in the toolbar. This
-  replaces the filter dialog inside `data_edit()` (the `dataFilter` module is
-  still exported).
+  "contains" for text. Active filters appear as chips in the toolbar.
+* Columns named in `col_readonly`, `col_hide` or `col_options` that are not in
+  the data are ignored with a message instead of an error, so the same settings
+  can be used for different data. They stopped the editor when other data was
+  opened from the Open menu. Open also keeps the current data, and says why, if
+  the new data has columns without a name or columns that hold tables.
+* The **Filter** button opens a dialog that lists every filter in one place,
+  for combinations that would be awkward to set column by column. Each row is
+  a column, a logic and a value, a column can have several rows, and the
+  dialog shows how many rows match before they are applied. It has the logics
+  of the 1.x dialog (equal, not equal, greater than, less than, between, not
+  between, contain, not contain and so on) plus matches regex, is missing and
+  is not missing, for numbers, text, dates and times. Filters set under the
+  column headers or from column summaries are listed too, and stay where they
+  are unless they are changed. `between` now includes its end points and
+  `contain` looks for plain text, ignoring case (1.x used regular
+  expressions; use `matches regex`). The `dataFilter` module is still exported.
 * Show or hide columns from the Columns menu (or a column's right-click menu),
   replacing the column selection dialog inside `data_edit()` (the
   `dataSelect` module is still exported).

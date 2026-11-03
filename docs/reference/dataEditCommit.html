@@ -130,7 +130,13 @@ it needs to go in the same observer.</p>
 
 <p>Every change made in the editor is recorded, one row per changed cell (or
 per row or column that was added, removed or renamed), in a data frame
-with the columns:</p><dl><dt>time</dt>
+with the columns:</p><dl><dt>session</dt>
+<dd><p>when the editing session started (e.g.
+<code>"2026-11-02 09:27:27.123"</code>), which names the session when logs of
+many sessions are kept together. Restoring a draft carries on its
+session.</p></dd>
+
+<dt>time</dt>
 <dd><p>when the change was made.</p></dd>
 
 <dt>user</dt>

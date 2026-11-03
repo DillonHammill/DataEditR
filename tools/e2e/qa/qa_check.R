@@ -134,6 +134,15 @@ if (scenario == "df") {
   same(result, e, "ordered factor kept, new level added after the others")
   reproduces(code_text(), input, result)
 
+} else if (scenario == "filter_dialog") {
+  # n >= 4, group c or missing, not epsilon; one cell edited through the filter
+  e <- input[c(6, 8), setdiff(names(input), "extra")]
+  e$n[1] <- 66
+  keep_cols <- setdiff(names(e), "when")
+  same(result[keep_cols], e[keep_cols], "Done returns the rows the dialog's filters show, with the edit")
+  # date-time columns come back as date-times
+  check(identical(format(result$when), e$when), "date-times of those rows")
+
 } else if (scenario == "subset") {
   e <- mtcars[mtcars$cyl == 4, c("mpg", "cyl", "gear", "carb")]
   same(result, e, "Done returns only what's on screen")
@@ -199,6 +208,35 @@ if (scenario == "df") {
           identical(as.vector(sav$q1[9]), -99),
         "saved as SPSS with the labels")
 
+} else if (scenario == "fill") {
+  e <- input
+  e$week <- c(paste("Week", 1:5), NA)
+  e$n <- c(10, 20, 10, 20, 10, 20)
+  e$day <- as.Date(c("2026-01-31", "2026-02-28", "2026-03-31", "2026-04-30",
+                     "2026-05-31", NA))
+  e$colour <- c("grey50", "steelblue", "darkolivegreen3", "steelblue", "grey50",
+                "black")
+  same(result, e, "series, copies, picked colours; the paste that added a column undone")
+  reproduces(code_text(), input, result)
+
+} else if (scenario == "comments") {
+  cm <- attr(result, "comments")
+  print(cm)
+  check(identical(cm$row, c(2L, 5L)) && identical(cm$column, c("disp", "cyl")) &&
+          identical(cm$comment, c("Check the units", "Re-measured")) &&
+          identical(unique(cm$user), "qa") && inherits(cm$time, "POSIXct"),
+        "comments returned with the data (the opened one deleted)")
+  e <- input
+  attr(e, "comments") <- NULL
+  e$mpg[1] <- 22
+  plain <- result
+  attr(plain, "comments") <- NULL
+  same(plain, e, "edit returned")
+  reproduces(code_text(), e, plain)
+  log <- read.csv(file.path(out, "log.csv"), stringsAsFactors = FALSE)
+  check(length(unique(log$session)) == 2 && identical(log$user, c("ana", "qa")),
+        "this session added to the log file")
+
 } else if (scenario == "cancel") {
   same(result, input, "Cancel returns the original data")
   check(length(list.files(file.path(out, "drafts"), "rds$")) == 0,
@@ -212,9 +250,10 @@ if (scenario == "df") {
   e$mpg[5] <- 1
   same(result, e, "edits returned")
   log <- read.csv(file.path(out, "log.csv"), stringsAsFactors = FALSE)
-  print(log[, -c(1, 2)])
-  same(names(log), c("data", "time", "user", "step", "how", "code", "action", "row",
-                     "column", "old", "new", "note"), "log columns")
+  print(log[, -c(1, 2, 3)])
+  same(names(log), c("data", "session", "time", "user", "step", "how", "code",
+                     "action", "row", "column", "old", "new", "note"), "log columns")
+  check(length(unique(log$session)) == 1, "one session")
   same(log$how, c("edit", "fill", "paste", "paste", "clear", "clear",
                   "undo", "undo", "edit"), "how each change was made")
   same(log$step, c(1L, 2L, 3L, 3L, 4L, 4L, 5L, 5L, 6L), "steps")
@@ -263,6 +302,11 @@ if (scenario == "df") {
   same(result$notes, c(NA_character_, NA, NA), "emptied text area is NA")
   same(result$grp, c("x", "z", NA), "dropdown value pasted")
   same(result$ok, c(TRUE, FALSE, TRUE), "checkbox pasted as yes")
+
+} else if (scenario == "open_settings") {
+  e <- iris
+  e$Sepal.Length[1] <- 9.9
+  same(result, e, "other data opened with settings for columns it does not have")
 
 } else if (scenario == "open") {
   e <- iris

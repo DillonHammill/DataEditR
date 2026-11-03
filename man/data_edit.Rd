@@ -68,7 +68,11 @@ use for each column:
 \item \code{"textarea"}: text over several lines;
 \item \code{"password"}: hidden text;
 \item \code{"url"}: web addresses with a button to open them;
-\item \code{"colour"} (or \code{"color"}): colours shown with a swatch;
+\item \code{"colour"} (or \code{"color"}): colours (R colour names such
+as \code{"grey50"} or hex codes such as \code{"#1D4ED8"}) shown with a
+swatch and edited with a colour picker. Set the colours the picker
+offers with \code{list(type = "colour", palette = c("red", "#1D4ED8"))};
+any colour can still be typed or picked;
 \item \code{c(min = 0, max = 10, step = 1)} (any of the three): numbers
 within limits;
 \item \code{"slider"}: a slider and bar for numbers from 0 to 100;
@@ -183,9 +187,11 @@ color. Set to \code{NULL} by default to disable highlighting.}
 and when, see \code{\link{dataEditLog}()}) is added when \emph{Done} is
 pressed, with a first column \code{data} naming the data that was
 edited. The file is created if it does not exist, so the same file can
-keep the history of many editing sessions. A function can be supplied
-instead; it is called with the log as a data frame (for example to write
-it to a database). Set to \code{NULL} by default to not keep the log.}
+keep the history of many editing sessions, and the \emph{History} tab
+lists the earlier sessions of the same data kept in it. A function can be
+supplied instead; it is called with the log as a data frame (for example
+to write it to a database). Set to \code{NULL} by default to not keep the
+log.}
 
 \item{autosave}{logical indicating whether changes should be saved as a
 draft while editing, set to \code{TRUE} by default. If the editor is
@@ -244,7 +250,8 @@ list of shortcuts.
 \section{Layout}{
 
 The toolbar opens other data (\emph{Open}), shows or hides column
-summaries and columns, lists active filters, searches the data (Ctrl+F),
+summaries and columns, filters rows (\emph{Filter}, a dialog listing every
+filter), lists active filters, searches the data (Ctrl+F),
 and opens the side panel. The panel shows the selected row as a form
 (\emph{Record}), lists every change with a button to revert it, the
 history of changes, broken rules and the code that reproduces the edits.

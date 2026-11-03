@@ -149,11 +149,12 @@ current data)</td>
 </tbody>
 </table>
 <p><code><a href="../reference/dataEdit.html">dataEditUI()</a></code> adds the grid together with the toolbar
-(undo/redo, columns, find, review changes, code and keyboard shortcuts),
-the review panel and the status bar. The grid supports everything
-described in <code><a href="../articles/DataEditR.html">vignette("DataEditR")</a></code>: editing, range
-selection, copy and paste, fill down, adding and removing rows and
-columns, header filters, change tracking and the review panel.</p>
+(undo/redo, columns, filter, find, review changes, code and keyboard
+shortcuts), the review panel and the status bar. The grid supports
+everything described in <code><a href="../articles/DataEditR.html">vignette("DataEditR")</a></code>: editing,
+range selection, copy and paste, fill down, adding and removing rows and
+columns, header filters and the filter dialog, change tracking and the
+review panel.</p>
 <p>The editor uses Bootstrap 5, so use a Bootstrap 5 page such as
 <code><a href="https://rdrr.io/pkg/bslib/man/page.html" class="external-link">bslib::page_fluid()</a></code> (or
 <code>fluidPage(theme = bslib::bs_theme(version = 5))</code>) for the
@@ -308,7 +309,26 @@ whole session. The user is taken from <code>session$user</code> when the
 app runs on a server that signs users in (such as Posit Connect), and
 can be set with the <code>user</code> argument of
 <code><a href="../reference/dataEdit.html">dataEditServer()</a></code>.</p>
+<p>The log has a <code>session</code> column that names the editing
+session. To list earlier sessions in the <code>History</code> tab, pass
+the log you kept to the <code>history</code> argument of
+<code><a href="../reference/dataEdit.html">dataEditServer()</a></code> (a data frame or a reactive returning
+one); entries of the current session are left out:</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">history</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/shiny/man/reactiveVal.html" class="external-link">reactiveVal</a></span><span class="op">(</span><span class="fu">DBI</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/DBI/man/dbReadTable.html" class="external-link">dbReadTable</a></span><span class="op">(</span><span class="va">con</span>, <span class="st">"cars_log"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">cars</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dataEdit.html">dataEditServer</a></span><span class="op">(</span><span class="st">"cars"</span>, data <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/dplyr/man/tbl.html" class="external-link">tbl</a></span><span class="op">(</span><span class="va">con</span>, <span class="st">"cars"</span><span class="op">)</span>, history <span class="op">=</span> <span class="va">history</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/pkg/shiny/man/observeEvent.html" class="external-link">observeEvent</a></span><span class="op">(</span><span class="va">input</span><span class="op">$</span><span class="va">save</span>, <span class="op">{</span></span>
+<span>  <span class="va">res</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dataEditCommit.html">dataEditCommit</a></span><span class="op">(</span><span class="va">cars</span><span class="op">)</span></span>
+<span>  <span class="fu">DBI</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/DBI/man/dbWriteTable.html" class="external-link">dbWriteTable</a></span><span class="op">(</span><span class="va">con</span>, <span class="st">"cars_log"</span>, <span class="va">res</span><span class="op">$</span><span class="va">log</span>, append <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/utils/savehistory.html" class="external-link">history</a></span><span class="op">(</span><span class="fu">DBI</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/DBI/man/dbReadTable.html" class="external-link">dbReadTable</a></span><span class="op">(</span><span class="va">con</span>, <span class="st">"cars_log"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="op">}</span><span class="op">)</span></span></code></pre></div>
+<p>Comments that users leave on cells (right-click a cell, or
+<code>Shift+F2</code>) are returned with the data as
+<code>attr(x, "comments")</code>: a data frame with the
+<code>row</code>, <code>column</code>, <code>comment</code>,
+<code>user</code> and <code>time</code>. Pass data with that attribute
+to show its comments.</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://shiny.posit.co/" class="external-link">shiny</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dillonhammill.github.io/DataEditR/">DataEditR</a></span><span class="op">)</span></span>
 <span></span>
@@ -375,7 +395,7 @@ changes stay in the editor, so the user can review them and try again.
 Other errors (e.g. a lost connection) are raised as usual; wrap the call
 in <code><a href="https://rdrr.io/r/base/conditions.html" class="external-link">tryCatch()</a></code> to show them to the user.</p>
 <p>For data frames, save the edited data in the same observer:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/pkg/shiny/man/observeEvent.html" class="external-link">observeEvent</a></span><span class="op">(</span><span class="va">input</span><span class="op">$</span><span class="va">save</span>, <span class="op">{</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/utils/write.table.html" class="external-link">write.csv</a></span><span class="op">(</span><span class="fu">cars</span><span class="op">(</span><span class="op">)</span>, <span class="st">"cars.csv"</span>, row.names <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
 <span>  <span class="fu"><a href="../reference/dataEditCommit.html">dataEditCommit</a></span><span class="op">(</span><span class="va">cars</span><span class="op">)</span></span>
@@ -433,7 +453,7 @@ function</td>
 <code>rows</code> and <code>columns</code> arguments of
 <code><a href="../reference/dataEdit.html">dataEditServer()</a></code>, so there is no need for
 <code>dataSync</code>:</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://shiny.posit.co/" class="external-link">shiny</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://deanattali.com/shinyjs/" class="external-link">shinyjs</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dillonhammill.github.io/DataEditR/">DataEditR</a></span><span class="op">)</span></span>

@@ -409,6 +409,30 @@
   var BADGES = {numeric: "123", character: "abc", logical: "T/F",
                 date: "date", datetime: "dttm"};
 
+  // filters listed in the toolbar before the rest are left to the dialog
+  var MAX_CHIPS = 4;
+
+  // logics of the filter dialog, in the order they are offered. input is
+  // what a row asks for: tags (any of several values), one or two values, or
+  // none; order: only for values that have an order (not plain text);
+  // suggest: offer the values of the column
+  var FILTER_LOGICS = {
+    equal: {label: "equal", input: "tags", suggest: true},
+    not_equal: {label: "not equal", input: "tags", suggest: true},
+    gt: {label: "greater than", input: "one", order: true},
+    lt: {label: "less than", input: "one", order: true},
+    gte: {label: "greater than or equal", input: "one", order: true},
+    lte: {label: "less than or equal", input: "one", order: true},
+    between: {label: "between", input: "two", order: true},
+    not_between: {label: "not between", input: "two", order: true},
+    contain: {label: "contain", input: "tags"},
+    not_contain: {label: "not contain", input: "tags"},
+    regex: {label: "matches regex", input: "one", raw: true},
+    not_regex: {label: "not matches regex", input: "one", raw: true},
+    missing: {label: "is missing", input: "none"},
+    present: {label: "is not missing", input: "none"}
+  };
+
   function uniqueName(base, existing) {
     var i = 1, name = base + i;
     while (existing.indexOf(name) !== -1) {
@@ -531,6 +555,8 @@
         changed: {},
         widths: {}, // columns the user resized
         pinned: {}, // new rows stay visible whatever the filters say
+        comments: {}, // "id|field" -> {text, user, time}
+        rColours: {}, // R colour name (lower case, no spaces) -> hex
         opts: {},
         ui: {},
         find: {query: "", matches: [], index: -1},
@@ -606,10 +632,15 @@
           // cells that break a rule (see R/rules.R)
           var problem = grid.problems[key];
           element.classList.toggle("editr-problem", !!problem);
-          if (bad) {
-            element.title = "\u201c" + v + "\u201d " + bad;
-          } else if (problem) {
-            element.title = problem;
+          // comments on cells (see R/comments.R)
+          var comment = grid.comments[key];
+          element.classList.toggle("editr-commented", !!comment);
+          var tips = [];
+          if (bad) tips.push("\u201c" + v + "\u201d " + bad);
+          else if (problem) tips.push(problem);
+          if (comment) tips.push("\ud83d\udcac " + comment.text);
+          if (tips.length) {
+            element.title = tips.join("\n");
           } else if (element.title) {
             element.removeAttribute("title");
           }
@@ -686,20 +717,212 @@
         return wrap;
       }
 
-      // a swatch next to the colour (hex codes and CSS colour names)
+      // a colour as CSS can draw it: R colour names first (R's "green" and
+      // "gray" are not the CSS ones, and "grey50" is not CSS at all), then
+      // hex codes and CSS names; null when it is not a colour
+      function colourCss(v) {
+        if (v === null || v === undefined) return null;
+        var s = String(v).trim();
+        if (!s) return null;
+        var r = grid.rColours[s.toLowerCase().replace(/\s+/g, "")];
+        if (r) return r;
+        if (/^#([0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(s)) return s;
+        return window.CSS && CSS.supports && CSS.supports("color", s) ? s : null;
+      }
+
+      // a colour as a hex code for <input type="color"> (#RRGGBB)
+      function colourHex(v) {
+        var css = colourCss(v);
+        if (!css) return null;
+        if (/^#[0-9a-f]{6}/i.test(css)) return css.slice(0, 7).toLowerCase();
+        if (/^#[0-9a-f]{3,4}$/i.test(css)) {
+          return ("#" + css[1] + css[1] + css[2] + css[2] + css[3] + css[3]).toLowerCase();
+        }
+        var probe = document.createElement("span");
+        probe.style.color = css;
+        document.body.appendChild(probe);
+        var m = /rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(getComputedStyle(probe).color);
+        probe.remove();
+        if (!m) return null;
+        return "#" + [m[1], m[2], m[3]].map(function (x) {
+          return ("0" + Number(x).toString(16)).slice(-2);
+        }).join("");
+      }
+
+      function swatch(v) {
+        var sw = document.createElement("span");
+        sw.className = "editr-swatch";
+        var css = colourCss(v);
+        if (css) {
+          sw.style.background = css;
+        } else {
+          sw.className += " editr-swatch-none";
+          sw.title = "Not a colour R knows";
+        }
+        return sw;
+      }
+
+      // a swatch next to the colour
       function colourNode(v) {
         var wrap = document.createElement("span");
         wrap.className = "editr-colour";
         if (v === null || v === undefined || v === "") return wrap;
         var s = String(v).trim();
-        var ok = window.CSS && CSS.supports ? CSS.supports("color", s) : true;
-        if (ok) {
-          var sw = document.createElement("span");
-          sw.className = "editr-swatch";
-          sw.style.background = s;
-          wrap.appendChild(sw);
-        }
+        wrap.appendChild(swatch(s));
         wrap.appendChild(document.createTextNode(s));
+        return wrap;
+      }
+
+      // R's default palette and the Okabe-Ito palette (safe for colour
+      // blindness), offered by the colour picker after the column's colours
+      var PALETTE = ["black", "#DF536B", "#61D04F", "#2297E6", "#28E2E5", "#CD0BBC",
+                     "#F5C710", "gray62", "#E69F00", "#56B4E9", "#009E73", "#F0E442",
+                     "#0072B2", "#D55E00", "#CC79A7", "white"];
+
+      // colours offered for a column: its palette (col_options), or the
+      // colours already in it and then the default palette
+      function colourChoices(c) {
+        var o = c.option || {};
+        if (o.palette && toArray(o.palette).length) return toArray(o.palette).map(String);
+        var seen = {}, out = [];
+        var add = function (v) {
+          if (v === null || v === undefined || out.length >= 24) return;
+          var s = String(v).trim();
+          var key = s.toLowerCase().replace(/\s+/g, "");
+          if (!s || seen[key]) return;
+          seen[key] = true;
+          if (colourCss(s)) out.push(s);
+        };
+        // the first colours of the column (looking at up to 5,000 rows)
+        var used = 0;
+        (grid.table ? grid.table.getData() : []).slice(0, 5000).some(function (row) {
+          var before = out.length;
+          add(row[c.field]);
+          if (out.length > before) used += 1;
+          return used >= 8;
+        });
+        PALETTE.forEach(add);
+        return out;
+      }
+
+      // colour columns: type a colour, or pick one of the swatches below the
+      // cell, or any colour with the browser's colour picker
+      function colourEditor(cell, onRendered, success, cancel) {
+        var old = cell.getValue();
+        var c = grid.colMap[cell.getField()] || {};
+        var wrap = document.createElement("div");
+        wrap.className = "editr-colour-edit";
+        var sw = document.createElement("span");
+        var input = document.createElement("input");
+        input.type = "text";
+        input.className = "editr-input";
+        input.value = old === null || old === undefined ? "" : String(old);
+        input.setAttribute("aria-label", "Colour");
+        input.setAttribute("autocomplete", "off");
+        wrap.appendChild(sw);
+        wrap.appendChild(input);
+        var paint = function () {
+          var next = swatch(input.value);
+          sw.className = next.className;
+          sw.style.background = next.style.background;
+          sw.title = next.title;
+        };
+        paint();
+        var box = document.createElement("div");
+        box.className = "editr-popup editr-colour-box";
+        box.setAttribute("role", "listbox");
+        box.setAttribute("aria-label", "Colours");
+        colourChoices(c).forEach(function (v) {
+          var b = document.createElement("button");
+          b.type = "button";
+          b.className = "editr-colour-pick";
+          b.setAttribute("role", "option");
+          b.style.background = colourCss(v);
+          b.title = v;
+          b.setAttribute("aria-label", v);
+          b.setAttribute("data-value", v);
+          if (String(old) === v) b.setAttribute("aria-selected", "true");
+          box.appendChild(b);
+        });
+        var custom = document.createElement("label");
+        custom.className = "editr-colour-custom";
+        var picker = document.createElement("input");
+        picker.type = "color";
+        picker.value = colourHex(input.value) || "#2975dd";
+        custom.appendChild(picker);
+        custom.appendChild(document.createTextNode("Other colour\u2026"));
+        box.appendChild(custom);
+
+        var done = false, picking = false;
+        var close = function () {
+          box.remove();
+          window.removeEventListener("scroll", place, true);
+        };
+        var finish = function (v) {
+          if (done) return;
+          done = true;
+          close();
+          v = v === null || v === undefined ? "" : String(v).trim();
+          var before = old === null || old === undefined ? "" : String(old);
+          if (v === before) cancel(); else success(v === "" ? null : v);
+        };
+        var stop = function () {
+          if (done) return;
+          done = true;
+          close();
+          cancel();
+        };
+        var place = function () {
+          var r = cell.getElement().getBoundingClientRect();
+          box.style.top = (r.bottom + window.scrollY + 4) + "px";
+          var left = r.left + window.scrollX;
+          var maxLeft = window.scrollX + document.documentElement.clientWidth -
+            box.getBoundingClientRect().width - 8;
+          box.style.left = Math.max(8, Math.min(left, maxLeft)) + "px";
+        };
+        input.addEventListener("input", paint);
+        input.addEventListener("blur", function () {
+          if (!picking) finish(input.value);
+        });
+        input.addEventListener("keydown", function (e) {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            finish(input.value);
+          } else if (e.key === "Escape") {
+            e.preventDefault();
+            stop();
+          }
+        });
+        input.addEventListener("mousedown", function (e) { e.stopPropagation(); });
+        // clicks in the box keep the focus in the text box
+        box.addEventListener("mousedown", function (e) {
+          if (e.target === picker || e.target === custom) {
+            picking = true;
+          } else {
+            e.preventDefault();
+          }
+        });
+        box.addEventListener("click", function (e) {
+          var b = e.target.closest && e.target.closest(".editr-colour-pick");
+          if (b) finish(b.getAttribute("data-value"));
+        });
+        picker.addEventListener("input", function () {
+          input.value = picker.value;
+          paint();
+        });
+        picker.addEventListener("change", function () { finish(picker.value); });
+        picker.addEventListener("blur", function () {
+          picking = false;
+          if (!done) input.focus({preventScroll: true});
+        });
+        onRendered(function () {
+          box.style.position = "absolute";
+          document.body.appendChild(box);
+          place();
+          window.addEventListener("scroll", place, true);
+          input.focus({preventScroll: true});
+          input.select();
+        });
         return wrap;
       }
 
@@ -1131,6 +1354,632 @@
         }
       }
 
+      /* ---------------------------------------------------------------- */
+      /* filter dialog: every filter in one place                          */
+      /* ---------------------------------------------------------------- */
+
+      // grid.conditions holds what the dialog added: {field, logic, values}.
+      // The header filters and summary picks are listed in the dialog as
+      // well (grid.draft), and stay where they were set while their rows are
+      // not changed; a row that was changed replaces them.
+
+      function filterType(c) {
+        var o = c.option || {};
+        if (c.kind === "logical" || o.type === "checkbox") return "logical";
+        if (c.kind === "date" || o.type === "date") return "date";
+        if (c.kind === "datetime" || o.type === "datetime") return "datetime";
+        if (o.type === "time") return "time";
+        if (c.kind === "numeric") return "number";
+        return "text";
+      }
+
+      function filterLogics(c) {
+        var type = filterType(c);
+        return Object.keys(FILTER_LOGICS).filter(function (k) {
+          if (type === "logical") {
+            return k === "equal" || k === "not_equal" || k === "missing" || k === "present";
+          }
+          return type !== "text" || !FILTER_LOGICS[k].order;
+        });
+      }
+
+      // a value typed into the dialog, as the column holds it
+      function filterValue(c, s) {
+        var v = normalizeValue(c, s);
+        return typeof v === "boolean" ? (v ? "TRUE" : "FALSE") : String(v);
+      }
+
+      function filterNumber(v) {
+        return v === "Inf" ? Infinity : v === "-Inf" ? -Infinity : Number(v);
+      }
+
+      function ruleKey(r) {
+        return JSON.stringify([r.field, r.logic, r.values]);
+      }
+
+      function ruleComplete(r) {
+        var input = FILTER_LOGICS[r.logic].input;
+        var has = function (x) { return x !== undefined && x !== null && x !== ""; };
+        if (input === "none") return true;
+        return has(r.values[0]) && (input !== "two" || has(r.values[1]));
+      }
+
+      // what stops a row from being applied (or null)
+      function ruleProblem(r) {
+        var c = grid.colMap[r.field];
+        var logic = FILTER_LOGICS[r.logic];
+        if (!c || logic.input === "none") return null;
+        if (logic.raw) {
+          try {
+            new RegExp(r.values[0] || "");
+          } catch (e) {
+            return "This is not a valid regular expression";
+          }
+          return null;
+        }
+        if (filterType(c) === "number" && (logic.order || logic.suggest)) {
+          var bad = r.values.filter(function (v) {
+            return v !== "" && v !== undefined && v !== "NA" && isNaN(filterNumber(v));
+          });
+          if (bad.length) return "“" + bad[0] + "” is not a number";
+        }
+        return null;
+      }
+
+      // {field, test}: does a value of the column pass a row of the dialog?
+      function conditionTest(r) {
+        var c = grid.colMap[r.field];
+        if (!c) return null;
+        var number = filterType(c) === "number";
+        var vals = r.values.map(String);
+        var blank = function (v) { return v === null || v === undefined || v === ""; };
+        var text = function (v) {
+          return typeof v === "boolean" ? (v ? "TRUE" : "FALSE") : String(v);
+        };
+        var shown = labelsOf(c) ? function (v) { return labelledText(c, text(v)); } : text;
+        // NaN when a cell of a number column does not hold a number
+        var order = function (v, x) {
+          if (!number) {
+            var s = text(v);
+            return s < x ? -1 : s > x ? 1 : 0;
+          }
+          var a = filterNumber(v), b = filterNumber(x);
+          return a < b ? -1 : a > b ? 1 : a === b ? 0 : NaN;
+        };
+        var nums = vals.map(filterNumber);
+        var low = vals.map(function (v) { return v.toLowerCase(); });
+        var hasNA = vals.indexOf("NA") !== -1;
+        var equal = function (v) {
+          if (blank(v)) return hasNA;
+          if (!number) return vals.indexOf(text(v)) !== -1;
+          var x = filterNumber(v);
+          return nums.some(function (w) {
+            return x === w || Math.abs(x - w) <= 1e-12 * Math.max(1, Math.abs(w));
+          });
+        };
+        var compare = function (ok) {
+          return function (v) { return !blank(v) && ok(order(v, vals[0])); };
+        };
+        // the two values can be given in either order
+        var between = function (v) {
+          if (blank(v)) return false;
+          var a = order(v, vals[0]), b = order(v, vals[1]);
+          return (a >= 0 && b <= 0) || (a <= 0 && b >= 0);
+        };
+        var contain = function (v) {
+          if (blank(v)) return false;
+          var s = shown(v).toLowerCase();
+          return low.some(function (x) { return s.indexOf(x) !== -1; });
+        };
+        var regex = function (v) {
+          if (blank(v)) return false;
+          regex.re = regex.re || new RegExp(vals[0]);
+          return regex.re.test(shown(v));
+        };
+        var missing = function (v) { return blank(v) || userMissing(c, v); };
+        var not = function (f) { return function (v) { return !f(v); }; };
+        var tests = {
+          equal: equal, not_equal: not(equal),
+          gt: compare(function (o) { return o > 0; }),
+          lt: compare(function (o) { return o < 0; }),
+          gte: compare(function (o) { return o >= 0; }),
+          lte: compare(function (o) { return o <= 0; }),
+          between: between, not_between: not(between),
+          contain: contain, not_contain: not(contain),
+          regex: regex, not_regex: not(regex),
+          missing: missing, present: not(missing)
+        };
+        return {field: r.field, test: tests[r.logic]};
+      }
+
+      function prepareConditions() {
+        grid.conditionTests = (grid.conditions || []).map(conditionTest).filter(Boolean);
+      }
+
+      // rows that match the filters added in the dialog (added rows stay)
+      function conditionFilter(data) {
+        if (pinnedRow(data)) return true;
+        var tests = grid.conditionTests || [];
+        for (var i = 0; i < tests.length; i++) {
+          if (!tests[i].test(data[tests[i].field])) return false;
+        }
+        return true;
+      }
+
+      // the column of row names has no title of its own
+      function columnName(c) {
+        return c.frozen ? "row names" : c.title;
+      }
+
+      function conditionText(r) {
+        var c = grid.colMap[r.field] || {title: r.field};
+        var vals = r.values.map(function (x) { return valueLabel(c, x) || String(x); });
+        var list = vals.length < 2 ? vals.join("") :
+          vals.slice(0, -1).join(", ") + " or " + vals[vals.length - 1];
+        var t = columnName(c);
+        switch (r.logic) {
+          case "equal": return t + " is " + list;
+          case "not_equal": return t + " is not " + list;
+          case "gt": return t + " > " + vals[0];
+          case "lt": return t + " < " + vals[0];
+          case "gte": return t + " ≥ " + vals[0];
+          case "lte": return t + " ≤ " + vals[0];
+          case "between": return t + " " + vals[0] + "–" + vals[1];
+          case "not_between": return t + " not " + vals[0] + "–" + vals[1];
+          case "contain": return t + " contains “" + list + "”";
+          case "not_contain": return t + " does not contain “" + list + "”";
+          case "regex": return t + " matches /" + vals[0] + "/";
+          case "not_regex": return t + " does not match /" + vals[0] + "/";
+          case "missing": return t + " is missing";
+          default: return t + " is not missing";
+        }
+      }
+
+      // the rows of the dialog for a header filter or summary pick
+      function filterRows(f) {
+        var out = [];
+        var add = function (logic, values) {
+          out.push({field: f.field, logic: logic, values: values.map(String)});
+        };
+        var range = function (lo, hi, below) {
+          if (below) {
+            add("gte", [lo]);
+            add("lt", [hi]);
+          } else if (lo !== "" && hi !== "") {
+            add("between", [lo, hi]);
+          } else if (lo !== "") {
+            add("gte", [lo]);
+          } else {
+            add("lte", [hi]);
+          }
+        };
+        var v = f.value, p = f.pick;
+        if (p) {
+          if (p.kind === "missing") add("missing", []);
+          else if (p.kind === "range") range(p.lo, p.hi, p.below);
+          else if (p.kind === "prefix") add("contain", [p.value]);
+          else add("equal", [p.value]);
+        } else if (Array.isArray(v)) {
+          add("equal", v.map(function (x) {
+            return typeof x === "boolean" ? (x ? "TRUE" : "FALSE") : x;
+          }));
+        } else if (typeof v === "object") {
+          range(v.min, v.max, v.below);
+        } else {
+          add("contain", [v]);
+        }
+        return out;
+      }
+
+      function blankRule() {
+        var cols = realColumns();
+        var open = cols.filter(function (col) {
+          return col.isVisible() && !grid.colMap[col.getField()].frozen;
+        });
+        var col = open[0] || cols[0];
+        return col ? {field: col.getField(), logic: "equal", values: []} : null;
+      }
+
+      // the values of a column offered as suggestions (never for passwords)
+      function columnValues(c) {
+        grid.draftValues = grid.draftValues || {};
+        if (grid.draftValues[c.field]) return grid.draftValues[c.field];
+        var seen = Object.create(null), out = [];
+        var add = function (v) {
+          if (v === null || v === undefined || v === "") return;
+          v = typeof v === "boolean" ? (v ? "TRUE" : "FALSE") : String(v);
+          if (!seen[v]) {
+            seen[v] = true;
+            out.push(v);
+          }
+        };
+        if (!c.option || c.option.type !== "password") {
+          if (filterType(c) === "logical") {
+            out = ["TRUE", "FALSE"];
+          } else {
+            grid.table.getData().forEach(function (row) { add(row[c.field]); });
+            if (c.option && c.option.type === "dropdown") toArray(c.option.values).forEach(add);
+            out.sort(filterType(c) === "number" ? function (a, b) {
+              return filterNumber(a) - filterNumber(b);
+            } : undefined);
+            out = out.slice(0, 1000);
+          }
+        }
+        grid.draftValues[c.field] = out;
+        return out;
+      }
+
+      function filterTags(r, c, changed) {
+        var wrap = document.createElement("div");
+        wrap.className = "editr-fd-tags";
+        var input = document.createElement("input");
+        input.type = "text";
+        input.autocomplete = "off";
+        input.setAttribute("aria-label", "Values of the filter");
+        var known = Object.create(null);
+        if (FILTER_LOGICS[r.logic].suggest) {
+          var values = columnValues(c);
+          if (values.length) {
+            var list = document.createElement("datalist");
+            grid.draftSeq = (grid.draftSeq || 0) + 1;
+            list.id = el.id + "_filter_values_" + grid.draftSeq;
+            values.forEach(function (v) {
+              known[v] = true;
+              var o = document.createElement("option");
+              o.value = v;
+              var lab = valueLabel(c, v);
+              if (lab) o.label = lab;
+              list.appendChild(o);
+            });
+            wrap.appendChild(list);
+            input.setAttribute("list", list.id);
+          }
+        }
+        var show = function () {
+          wrap.querySelectorAll(".editr-chip").forEach(function (t) { wrap.removeChild(t); });
+          r.values.forEach(function (v, i) {
+            var tag = document.createElement("span");
+            tag.className = "editr-chip";
+            var name = document.createElement("span");
+            name.textContent = labelledText(c, v);
+            tag.appendChild(name);
+            var x = document.createElement("button");
+            x.type = "button";
+            x.setAttribute("aria-label", "Remove " + labelledText(c, v));
+            x.innerHTML = ICONS.x;
+            x.addEventListener("click", function () {
+              r.values.splice(i, 1);
+              show();
+              changed();
+            });
+            tag.appendChild(x);
+            wrap.insertBefore(tag, input);
+          });
+          input.placeholder = r.values.length ? "" : "Type a value and press Enter";
+        };
+        var add = function () {
+          var s = input.value.trim();
+          input.value = "";
+          if (!s) return;
+          // "contain" looks for the text as it was typed
+          var v = FILTER_LOGICS[r.logic].suggest ? filterValue(c, s) : s;
+          if (r.values.indexOf(v) === -1) r.values.push(v);
+          show();
+          changed();
+        };
+        input.addEventListener("keydown", function (e) {
+          if (e.key === "Enter" && input.value.trim()) {
+            e.preventDefault();
+            e.stopPropagation();
+            add();
+          } else if (e.key === "Backspace" && !input.value && r.values.length) {
+            r.values.pop();
+            show();
+            changed();
+          }
+        });
+        // picking a suggestion is not typing
+        input.addEventListener("input", function (e) {
+          if (e.inputType && e.inputType !== "insertReplacementText") return;
+          if (known[input.value]) add();
+        });
+        input.addEventListener("blur", add);
+        wrap.addEventListener("click", function (e) {
+          if (e.target === wrap) input.focus();
+        });
+        wrap.appendChild(input);
+        show();
+        return wrap;
+      }
+
+      function filterInput(r, c, i, label, changed) {
+        var logic = FILTER_LOGICS[r.logic];
+        var type = logic.raw ? "text" : filterType(c);
+        var input = document.createElement("input");
+        input.className = "form-control form-control-sm";
+        input.type = type === "date" ? "date" : type === "datetime" ? "datetime-local" :
+          type === "time" ? "time" : "text";
+        if (type === "number") input.inputMode = "decimal";
+        if (logic.raw) input.placeholder = "Regular expression";
+        input.setAttribute("aria-label", label);
+        var v = r.values[i];
+        if (v !== undefined) {
+          input.value = type === "datetime" ? String(v).replace(" ", "T").slice(0, 16) : v;
+        }
+        input.addEventListener("input", function () {
+          var x = input.value.trim();
+          if (type === "datetime" && x) x = x.replace("T", " ") + (x.length === 16 ? ":00" : "");
+          r.values[i] = x && !logic.raw ? filterValue(c, x) : x;
+          changed();
+        });
+        return input;
+      }
+
+      function filterSelect(label, items, value) {
+        var sel = document.createElement("select");
+        sel.className = "form-select form-select-sm";
+        sel.setAttribute("aria-label", label);
+        items.forEach(function (it) {
+          var o = document.createElement("option");
+          o.value = it[0];
+          o.textContent = it[1];
+          sel.appendChild(o);
+        });
+        sel.value = value;
+        return sel;
+      }
+
+      function filterRowUI(r) {
+        var row = document.createElement("div");
+        row.className = "editr-fd-row";
+        var column = filterSelect("Column", realColumns().map(function (col) {
+          var c = grid.colMap[col.getField()];
+          return [c.field, columnName(c) + (col.isVisible() ? "" : " (hidden)")];
+        }), r.field);
+        var logic = document.createElement("div");
+        var slot = document.createElement("div");
+        slot.className = "editr-fd-value";
+        var msg = document.createElement("div");
+        msg.className = "editr-fd-msg";
+        msg.setAttribute("role", "status");
+        r.msg = msg;
+        var fillValue = function () {
+          var c = grid.colMap[r.field];
+          var input = FILTER_LOGICS[r.logic].input;
+          slot.innerHTML = "";
+          if (input === "tags") {
+            slot.appendChild(filterTags(r, c, draftChanged));
+          } else if (input === "one") {
+            slot.appendChild(filterInput(r, c, 0, "Value of the filter", draftChanged));
+          } else if (input === "two") {
+            slot.appendChild(filterInput(r, c, 0, "From", draftChanged));
+            var and = document.createElement("span");
+            and.textContent = "and";
+            slot.appendChild(and);
+            slot.appendChild(filterInput(r, c, 1, "To", draftChanged));
+          }
+        };
+        var fillLogic = function () {
+          var c = grid.colMap[r.field];
+          logic.innerHTML = "";
+          // the type of the column may have changed since the row was added
+          var keys = filterLogics(c);
+          if (keys.indexOf(r.logic) === -1) keys.unshift(r.logic);
+          var sel = filterSelect("Logic", keys.map(function (k) {
+            return [k, FILTER_LOGICS[k].label];
+          }), r.logic);
+          sel.addEventListener("change", function () {
+            var before = FILTER_LOGICS[r.logic].input;
+            r.logic = sel.value;
+            var now = FILTER_LOGICS[r.logic].input;
+            if (now !== before) {
+              r.values = now === "none" ? [] : r.values.slice(0, now === "one" ? 1 : 2);
+            }
+            fillValue();
+            draftChanged();
+          });
+          logic.appendChild(sel);
+        };
+        column.addEventListener("change", function () {
+          r.field = column.value;
+          r.values = [];
+          if (filterLogics(grid.colMap[r.field]).indexOf(r.logic) === -1) r.logic = "equal";
+          fillLogic();
+          fillValue();
+          draftChanged();
+        });
+        var remove = document.createElement("button");
+        remove.type = "button";
+        remove.className = "btn btn-sm editr-fd-remove";
+        remove.setAttribute("aria-label", "Remove this filter");
+        remove.title = "Remove this filter";
+        remove.innerHTML = ICONS.x;
+        remove.addEventListener("click", function () {
+          grid.draft.splice(grid.draft.indexOf(r), 1);
+          renderDraft();
+        });
+        fillLogic();
+        fillValue();
+        row.appendChild(column);
+        row.appendChild(logic);
+        row.appendChild(slot);
+        row.appendChild(remove);
+        row.appendChild(msg);
+        return row;
+      }
+
+      function filterModal() { return byId(grid.ui.filters); }
+
+      function renderDraft() {
+        var m = filterModal();
+        var box = m.querySelector(".editr-fd-rows");
+        box.innerHTML = "";
+        grid.draft.forEach(function (r) { box.appendChild(filterRowUI(r)); });
+        if (!grid.draft.length) {
+          var none = document.createElement("div");
+          none.className = "form-text";
+          none.textContent = "No filters: every row is shown.";
+          box.appendChild(none);
+        }
+        m.querySelector(".editr-fd-clear").disabled = !grid.draft.length;
+        updateDraft();
+      }
+
+      // the messages of the rows, what would be shown and whether it can be
+      function updateDraft() {
+        var m = filterModal();
+        if (!m || !grid.table) return;
+        var problems = 0, unfinished = 0;
+        grid.draft.forEach(function (r) {
+          var p = ruleProblem(r);
+          r.msg.textContent = p || "";
+          if (p) problems += 1;
+          else if (!ruleComplete(r)) unfinished += 1;
+        });
+        m.querySelector(".editr-fd-apply").disabled = problems > 0;
+        var tests = problems ? [] : grid.draft.filter(ruleComplete).map(conditionTest).filter(Boolean);
+        var data = grid.table.getData();
+        var shown = 0;
+        if (!problems) {
+          data.forEach(function (row) {
+            for (var i = 0; i < tests.length; i++) {
+              if (!tests[i].test(row[tests[i].field])) return;
+            }
+            shown += 1;
+          });
+        }
+        var total = data.length;
+        var text = problems ? "" : shown.toLocaleString("en-US") + " of " +
+          total.toLocaleString("en-US") + (total === 1 ? " row matches" : " rows match");
+        if (unfinished) {
+          text += (text ? " · " : "") + (unfinished === 1 ?
+            "1 filter has no value and is ignored" :
+            unfinished + " filters have no value and are ignored");
+        }
+        m.querySelector(".editr-fd-count").textContent = text;
+      }
+
+      function draftChanged() {
+        clearTimeout(grid.draftTimer);
+        grid.draftTimer = setTimeout(updateDraft, 120);
+      }
+
+      function modalShow(m) {
+        if (window.bootstrap && bootstrap.Modal) {
+          bootstrap.Modal.getOrCreateInstance(m).show();
+        } else if (window.jQuery && jQuery.fn.modal) {
+          jQuery(m).modal("show");
+        }
+      }
+
+      function modalHide(m) {
+        if (window.bootstrap && bootstrap.Modal) {
+          bootstrap.Modal.getOrCreateInstance(m).hide();
+        } else if (window.jQuery && jQuery.fn.modal) {
+          jQuery(m).modal("hide");
+        }
+      }
+
+      function openFilterDialog() {
+        var m = filterModal();
+        if (!m) return;
+        closePopup();
+        grid.draftSources = {};
+        grid.draftValues = null;
+        grid.draft = [];
+        activeFilters().forEach(function (f) {
+          if (f.cond) return;
+          var source = (f.pick ? "pick:" : "header:") + f.field;
+          filterRows(f).forEach(function (r) {
+            r.source = source;
+            r.original = ruleKey(r);
+            grid.draftSources[source] = (grid.draftSources[source] || 0) + 1;
+            grid.draft.push(r);
+          });
+        });
+        grid.conditions.forEach(function (r) {
+          if (!grid.colMap[r.field]) return;
+          grid.draft.push({field: r.field, logic: r.logic, values: r.values.slice()});
+        });
+        if (!grid.draft.length) {
+          var blank = blankRule();
+          if (blank) grid.draft.push(blank);
+        }
+        renderDraft();
+        modalShow(m);
+      }
+
+      function addDraftRow() {
+        var r = blankRule();
+        if (!r) return;
+        grid.draft.push(r);
+        renderDraft();
+        var rows = filterModal().querySelectorAll(".editr-fd-row");
+        rows[rows.length - 1].querySelector("select").focus();
+      }
+
+      function clearDraft() {
+        grid.draft = [];
+        renderDraft();
+      }
+
+      function clearFilterSource(source) {
+        var kind = source.split(":")[0];
+        var field = source.slice(kind.length + 1);
+        if (kind === "pick") delete grid.picks[field];
+        else grid.table.setHeaderFilterValue(field, "");
+      }
+
+      // rows that were not finished are ignored
+      function applyDraft() {
+        var rows = grid.draft.filter(ruleComplete);
+        if (rows.some(ruleProblem)) return;
+        var same = {};
+        rows.forEach(function (r) {
+          if (r.source && ruleKey(r) === r.original) same[r.source] = (same[r.source] || 0) + 1;
+        });
+        var stays = function (s) { return same[s] === grid.draftSources[s]; };
+        Object.keys(grid.draftSources).forEach(function (s) {
+          if (!stays(s)) clearFilterSource(s);
+        });
+        grid.conditions = rows.filter(function (r) {
+          return !(r.source && stays(r.source));
+        }).map(function (r) {
+          return {field: r.field, logic: r.logic, values: r.values.slice()};
+        });
+        grid.table.refreshFilter();
+        modalHide(filterModal());
+      }
+
+      function bindFilterDialog() {
+        var m = filterModal();
+        if (!m || m.__editrBound) return;
+        m.__editrBound = true;
+        var own = function () { return el.__editr; };
+        var on = function (cls, fn) {
+          m.querySelectorAll(cls).forEach(function (b) { b.addEventListener("click", fn); });
+        };
+        on(".editr-fd-add", function () { own().filterDialog.add(); });
+        on(".editr-fd-clear", function () { own().filterDialog.clear(); });
+        on(".editr-fd-apply", function () { own().filterDialog.apply(); });
+        on(".editr-fd-cancel", function () { own().filterDialog.cancel(); });
+        // Enter in a value applies the filters (see filterTags for values
+        // still being typed)
+        m.addEventListener("keydown", function (e) {
+          if (e.key === "Enter" && e.target.tagName === "INPUT" &&
+              !m.querySelector(".editr-fd-apply").disabled) {
+            e.preventDefault();
+            own().filterDialog.apply();
+          }
+        });
+      }
+
+      grid.filterDialog = {
+        open: openFilterDialog, add: addDraftRow, clear: clearDraft,
+        apply: applyDraft,
+        cancel: function () { modalHide(filterModal()); }
+      };
+
       function buildColumn(c) {
         var def = {
           title: c.title,
@@ -1199,6 +2048,7 @@
           def.formatter = makeFormatter("url");
         } else if (o && o.type === "colour") {
           def.formatter = makeFormatter("colour");
+          def.editor = c.readonly ? false : colourEditor;
         } else if (o && o.type === "number") {
           def.editor = c.readonly ? false : "number";
           def.editorParams = {selectContents: true};
@@ -1393,8 +2243,29 @@
       }
 
       function rowMenu(e, row) {
-        var items = [{label: "Fill down  (Ctrl+D)", action: fillDown},
-                     {separator: true}];
+        var items = [];
+        var cellEl = e && e.target && e.target.closest ? e.target.closest(".tabulator-cell") : null;
+        var field = cellEl ? cellEl.getAttribute("tabulator-field") : null;
+        if (field && grid.colMap[field] && grid.opts.comments !== false) {
+          var cell = row.getCell(field);
+          var has = !!grid.comments[row.getIndex() + "|" + field];
+          items.push({label: (has ? "Edit comment\u2026" : "Add comment\u2026") + "  (Shift+F2)",
+                      action: function () { openComment(cell); }});
+          if (has) {
+            items.push({label: "Delete comment", action: function () {
+              setComment(row.getIndex(), field, "");
+            }});
+          }
+        }
+        var nComments = Object.keys(grid.comments).length;
+        if (nComments && grid.opts.comments !== false) {
+          items.push({label: "Delete all comments (" + nComments + ")\u2026",
+                      action: function () {
+                        confirmDeleteComments(cellEl || row.getElement());
+                      }});
+        }
+        items.push({label: "Fill down  (Ctrl+D)", action: fillDown});
+        items.push({separator: true});
         if (grid.opts.row_edit) {
           items.push({label: "Insert row above",
                       action: function (e, r) { insertRow(r, false); }});
@@ -1412,6 +2283,140 @@
           items.push({separator: true});
         }
         return items.concat(historyItems());
+      }
+
+      /* comments on cells ---------------------------------------------- */
+
+      function commentSet(args) {
+        var out = {};
+        var keys = toArray(args && args.keys);
+        var texts = toArray(args && args.texts);
+        var users = toArray(args && args.users);
+        var times = toArray(args && args.times);
+        keys.forEach(function (k, i) {
+          out[k] = {text: String(texts[i]), user: users[i] || "", time: times[i] || ""};
+        });
+        return out;
+      }
+
+      function openComment(cell) {
+        if (!cell) return;
+        var id = cell.getRow().getIndex();
+        var field = cell.getField();
+        var c = grid.colMap[field];
+        if (!c) return;
+        var cur = grid.comments[id + "|" + field];
+        var box = document.createElement("div");
+        box.className = "editr-popup editr-comment-box";
+        box.setAttribute("role", "dialog");
+        box.setAttribute("aria-label", "Comment on " + c.title);
+        var meta = cur && (cur.user || cur.time) ?
+          [cur.user, cur.time].filter(function (x) { return x; }).join(" \u00b7 ") : "";
+        box.innerHTML = '<div class="editr-comment-title">Comment on ' + escapeHTML(c.title) +
+          '</div>' + (meta ? '<div class="editr-comment-meta">' + escapeHTML(meta) + '</div>' : '') +
+          '<textarea class="form-control form-control-sm" rows="3" aria-label="Comment"' +
+          ' placeholder="Why the value is what it is, what to check\u2026"></textarea>' +
+          '<div class="editr-comment-actions">' +
+          (cur ? '<button type="button" class="btn btn-link btn-sm editr-comment-delete" data-act="delete">Delete</button>' : '') +
+          '<span class="editr-spacer"></span>' +
+          '<button type="button" class="btn btn-outline-secondary btn-sm" data-act="cancel">Cancel</button>' +
+          '<button type="button" class="btn btn-primary btn-sm" data-act="save">Save</button></div>';
+        var ta = box.querySelector("textarea");
+        ta.value = cur ? cur.text : "";
+        var finish = function (act) {
+          if (act === "save") setComment(id, field, ta.value.trim());
+          else if (act === "delete") setComment(id, field, "");
+          closePopup();
+        };
+        box.addEventListener("click", function (e) {
+          var a = e.target.closest && e.target.closest("[data-act]");
+          if (a) finish(a.getAttribute("data-act"));
+        });
+        ta.addEventListener("keydown", function (e) {
+          e.stopPropagation();
+          if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+            e.preventDefault();
+            finish("save");
+          } else if (e.key === "Escape") {
+            e.preventDefault();
+            finish("cancel");
+          }
+        });
+        var popup = openPopup(cell.getElement(), box);
+        if (popup) popup.kind = "comment";
+        // at once, so typing straight away goes into the box (and again
+        // after a menu click has finished)
+        ta.focus();
+        setTimeout(function () {
+          if (document.activeElement !== ta && document.body.contains(ta)) ta.focus();
+        }, 0);
+      }
+
+      // R keeps the comments (with who wrote them and when) and sends them
+      // back with set_comments
+      function setComment(id, field, text) {
+        var key = id + "|" + field;
+        if (text) {
+          var cur = grid.comments[key];
+          grid.comments[key] = {text: text, user: cur ? cur.user : "", time: cur ? cur.time : ""};
+        } else {
+          delete grid.comments[key];
+        }
+        reformatRows([id]);
+        if (formVisible()) refreshForm();
+        if (shinyOpen()) {
+          Shiny.setInputValue(el.id + "_comment",
+                              {id: id, field: field, text: text, nonce: Math.random()},
+                              {priority: "event"});
+        }
+      }
+
+      // comments cannot be undone, so deleting them all is confirmed first
+      function confirmDeleteComments(anchor) {
+        var n = Object.keys(grid.comments).length;
+        if (!n) return;
+        var box = document.createElement("div");
+        box.className = "editr-popup editr-guard editr-comments-clear";
+        box.setAttribute("role", "alertdialog");
+        box.setAttribute("aria-label", "Delete all comments");
+        box.innerHTML =
+          '<div class="editr-guard-msg"><span class="editr-guard-icon">' + ICONS.alert +
+          '</span><div><div class="editr-guard-title">Delete all ' + n + ' comment' +
+          (n === 1 ? "" : "s") + '?</div>' +
+          '<div class="editr-guard-sub">Deleted comments cannot be brought back with undo.</div>' +
+          '</div></div><div class="editr-guard-actions">' +
+          '<button type="button" class="btn btn-danger btn-sm" data-act="delete">Delete all comments</button>' +
+          '<button type="button" class="btn btn-link btn-sm" data-act="cancel">Cancel</button></div>';
+        box.addEventListener("click", function (e) {
+          var a = e.target.closest && e.target.closest("[data-act]");
+          if (!a) return;
+          closePopup();
+          if (a.getAttribute("data-act") === "delete") deleteAllComments();
+        });
+        var popup = openPopup(anchor, box);
+        if (popup) popup.kind = "guard";
+        var cancel = box.querySelector('[data-act="cancel"]');
+        if (cancel) cancel.focus();
+      }
+
+      function deleteAllComments() {
+        var ids = {};
+        Object.keys(grid.comments).forEach(function (k) { ids[k.split("|")[0]] = true; });
+        grid.comments = {};
+        reformatRows(Object.keys(ids).map(Number));
+        if (formVisible()) refreshForm();
+        if (shinyOpen()) {
+          Shiny.setInputValue(el.id + "_comment", {all: true, nonce: Math.random()},
+                              {priority: "event"});
+        }
+      }
+
+      function activeCell() {
+        var ranges = grid.table && grid.table.getRanges ? grid.table.getRanges() : [];
+        if (!ranges.length) return null;
+        var cells = ranges[0].getCells();
+        var first = Array.isArray(cells[0]) ? cells[0][0] : cells[0];
+        return first || null;
       }
 
       function insertColumn(column, right) {
@@ -1444,6 +2449,9 @@
               var cid = col.getField();
               delete grid.colMap[cid];
               col.delete();
+              if (grid.picks[cid] || grid.conditions.some(function (r) { return r.field === cid; })) {
+                grid.table.refreshFilter();
+              }
               emit({type: "delete_col", cid: cid});
               updateStatus();
               reportView();
@@ -1562,6 +2570,7 @@
         if (c) c.title = title;
         var col = grid.table.getColumn(field);
         if (col) col.updateDefinition({title: title});
+        renderChips();
       }
 
       /* ---------------------------------------------------------------- */
@@ -1741,7 +2750,8 @@
 
       // Excel-like: a single selected cell takes the whole block; a larger
       // selection that is a multiple of the block is filled by repeating it.
-      // Rows past the end are added when rows can be added.
+      // Rows past the end are added when rows can be added, and columns
+      // past the last column when columns can be added.
       function pasteRange(parsed) {
         var table = grid.table;
         var mod = table.modules.selectRange;
@@ -1763,11 +2773,25 @@
         var nRows = selRows > dataRows && selRows % dataRows === 0 ? selRows : dataRows;
         var nCols = selCols > dataCols && selCols % dataCols === 0 ? selCols : dataCols;
 
-        // target columns (the "+" column and anything past it are ignored)
+        // target columns: the columns from the selection on, then new
+        // columns (V1, V2, ...) for the rest of a wider block, or nothing
+        // when columns cannot be added
+        var room = 0;
+        for (var q = c0; q < cols.length; q++) {
+          if (grid.colMap[cols[q].getField()]) room += 1;
+        }
+        var titles = currentTitles();
         var targets = [];
         for (var j = 0; j < nCols; j++) {
-          var col = cols[c0 + j];
+          var col = j < room ? cols[c0 + j] : null;
           var c = col && grid.colMap[col.getField()];
+          if (!c && j >= room && grid.opts.col_edit) {
+            var title = uniqueName("V", titles);
+            titles.push(title);
+            c = {field: null, title: title, kind: "character", readonly: false,
+                 rename: true, frozen: false, empty: true,
+                 filter: {type: "text"}, added: true};
+          }
           targets.push(c ? c : null);
         }
         var existing = rows.slice(r0, r0 + nRows);
@@ -1790,7 +2814,14 @@
           });
           cells.push({c: c, values: vals});
         });
+        writeBlock(bounds.start.getComponent(), existing, extra, cells,
+                   {label: "paste"});
+        return [];
+      }
 
+      // check the values going into each column, then write them, asking
+      // first when some do not fit their column
+      function writeBlock(anchor, existing, extra, cells, how) {
         var problems = [];
         cells.forEach(function (col) {
           var bad = col.values.filter(function (v) {
@@ -1801,23 +2832,44 @@
                            reason: invalidReason(col.c, bad[0])});
           }
         });
-
         var apply = function (act) {
-          applyPaste(existing, extra, cells, act);
+          applyPaste(existing, extra, cells, act, how);
         };
         if (problems.length) {
-          pasteGuard(bounds.start.getComponent(), problems, apply);
+          pasteGuard(anchor, problems, apply, how.label);
         } else {
-          apply("paste");
+          apply(how.label);
         }
-        return [];
       }
 
-      // write a checked paste: add rows, update cells, report one batch of ops
-      // (one undo step) and select the pasted block
-      function applyPaste(existing, extra, cells, act) {
+      // write a checked paste or fill: add columns and rows, update cells,
+      // report one batch of ops (one undo step) and select what was written
+      // (how.select: [first row, last row, first field, last field])
+      function applyPaste(existing, extra, cells, act, how) {
         var table = grid.table;
+        how = how || {label: "paste"};
+        var label = how.label;
         if (act === "cancel") return;
+        // NEW COLUMNS AFTER THE LAST COLUMN (A PASTE WIDER THAN THE TABLE)
+        var after = null;
+        cells.forEach(function (col) {
+          if (!col.c.added || col.c.field) return;
+          if (!after) {
+            var real = realColumns();
+            after = real.length ? real[real.length - 1].getField() : null;
+          }
+          var cid = "c" + grid.nextCol++;
+          col.c.field = cid;
+          grid.colMap[cid] = col.c;
+          if (after) {
+            table.addColumn(buildColumn(col.c), false, after);
+          } else {
+            table.addColumn(buildColumn(col.c), true);
+          }
+          emit({type: "insert_col", cid: cid, name: col.c.title,
+                anchor: after, right: true}, label);
+          after = cid;
+        });
         if (act === "text") {
           cells.forEach(function (col) {
             var bad = col.values.some(function (v) {
@@ -1881,33 +2933,219 @@
         });
         table.restoreRedraw();
         if (newIds.length) {
-          emit({type: "insert_rows", ids: newIds, anchor: null, below: true}, "paste");
+          emit({type: "insert_rows", ids: newIds, anchor: null, below: true}, label);
         }
-        ops.forEach(function (op) { emit(op, "paste"); });
+        ops.forEach(function (op) { emit(op, label); });
         var done = newRows.length ? table.addData(newRows, false) : Promise.resolve();
         Promise.resolve(done).then(function () {
           var fields = cells.map(function (col) { return col.c.field; });
-          if (!fields.length || !ids.length || !table.addRange) return;
-          var first = table.getRow(ids[0]), last = table.getRow(ids[ids.length - 1]);
-          if (!first || !last) return;
+          var sel = how.select;
+          if (!sel) {
+            if (!fields.length || !ids.length) return;
+            sel = [table.getRow(ids[0]), table.getRow(ids[ids.length - 1]),
+                   fields[0], fields[fields.length - 1]];
+          }
+          if (!table.addRange || !sel[0] || !sel[1]) return;
           table.getRanges().forEach(function (r) { r.remove(); });
-          table.addRange(first.getCell(fields[0]), last.getCell(fields[fields.length - 1]));
+          table.addRange(sel[0].getCell(sel[2]), sel[1].getCell(sel[3]));
           updateStatus();
           selectionSummary();
         });
       }
 
+      /* ---------------------------------------------------------------- */
+      /* fill handle                                                       */
+      /* ---------------------------------------------------------------- */
+
+      // Values for the cells a selection is dragged over (pos: positions
+      // counted from the first selected cell; -1 is the cell before it):
+      // two or more numbers or dates a fixed step apart, or text ending in
+      // such numbers (Week 1, Week 2), carry on as a series; anything else
+      // is repeated. copy = TRUE repeats series too.
+      function fillValues(src, pos, copy) {
+        var k = src.length;
+        var series = copy || k < 2 ? null : fillSeries(src);
+        return pos.map(function (p) {
+          return series ? series(p) : src[((p % k) + k) % k];
+        });
+      }
+
+      function fillSeries(src) {
+        var steady = function (xs) {
+          var step = xs[1] - xs[0];
+          if (!isFinite(step) || step === 0) return null;
+          for (var i = 2; i < xs.length; i++) {
+            if (Math.abs(xs[i] - xs[i - 1] - step) > 1e-9 * Math.max(1, Math.abs(step))) {
+              return null;
+            }
+          }
+          return step;
+        };
+        var decimals = function (x) {
+          var m = /\.(\d+)$/.exec(String(x));
+          return m ? m[1].length : 0;
+        };
+        var round = function (x, d) {
+          return Number(x.toFixed(Math.min(d, 15)));
+        };
+        // numbers
+        if (src.every(function (v) { return typeof v === "number" && isFinite(v); })) {
+          var step = steady(src);
+          if (step === null) return null;
+          var d = Math.max.apply(null, src.map(decimals));
+          return function (p) { return round(src[0] + step * p, d); };
+        }
+        if (!src.every(function (v) { return typeof v === "string"; })) return null;
+        // dates: months apart on the same day, or days apart
+        var dates = src.map(function (v) {
+          return /^\d{4}-\d{2}-\d{2}$/.test(v) && validDate(v) ? v : null;
+        });
+        if (dates.every(function (v) { return v; })) {
+          var ymd = dates.map(function (v) { return v.split("-").map(Number); });
+          var months = ymd.map(function (x) { return x[0] * 12 + x[1] - 1; });
+          var mstep = steady(months);
+          var lastDay = function (y, mo) { return new Date(Date.UTC(y, mo + 1, 0)).getUTCDate(); };
+          var ends = ymd.every(function (x) { return x[2] === lastDay(x[0], x[1] - 1); });
+          if (mstep !== null && (ends || ymd.every(function (x) { return x[2] === ymd[0][2]; }))) {
+            return function (p) {
+              var m = months[0] + mstep * p;
+              var y = Math.floor(m / 12), mo = m - y * 12;
+              // month ends stay month ends; the 31st becomes the last day of
+              // shorter months
+              var day = ends ? lastDay(y, mo) : Math.min(ymd[0][2], lastDay(y, mo));
+              return y + "-" + pad2(mo + 1) + "-" + pad2(day);
+            };
+          }
+          var days = ymd.map(function (x) { return Date.UTC(x[0], x[1] - 1, x[2]) / 864e5; });
+          var dstep = steady(days);
+          if (dstep === null) return null;
+          return function (p) {
+            return new Date((days[0] + dstep * p) * 864e5).toISOString().slice(0, 10);
+          };
+        }
+        // text ending in a number
+        var parts = src.map(function (v) { return /^(.*?)(\d+)$/.exec(v); });
+        if (parts.every(function (m) { return m && m[1] === parts[0][1]; })) {
+          var nums = parts.map(function (m) { return Number(m[2]); });
+          var nstep = steady(nums);
+          if (nstep === null) return null;
+          var width = parts[0][2].charAt(0) === "0" ? parts[0][2].length : 0;
+          return function (p) {
+            var n = nums[0] + nstep * p;
+            if (n < 0) return src[((p % src.length) + src.length) % src.length];
+            var t = String(n);
+            while (t.length < width) t = "0" + t;
+            return parts[0][1] + t;
+          };
+        }
+        return null;
+      }
+
+      // text of a value for another column (filling across columns)
+      function fillText(v) {
+        if (v === null || v === undefined) return v;
+        if (typeof v === "boolean") return v ? "TRUE" : "FALSE";
+        return String(v);
+      }
+
+      // Tabulator draws the fill handle (selectableRangeFill) and the
+      // preview of the cells it is dragged over; we work out the values and
+      // write them like a paste: one undo step, logged as a fill, values
+      // that do not fit a column are asked about. Hold Ctrl to copy without
+      // carrying on a series.
+      function patchFillHandle(table) {
+        var mod = table.modules.selectRange;
+        var fh = mod && mod.fillHandle;
+        if (!fh) return;
+        fh.element.setAttribute("title", "Drag to fill (Ctrl: copy without a series)");
+        fh.handleMouseUp = function (e) {
+          fh.isActive = false;
+          fh.unsubscribe("cell-mousemove", fh.handleCellMouseMove);
+          document.removeEventListener("mouseup", fh.handleMouseUp);
+          var src = fh.source;
+          var target = fh.constructor.extendAlongAxis(src, fh.pointerRow, fh.pointerCol);
+          if (fh.preview) {
+            fh.preview.destroy();
+            fh.preview = null;
+          }
+          fillArea(src, target, !!(e && (e.ctrlKey || e.metaKey)));
+        };
+      }
+
+      function fillArea(src, target, copy) {
+        var mod = grid.table.modules.selectRange;
+        var rows = mod.getTableRows();
+        var cols = mod.getTableColumns();
+        var down = target.top !== src.top || target.bottom !== src.bottom;
+        var across = target.left !== src.left || target.right !== src.right;
+        if (!down && !across) return;
+        var fieldAt = function (j) { return cols[j] && cols[j].getField(); };
+        var defAt = function (j) { return grid.colMap[fieldAt(j)]; };
+        var outside = function (lo, hi, a, b) {
+          var out = [];
+          for (var i = lo; i <= hi; i++) if (i < a || i > b) out.push(i);
+          return out;
+        };
+        var existing, cells = [];
+        if (down) {
+          var tRows = outside(target.top, target.bottom, src.top, src.bottom);
+          existing = tRows.map(function (r) { return rows[r]; });
+          var pos = tRows.map(function (r) { return r - src.top; });
+          for (var j = src.left; j <= src.right; j++) {
+            var c = defAt(j);
+            if (!c || c.readonly) continue;
+            var vals = [];
+            for (var r = src.top; r <= src.bottom; r++) vals.push(rows[r].getData()[c.field]);
+            cells.push({c: c, values: fillValues(vals, pos, copy)});
+          }
+        } else {
+          existing = [];
+          var srcRows = [];
+          for (var r2 = src.top; r2 <= src.bottom; r2++) {
+            existing.push(rows[r2]);
+            var v2 = [];
+            for (var j2 = src.left; j2 <= src.right; j2++) {
+              var d2 = defAt(j2);
+              v2.push(d2 ? rows[r2].getData()[d2.field] : null);
+            }
+            srcRows.push(v2);
+          }
+          outside(target.left, target.right, src.left, src.right).forEach(function (tc) {
+            var c = defAt(tc);
+            if (!c || c.readonly) return;
+            var values = srcRows.map(function (v) {
+              var x = fillText(fillValues(v, [tc - src.left], copy)[0]);
+              return isBlank(x) ? null : normalizeValue(c, x);
+            });
+            cells.push({c: c, values: values});
+          });
+        }
+        if (!cells.length || !existing.length) return;
+        // SELECT THE SELECTION AND WHAT WAS FILLED (REAL COLUMNS ONLY)
+        var lo = target.left, hi = target.right;
+        while (lo < hi && !defAt(lo)) lo++;
+        while (hi > lo && !defAt(hi)) hi--;
+        writeBlock(existing[0].getComponent().getCell(cells[0].c.field), existing, 0, cells, {
+          label: "fill",
+          select: [rows[target.top].getComponent(), rows[target.bottom].getComponent(),
+                   fieldAt(lo), fieldAt(hi)]
+        });
+      }
+
       // one question for all the pasted values that do not fit their columns
-      function pasteGuard(anchorCell, problems, decide) {
+      function pasteGuard(anchorCell, problems, decide, label) {
+        var fill = label === "fill";
         var total = problems.reduce(function (a, p) { return a + p.n; }, 0);
         var text = problems.every(function (p) { return canBecomeText(p.c); });
         var box = document.createElement("div");
         box.className = "editr-popup editr-guard";
         box.setAttribute("role", "alertdialog");
-        box.setAttribute("aria-label", "Pasted values do not match the column types");
+        box.setAttribute("aria-label", (fill ? "Filled" : "Pasted") +
+                         " values do not match the column types");
         box.innerHTML =
           '<div class="editr-guard-msg"><span class="editr-guard-icon">' + ICONS.alert +
-          '</span><div><div class="editr-guard-title">' + total + ' pasted value' +
+          '</span><div><div class="editr-guard-title">' + total +
+          (fill ? ' filled value' : ' pasted value') +
           (total === 1 ? " does" : "s do") + ' not fit ' +
           (problems.length === 1 ? "the column" : "their columns") + '</div>' +
           problems.map(function (p) {
@@ -1920,7 +3158,8 @@
           (text ? '<button type="button" class="btn btn-outline-secondary btn-sm" data-act="text">Convert ' +
             (problems.length === 1 ? escapeHTML(problems[0].c.title) : "those columns") +
             ' to text</button>' : '') +
-          '<button type="button" class="btn btn-link btn-sm" data-act="cancel">Cancel paste</button></div>';
+          '<button type="button" class="btn btn-link btn-sm" data-act="cancel">Cancel ' +
+          (fill ? "fill" : "paste") + '</button></div>';
         var decided = false;
         box.addEventListener("click", function (e) {
           var act = e.target.closest && e.target.closest("[data-act]");
@@ -1974,13 +3213,16 @@
         var picks = Object.keys(grid.picks || {}).filter(function (f) {
           return grid.colMap[f];
         }).map(function (f) { return {field: f, pick: grid.picks[f]}; });
+        var conditions = (grid.conditions || []).filter(function (r) {
+          return grid.colMap[r.field];
+        }).map(function (r) { return {field: r.field, cond: r}; });
         return picks.concat(grid.table.getHeaderFilters().filter(function (f) {
           var v = f.value;
           if (v === "" || v === null || v === undefined) return false;
           if (Array.isArray(v)) return v.length > 0;
           if (typeof v === "object") return v.min !== "" || v.max !== "";
           return true;
-        }));
+        }), conditions);
       }
 
       function updateStatus() {
@@ -2004,33 +3246,35 @@
       }
 
       function chipText(f) {
+        if (f.cond) return conditionText(f.cond);
         var c = grid.colMap[f.field] || {title: f.field};
+        var name = columnName(c);
         var v = f.value;
         if (f.pick) {
           var p = f.pick;
-          if (p.kind === "missing") return c.title + " is missing";
+          if (p.kind === "missing") return name + " is missing";
           if (p.kind === "range") {
-            return p.below ? p.lo + " \u2264 " + c.title + " < " + p.hi :
-              c.title + " " + p.lo + "\u2013" + p.hi;
+            return p.below ? p.lo + " \u2264 " + name + " < " + p.hi :
+              name + " " + p.lo + "\u2013" + p.hi;
           }
-          if (p.kind === "prefix") return c.title + " in " + p.value;
-          return c.title + " is " + (valueLabel(c, p.value) || p.value);
+          if (p.kind === "prefix") return name + " in " + p.value;
+          return name + " is " + (valueLabel(c, p.value) || p.value);
         }
         if (Array.isArray(v)) {
           var vals = v.map(function (x) { return valueLabel(c, x) || String(x); });
-          if (vals.length === 1) return c.title + " is " + vals[0];
-          return c.title + " is " + vals.slice(0, -1).join(", ") + " or " +
+          if (vals.length === 1) return name + " is " + vals[0];
+          return name + " is " + vals.slice(0, -1).join(", ") + " or " +
             vals[vals.length - 1];
         }
         if (typeof v === "object") {
           if (v.min !== "" && v.max !== "" && v.below) {
-            return v.min + " \u2264 " + c.title + " < " + v.max;
+            return v.min + " \u2264 " + name + " < " + v.max;
           }
-          if (v.min !== "" && v.max !== "") return c.title + " " + v.min + "\u2013" + v.max;
-          if (v.min !== "") return c.title + " \u2265 " + v.min;
-          return c.title + " \u2264 " + v.max;
+          if (v.min !== "" && v.max !== "") return name + " " + v.min + "\u2013" + v.max;
+          if (v.min !== "") return name + " \u2265 " + v.min;
+          return name + " \u2264 " + v.max;
         }
-        return c.title + " contains \u201c" + v + "\u201d";
+        return name + " contains \u201c" + v + "\u201d";
       }
 
       function renderChips() {
@@ -2038,7 +3282,9 @@
         if (!box) return;
         box.innerHTML = "";
         var filters = activeFilters();
-        filters.forEach(function (f) {
+        // many filters would push the grid down: the dialog lists the rest
+        var few = filters.length > MAX_CHIPS ? filters.slice(0, MAX_CHIPS - 1) : filters;
+        few.forEach(function (f) {
           var chip = document.createElement("span");
           chip.className = "editr-chip";
           var text = document.createElement("span");
@@ -2050,7 +3296,10 @@
           x.setAttribute("aria-label", "Remove filter " + chipText(f));
           x.innerHTML = ICONS.x;
           x.addEventListener("click", function () {
-            if (f.pick) {
+            if (f.cond) {
+              grid.conditions.splice(grid.conditions.indexOf(f.cond), 1);
+              grid.table.refreshFilter();
+            } else if (f.pick) {
               delete grid.picks[f.field];
               grid.table.refreshFilter();
             } else {
@@ -2060,6 +3309,15 @@
           chip.appendChild(x);
           box.appendChild(chip);
         });
+        if (few.length < filters.length) {
+          var more = document.createElement("button");
+          more.type = "button";
+          more.className = "editr-chip-clear editr-chip-more";
+          more.textContent = "+" + (filters.length - few.length) + " more";
+          more.title = "See every filter";
+          more.addEventListener("click", function () { el.__editr.filterDialog.open(); });
+          box.appendChild(more);
+        }
         if (filters.length > 1) {
           var clear = document.createElement("button");
           clear.type = "button";
@@ -2067,11 +3325,15 @@
           clear.textContent = "Clear filters";
           clear.addEventListener("click", function () {
             grid.picks = {};
+            grid.conditions = [];
             grid.table.refreshFilter();
             grid.table.clearHeaderFilter();
           });
           box.appendChild(clear);
         }
+        setText(grid.ui.filter_count, filters.length ? filters.length : "");
+        var btn = byId(grid.ui.filter_btn);
+        if (btn) btn.classList.toggle("editr-tool-on", filters.length > 0);
       }
 
       // tell R which rows/columns are on screen (for "return what's on
@@ -2269,6 +3531,14 @@
             el.__editr.openColumns(cols);
           });
         }
+        var filt = byId(grid.ui.filter_btn);
+        if (filt && !filt.__editrBound) {
+          filt.__editrBound = true;
+          filt.addEventListener("click", function () {
+            el.__editr.filterDialog.open();
+          });
+        }
+        bindFilterDialog();
       }
 
       /* ---------------------------------------------------------------- */
@@ -2343,6 +3613,26 @@
           });
           input.setAttribute("list", dl.id);
           input.editrList = dl;
+        } else if (o.type === "colour") {
+          // the text box with a swatch that opens the colour picker
+          input = document.createElement("input");
+          input.type = "text";
+          input.value = formValue(c, v);
+          var pick = document.createElement("input");
+          pick.type = "color";
+          pick.className = "editr-form-colour";
+          pick.setAttribute("aria-label", "Pick a colour for " + c.title);
+          pick.value = colourHex(input.value) || "#000000";
+          pick.disabled = !!c.readonly;
+          pick.addEventListener("change", function () {
+            input.value = pick.value;
+            input.dispatchEvent(new Event("change"));
+          });
+          input.addEventListener("input", function () {
+            var hex = colourHex(input.value);
+            if (hex) pick.value = hex;
+          });
+          input.editrList = pick;
         } else {
           input = document.createElement("input");
           input.type = o.type === "password" ? "password" :
@@ -2513,11 +3803,21 @@
               input.value = formValue(c, v);
             }
           }
+          var pick = wrap.querySelector(".editr-form-colour");
+          if (pick && input) pick.value = colourHex(input.value) || "#000000";
           var key = data[ID] + "|" + field;
           var bad = invalidReason(c, v);
           var problem = grid.problems[key];
           var msg = wrap.querySelector(".editr-form-msg");
           msg.textContent = bad ? "\u201c" + v + "\u201d " + bad : (problem || "");
+          var note = wrap.querySelector(".editr-form-comment");
+          var comment = grid.comments[key];
+          if (!note && comment) {
+            note = document.createElement("div");
+            note.className = "editr-form-comment";
+            wrap.appendChild(note);
+          }
+          if (note) note.textContent = comment ? "\ud83d\udcac " + comment.text : "";
           wrap.classList.toggle("editr-form-bad", !!(bad || problem));
           wrap.classList.toggle("editr-form-changed", !!grid.changed[key]);
         });
@@ -2609,6 +3909,16 @@
           } else if (method === "set_summary") {
             grid.summary = args.summary || {};
             fillSummaries();
+          } else if (method === "set_comments") {
+            var before = grid.comments;
+            grid.comments = commentSet(args);
+            var touchedC = {};
+            Object.keys(before).concat(Object.keys(grid.comments)).forEach(function (k) {
+              var a = before[k], b = grid.comments[k];
+              if (!a || !b || a.text !== b.text) touchedC[k.split("|")[0]] = true;
+            });
+            reformatRows(Object.keys(touchedC).map(Number));
+            if (formVisible()) refreshForm();
           } else if (method === "set_problems") {
             var nextP = problemMap(args);
             var touchedP = {};
@@ -2648,8 +3958,17 @@
         grid.changed = {};
         toArray(opts.changed).forEach(function (k) { grid.changed[k] = true; });
         grid.problems = problemMap(opts.problems);
+        grid.comments = commentSet(opts.comments);
+        grid.rColours = {};
+        if (opts.colours) {
+          var hex = toArray(opts.colours.hex);
+          toArray(opts.colours.names).forEach(function (n, i) {
+            grid.rColours[String(n).toLowerCase().replace(/\s+/g, "")] = hex[i];
+          });
+        }
         grid.summary = opts.summary_data || {};
         grid.picks = {};
+        grid.conditions = [];
         var pref = null;
         try { pref = window.localStorage.getItem("DataEditR.summary"); } catch (e) {}
         grid.summaryOn = opts.summary !== false && pref !== "off";
@@ -2699,6 +4018,7 @@
           selectableRangeRows: true,
           selectableRangeClearCells: true,
           selectableRangeClearCellsValue: null,
+          selectableRangeFill: true,
           editTriggerEvent: "dblclick",
           clipboard: true,
           clipboardCopyStyled: false,
@@ -2720,11 +4040,13 @@
         table.on("tableBuilt", function () {
           grid.ready = true;
           table.addFilter(pickFilter);
+          table.addFilter(conditionFilter);
           var queued = pending[el.id] || [];
           delete pending[el.id];
           queued.forEach(function (m) { grid.handle(m.method, m.args || {}); });
           patchRowDisplayed(table);
           patchScrollToRow(table);
+          patchFillHandle(table);
           var add = holder.querySelector(".editr-addrow");
           if (add) add.addEventListener("click", addRowAtEnd);
           bindUI();
@@ -2736,8 +4058,9 @@
         // rows added while a filter is active stay visible until the user
         // changes the filters; then every row is judged afresh
         table.on("dataFiltering", function () {
+          prepareConditions();
           var key = JSON.stringify(activeFilters().map(function (f) {
-            return [f.field, f.value];
+            return [f.field, f.value, f.pick, f.cond];
           }));
           if (key !== grid.filterKey) {
             grid.filterKey = key;
@@ -2841,6 +4164,19 @@
       el.addEventListener("dragstart", function (e) {
         if (e.target && e.target.closest && e.target.closest(".tabulator-editing")) {
           e.preventDefault();
+        }
+      }, true);
+
+      // Shift+F2 comments on the selected cell (as in spreadsheets)
+      el.addEventListener("keydown", function (e) {
+        if (e.key !== "F2" || !e.shiftKey || grid.opts.comments === false) return;
+        var t = e.target;
+        if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA")) return;
+        var cell = activeCell();
+        if (cell && grid.colMap[cell.getField()]) {
+          e.preventDefault();
+          e.stopPropagation();
+          openComment(cell);
         }
       }, true);
 

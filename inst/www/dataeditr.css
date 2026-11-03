@@ -306,6 +306,10 @@
    toolbar on one line for longer */
 .editr-toolbar {
   container-type: inline-size;
+  /* a container can be a stacking context (Chromium 123 is, 153 is not), and
+     so is the grid, which comes later: keep the toolbar's menus over the grid */
+  position: relative;
+  z-index: 5;
 }
 
 @container (max-width: 1060px) {
@@ -415,6 +419,136 @@
 
 .editr-open-dims .shiny-input-container {
   flex: 0 0 72px;
+}
+
+/* filter dialog ------------------------------------------------------------- */
+
+.editr-fd-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.5fr) 31px;
+  gap: 8px;
+  align-items: start;
+  padding: 4px 0;
+}
+
+.editr-fd-value {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.editr-fd-value > input {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.editr-fd-value > span {
+  color: #52606D;
+  font-size: 12px;
+}
+
+.editr-fd-tags {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 31px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border: 1px solid #D5D9DF;
+  border-radius: 4px;
+  background: #FFFFFF;
+  cursor: text;
+}
+
+.editr-fd-tags:focus-within {
+  border-color: #1D4ED8;
+  box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.15);
+}
+
+.editr-fd-tags input {
+  flex: 1 1 70px;
+  min-width: 70px;
+  height: 24px;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: #1F2933;
+  font-size: 12px;
+}
+
+.editr-fd-tags .editr-chip {
+  height: 24px;
+  max-width: 100%;
+  padding-left: 8px;
+  font-size: 12px;
+}
+
+.editr-fd-tags .editr-chip > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.editr-fd-remove {
+  width: 31px;
+  height: 31px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  color: #52606D;
+}
+
+.editr-fd-remove:hover {
+  background: #F6F7F9;
+  color: #1F2933;
+}
+
+.editr-fd-msg {
+  grid-column: 3 / -1;
+  color: #B42318;
+  font-size: 12px;
+}
+
+.editr-fd-msg:empty {
+  display: none;
+}
+
+.editr-filter-dialog .modal-body {
+  padding-top: 8px;
+}
+
+.editr-filter-dialog .modal-footer {
+  justify-content: flex-start;
+}
+
+.editr-fd-count {
+  flex: 1 1 200px;
+  min-width: 0;
+  color: #52606D;
+  font-size: 12px;
+  text-align: right;
+}
+
+@media (max-width: 640px) {
+  .editr-fd-row {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 31px;
+  }
+  .editr-fd-value {
+    grid-column: 1 / 3;
+    grid-row: 2;
+  }
+  .editr-fd-msg {
+    grid-column: 1 / -1;
+  }
+  .editr-fd-count {
+    flex-basis: 100%;
+    order: -1;
+    text-align: left;
+  }
 }
 
 /* body: grid + review panel ------------------------------------------------ */
@@ -656,6 +790,88 @@ button.editr-change-title:hover {
   padding: 24px 8px;
   color: #52606D;
   text-align: center;
+}
+
+/* HISTORY - EARLIER SESSIONS (data_edit(log = ) or dataEditServer(history = )) */
+.editr-empty.editr-session-none {
+  padding: 4px 0 8px;
+  text-align: left;
+}
+
+.editr-sessions-head {
+  margin-top: 18px;
+}
+
+.editr-sessions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.editr-session > summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  padding: 7px 10px 7px 28px;
+  position: relative;
+  border-radius: 8px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.editr-session > summary::-webkit-details-marker {
+  display: none;
+}
+
+.editr-session > summary::before {
+  content: "";
+  position: absolute;
+  left: 11px;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  margin-top: -4px;
+  border-right: 1.5px solid #52606D;
+  border-bottom: 1.5px solid #52606D;
+  transform: rotate(-45deg);
+  transition: transform 0.15s;
+}
+
+.editr-session[open] > summary::before {
+  transform: rotate(45deg);
+}
+
+.editr-session > summary:hover {
+  background: #F1F3F5;
+}
+
+.editr-session > summary:focus-visible {
+  outline: 2px solid #2563EB;
+  outline-offset: -2px;
+}
+
+.editr-session-when {
+  color: #1F2933;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.editr-session-who {
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: #E9ECF0;
+  color: #3E4C59;
+  font-size: 12px;
+}
+
+.editr-session > summary .editr-muted {
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.editr-session > .editr-history {
+  margin: 4px 0 10px;
 }
 
 .editr-code {
@@ -991,6 +1207,19 @@ button.editr-change-title:hover {
   font-size: 10px;
 }
 
+/* colour fields: the text box with the colour picker next to it */
+.editr-form-field:has(> .editr-form-colour) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.editr-form-field:has(> .editr-form-colour) > label,
+.editr-form-field:has(> .editr-form-colour) > .editr-form-msg,
+.editr-form-field:has(> .editr-form-colour) > .editr-form-comment {
+  grid-column: 1 / -1;
+}
+
 .editr-form-field.editr-form-changed .editr-form-input {
   background-color: #EFF5FF;
 }
@@ -1040,4 +1269,12 @@ button.editr-change-title:hover {
 
 .editr-load-row .form-group {
   margin-bottom: 0;
+}
+
+/* record form: the comment of a field */
+.editr-form-comment {
+  margin-top: 2px;
+  color: #92400E;
+  font-size: 12px;
+  white-space: pre-wrap;
 }

@@ -184,14 +184,25 @@ Click and drag (or `Shift` + click) to select a range of cells. The status bar s
 screenshot("ranges.gif")
 ```
 
-`Ctrl+D` replaces the "drag to fill" handle of earlier versions of **DataEditR**: select the cell to copy together with the cells below it and press `Ctrl+D` (or choose `Fill down` from the right-click menu).
+To fill cells like in a spreadsheet, drag the small square at the bottom-right corner of the selection down, up or across. The cells it passes over are outlined and filled when you let go:
+
+* One selected value is copied into every cell.
+* Two or more numbers, dates or texts ending in a number that go up (or down) by the same step carry on as a series: `1, 2` gives `3, 4, 5`, a week of dates gives the following weeks, month ends give the following month ends and `Week 1, Week 2` gives `Week 3, Week 4`.
+* Anything else is repeated, e.g. `TRUE, FALSE, TRUE, FALSE`.
+* Hold `Ctrl` when you let go to copy the selection without carrying on a series.
+
+Like a paste, a fill is one step that can be undone and values that do not fit a column are asked about first. `Ctrl+D` (or `Fill down` in the right-click menu) copies the first row of the selection into the rows below it.
+
+```{r, echo = FALSE, fig.align = "center", out.width = "100%"}
+screenshot("fill.gif")
+```
 
 ### 3.3 Copy and paste with spreadsheets
 
 Copy cells in Excel, Google Sheets, LibreOffice or any other software that copies tables as text, click a cell in the data editor and press `Ctrl+V`:
 
 * The block is pasted from the selected cell. Selecting a larger range that is a multiple of the block (e.g. ten cells for a single value) fills the range by repeating the block.
-* If the block has more rows than there are below the selected cell, rows are added at the end of the data (unless `row_edit = FALSE`). Values beyond the last column are ignored.
+* If the block has more rows than there are below the selected cell, rows are added at the end of the data (unless `row_edit = FALSE`). If it has more columns than there are to the right, columns named `V1`, `V2`, ... are added at the end (unless `col_edit = FALSE`), in the same step.
 * Line endings from Windows, Mac or Linux, the line break that spreadsheets add after the last row, and cells containing line breaks, tabs or quotes are all handled.
 * Values are converted to the type of their column. Formatted numbers such as `1,234.5`, `$12.50` or `45%` become `1234.5`, `12.5` and `0.45`. Dates such as `15/03/2024`, `15.03.2024` or `2024/3/15` become `2024-03-15`: whether the day or the month comes first is worked out from values such as `15/03` that can only be read one way, and otherwise follows the language of your browser (month first for US English). `yes`/`no`, `TRUE`/`FALSE` and `1`/`0` become logicals.
 * If some values still do not fit their column (for example `n/a` in a numeric column, or a value that is not one of the options of a dropdown menu), the data editor asks once for the whole paste whether to store them as missing values, convert the column to text or cancel the paste.
@@ -362,6 +373,30 @@ screenshot("record.png")
 
 Changes made in the form are ordinary edits: they can be undone, are listed in the review panel and appear in the code.
 
+### 3.14 Comments on cells
+
+Right-click a cell and choose `Add comment` (or select it and press `Shift+F2`) to leave a comment on it: why a value was changed, what still needs checking or where it came from. Press `Ctrl+Enter` or `Save` to keep the comment and `Escape` to close it without saving. Commented cells have an amber corner; rest the pointer on the cell (or open the record form) to read the comment, and right-click it to edit or delete it. To start afresh, right-click any cell and choose `Delete all comments`; the editor asks first, as deleted comments cannot be brought back with undo.
+
+```{r, echo = FALSE, fig.align = "center", out.width = "100%"}
+screenshot("comments.png")
+```
+
+Comments are returned with the data as the `comments` attribute, a data frame with the `row` (its number in the returned data), the `column`, the `comment`, the `user` who wrote it and the `time`. Data that has this attribute opens with its comments, so they can be kept from one session to the next. Rows can also be given by their row names:
+
+```{r, eval = FALSE}
+cars <- data_edit(mtcars)
+attr(cars, "comments")
+#>   row column                       comment user                time
+#> 1   3    mpg Checked against the 1974 table  ana 2026-11-02 09:27:27
+
+# Comments of your own
+attr(mtcars, "comments") <- data.frame(row = "Datsun 710", column = "mpg",
+                                       comment = "Checked against the 1974 table")
+data_edit(mtcars)
+```
+
+Comments are kept in [drafts](#unsaved-changes-are-kept) with the changes, but they are not changes to the data: they are not undone and not listed in the review panel.
+
 ## 4. Data Creation
 
 You can also use `data_edit()` to interactively create data.frames from scratch without any coding.
@@ -404,7 +439,7 @@ The columns of a template are typed automatically when the data is returned, so 
 
 ## 5. Data Filtering
 
-`data_edit()` makes it easy to view and edit a subset of your data: filter rows by typing under the column headers and show or hide columns from the `Columns` menu. Edits made to a subset are applied directly to the complete dataset.
+`data_edit()` makes it easy to view and edit a subset of your data: filter rows by typing under the column headers or in the `Filter` dialog, and show or hide columns from the `Columns` menu. Edits made to a subset are applied directly to the complete dataset.
 
 ### 5.1 Row filtering
 
@@ -414,13 +449,39 @@ Every column has a filter box under its name and the box depends on the type of 
 * **columns with a few distinct values** (e.g. `cyl` or `gear`) have a list to pick one or more values (`Any` means no filter);
 * **text** columns keep values that contain what you type.
 
-Clicking a bar of a column's summary (see [Column summaries](#column-summaries)) sets its filter for you, and clicking the share of missing values shows only the rows where the value is missing. Rows must match every filter to be shown. Active filters are listed as chips in the toolbar; click the `x` on a chip to remove that filter or `Clear filters` to remove them all. The status bar shows how many of the rows are on screen.
+Clicking a bar of a column's summary (see [Column summaries](#column-summaries)) sets its filter for you, and clicking the share of missing values shows only the rows where the value is missing. Rows must match every filter to be shown. Active filters are listed as chips in the toolbar; click the `x` on a chip to remove that filter or `Clear filters` to remove them all. With more than four filters the toolbar shows the first three and a `+2 more` button that opens the `Filter` dialog. The status bar shows how many of the rows are on screen.
 
 ```{r, echo = FALSE, fig.align = "center", out.width = "100%"}
 screenshot("filter-rows.gif")
 ```
 
-### 5.2 Column selection
+### 5.2 Filter dialog
+
+Click `Filter` in the toolbar to see and change every filter in one place, which is the easiest way to build a complex combination of filters. Each row of the dialog is one filter: a column, a logic and a value. Click `Add filter` for another row and the `x` at the end of a row to remove it. Rows must match every filter, and a column can have more than one filter.
+
+```{r, echo = FALSE, fig.align = "center", out.width = "100%"}
+screenshot("filter-dialog.png")
+```
+
+| Logic                                                                    | Keeps the rows where the value                  | Columns               |
+|--------------------------------------------------------------------------|-------------------------------------------------|-----------------------|
+| `equal`, `not equal`                                                     | is (or is not) one of the values                | all                   |
+| `greater than`, `less than`, `greater than or equal`, `less than or equal` | compares that way with the value                | numbers, dates, times |
+| `between`, `not between`                                                 | lies (or does not lie) between two values       | numbers, dates, times |
+| `contain`, `not contain`                                                 | includes (or does not include) any of the texts | all except logicals   |
+| `matches regex`, `not matches regex`                                     | matches (or does not match) the pattern         | all except logicals   |
+| `is missing`, `is not missing`                                           | is (or is not) missing                          | all                   |
+
+* `equal`, `not equal`, `contain` and `not contain` take several values: type a value and press `Enter`, or pick one of the values of the column from the list. `NA` matches missing values.
+* `between` includes both of its values, like `dplyr::between()` and the boxes under the column headers, and they can be given in either order. Use `greater than` and `less than` to leave them out.
+* `contain` looks for plain text and ignores case, so `merc` finds `Merc 230`. `matches regex` takes a regular expression and respects case, so `^Merc [0-9]+$` finds `Merc 230` and not `Merc 450SE`. The patterns are JavaScript regular expressions, so classes such as `[[:alpha:]]` are written `[a-zA-Z]`.
+* The logics starting with `not` also keep rows where the value is missing.
+
+The dialog shows how many rows match while you work, and nothing changes until you press `Apply`, so `Cancel` leaves your filters as they were. A filter without a value is ignored, and `Clear all` removes every row of the dialog.
+
+Filters set under the column headers or from a column's summary are listed in the dialog as well. They stay where they are if you leave them unchanged; if you change one it becomes a filter of the dialog and its box under the header is cleared. Filters of the dialog are shown as chips with the others.
+
+### 5.3 Column selection
 
 Click `Columns` in the toolbar to show or hide columns, or choose `Hide column` from the menu of a column header. `Show all` and `Hide all` change every column at once, and the button shows how many columns are visible.
 
@@ -430,11 +491,11 @@ screenshot("select-columns.gif")
 
 Columns can also be hidden before the data editor opens (`col_hide`, see [Read-only and hidden columns](#read-only-and-hidden-columns)); those columns are not listed in the `Columns` menu and cannot be shown by the user.
 
-### 5.3 Edits apply to the complete dataset
+### 5.4 Edits apply to the complete dataset
 
 Filtered rows and hidden columns are only *views* onto your data, so any change you make while a filter is active is made directly to the complete dataset, without requiring any additional action (earlier versions of **DataEditR** needed a *sync* button for this). Rows added while a filter is active stay visible until the filters change, so you can fill them in even if they do not match the filters yet.
 
-### 5.4 Return or export data subsets
+### 5.5 Return or export data subsets
 
 `data_edit()` will return the complete dataset as an R object for downstream use by default. If you would like to return just the rows and columns that are on screen, open the menu next to the `Done` button and choose `Only what's on screen` before pressing `Done`. The menu shows the size of the data that each option returns.
 
@@ -657,7 +718,11 @@ screenshot("col-types.gif")
 * **Numbers within limits** (`c(min = , max = , step = )`): values outside the limits are flagged, and the `step` sets how much the arrows of the number box change the value.
 * **Sliders and ratings** (`"slider"`, `"rating"`): a bar shows each value; double-click to drag the slider (or use the arrow keys) or to click a star. Clear a cell with `Delete` to store a missing value.
 * **Web addresses** (`"url"`): addresses starting with `http://`, `https://` or `mailto:` get a button that opens them in a new tab; double-click the cell to edit the address.
-* **Colours** (`"colour"`): a swatch is shown for colours the browser understands, i.e. hex codes such as `"#1D4ED8"` and CSS colour names such as `"orange"` (some R colour names, such as `"grey50"`, are shown without a swatch).
+* **Colours** (`"colour"`): a swatch is shown next to each colour, for R colour names such as `"grey50"` or `"steelblue"` and hex codes such as `"#1D4ED8"`; values that are not colours get a dashed swatch. Double-click a cell to type a colour or pick one: the swatches offer the colours already in the column, R's palette and the colour-blind-safe Okabe-Ito palette, and `Other colour...` opens the browser's colour picker. Set the swatches with e.g. `list(type = "colour", palette = c("steelblue", "darkorange", "#009E73"))`.
+
+```{r, echo = FALSE, fig.align = "center", out.width = "100%"}
+screenshot("colour-picker.png")
+```
 
 ### 7.6 Validation rules
 
@@ -811,6 +876,12 @@ log[, c("time", "user", "how", "row", "column", "old", "new", "note")]
 #>                       time user   how row column old  new                            note
 #> 1 2026-11-01 14:02:11+1100  ana  edit   3     pH 7.9  7.4 Re-measured, meter recalibrated
 #> 2 2026-11-01 14:03:40+1100  ana paste  12   mass 1.2 1.25                            <NA>
+```
+
+Each editing session gets its own `session` value (when it started), and the `History` tab lists the earlier sessions of the same data kept in the file below the changes of this session, newest first. Click a session to see its steps and notes:
+
+```{r, echo = FALSE, fig.align = "center", out.width = "100%"}
+screenshot("history-sessions.png")
 ```
 
 `log` can also be a function, which is called with the log as a data frame, for example to write it to a database. Nothing is written when `Cancel` is pressed. The user name is the name you are logged in with; set `options(DataEditR.user = "Your Name")` to record another name.

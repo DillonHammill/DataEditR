@@ -127,13 +127,18 @@ data_code_pipes <- function(x, x_edit, rowname_col = NULL) {
   # DETECT COLUMN CHANGES
   col_changes <- data_code_columns(orig_cols, edit_cols)
 
-  # DETECT ROW CHANGES
-  removed_rows <- setdiff(orig_rows, edit_rows)
-  added_rows <- setdiff(edit_rows, orig_rows)
-  shared_rows <- intersect(orig_rows, edit_rows)
-
-  # REMAINING ROWS AFTER REMOVAL (PRESERVING ORDER)
-  remaining_rows <- orig_rows[!orig_rows %in% removed_rows]
+  # DETECT ROW CHANGES (NONE WHEN THE ROWS ARE THE SAME)
+  if (identical(orig_rows, edit_rows)) {
+    removed_rows <- added_rows <- character(0)
+    shared_rows <- remaining_rows <- orig_rows
+  } else {
+    in_edit <- orig_rows %in% edit_rows
+    removed_rows <- unique(orig_rows[!in_edit])
+    added_rows <- unique(edit_rows[!edit_rows %in% orig_rows])
+    shared_rows <- unique(orig_rows[in_edit])
+    # REMAINING ROWS AFTER REMOVAL (PRESERVING ORDER)
+    remaining_rows <- orig_rows[in_edit]
+  }
 
   # BUILD PIPE OPERATIONS
   pipes <- c()
@@ -214,29 +219,33 @@ data_code_pipes <- function(x, x_edit, rowname_col = NULL) {
   check_cols_orig <- setdiff(orig_cols, col_changes$removed)
 
   # Indices within remaining_rows that are shared with edited data
-  shared_indices <- which(remaining_rows %in% shared_rows)
+  shared_indices <- seq_along(remaining_rows)
+  # ROWS ARE LOOKED UP BY POSITION ([.data.frame MATCHES ROW NAMES SLOWLY)
+  shared_row_names <- remaining_rows[shared_indices]
+  pos_orig <- match(shared_row_names, orig_rows)
+  pos_edit <- match(shared_row_names, edit_rows)
+  in_place <- identical(pos_orig, pos_edit) &&
+    identical(pos_orig, seq_len(nrow(x))) && nrow(x) == nrow(x_edit)
 
   mutate_ops <- c()
   for (orig_col in check_cols_orig) {
     edit_col <- col_name_map[orig_col]
     if (!edit_col %in% edit_cols) next
 
-    # Vectorized comparison for shared rows
-    shared_row_names <- remaining_rows[shared_indices]
     # CODES OF VALUE-LABELLED COLUMNS (SPSS USER-DEFINED MISSING VALUES ARE
     # VALUES, NOT NA)
-    orig_vals <- as.character(plain_values(x[shared_row_names, orig_col]))
-    edit_vals <- as.character(plain_values(x_edit[shared_row_names, edit_col]))
-    # Handle NA values: NA != NA returns NA, so use explicit NA check
-    differs <- (is.na(orig_vals) != is.na(edit_vals)) |
-      (!is.na(orig_vals) & !is.na(edit_vals) & orig_vals != edit_vals)
-    changed <- which(differs)
+    orig_col_vals <- plain_values(x[[orig_col]])
+    edit_col_vals <- plain_values(x_edit[[edit_col]])
+    # UNCHANGED COLUMNS OF UNCHANGED ROWS
+    if (in_place && identical(orig_col_vals, edit_col_vals)) next
+    edit_vals <- edit_col_vals[pos_edit]
+    changed <- code_changed(orig_col_vals[pos_orig], edit_vals)
 
     if (length(changed) > 0) {
       # Positions relative to remaining_rows (post-slice)
       positions <- shared_indices[changed]
       values <- vapply(
-        plain_values(x_edit[shared_row_names[changed], edit_col]),
+        edit_vals[changed],
         data_code_value,
         character(1)
       )
@@ -274,7 +283,7 @@ data_code_pipes <- function(x, x_edit, rowname_col = NULL) {
     # Use only rows that exist in x_edit
     safe_rows <- remaining_rows[remaining_rows %in% edit_rows]
     for (col in col_changes$added) {
-      vals <- plain_values(x_edit[safe_rows, col])
+      vals <- plain_values(x_edit[[col]])[match(safe_rows, edit_rows)]
       val_str <- paste(
         vapply(vals, data_code_value, character(1)),
         collapse = ", "
@@ -315,7 +324,7 @@ data_code_pipes <- function(x, x_edit, rowname_col = NULL) {
     n_rows <- length(remaining_rows[remaining_rows %in% edit_rows])
     for (k in seq_along(added_rows)) {
       row <- added_rows[k]
-      row_data <- x_edit[row, , drop = FALSE]
+      row_data <- x_edit[match(row, edit_rows), , drop = FALSE]
       vals <- c()
       # Include row name column if row names are meaningful
       if (has_rownames) {
@@ -572,10 +581,38 @@ data_code_quote <- function(x) {
 #'
 #' @noRd
 data_code_has_rownames <- function(x) {
-  rn <- rownames(x)
+  # DATA FRAMES: LOOK AT THE ROW NAMES AS STORED (rownames() WOULD TURN
+  # 100,000 NUMBERS INTO TEXT)
+  rn <- if (is.data.frame(x)) .row_names_info(x, type = 0L) else rownames(x)
   if (is.null(rn) || length(rn) == 0) return(FALSE)
-  # Default row names are "1", "2", ..., "n"
-  !identical(rn, as.character(seq_len(nrow(x))))
+  # Default row names are "1", "2", ..., "n" (stored compactly as c(NA, -n))
+  if (is.integer(rn)) {
+    if (length(rn) == 2 && is.na(rn[1])) return(FALSE)
+    return(!identical(rn, seq_len(nrow(x))))
+  }
+  !identical(as.character(rn), as.character(seq_len(nrow(x))))
+}
+
+#' Rows whose values differ between two columns, compared as text (as they
+#' are written in the code) but only where the values themselves differ
+#' @noRd
+code_changed <- function(a, b) {
+  ra <- unclass(a)
+  rb <- unclass(b)
+  same_kind <- (is.numeric(ra) && is.numeric(rb)) ||
+    (is.logical(ra) && is.logical(rb)) ||
+    (is.character(ra) && is.character(rb))
+  cand <- if (same_kind && !is.factor(a) && !is.factor(b)) {
+    na_a <- is.na(ra)
+    na_b <- is.na(rb)
+    which(na_a != na_b | (!na_a & !na_b & ra != rb))
+  } else {
+    seq_along(a)
+  }
+  if (length(cand) == 0) return(integer(0))
+  sa <- as.character(a[cand])
+  sb <- as.character(b[cand])
+  cand[(is.na(sa) != is.na(sb)) | (!is.na(sa) & !is.na(sb) & sa != sb)]
 }
 
 ## FORMAT VALUE ----------------------------------------------------------------

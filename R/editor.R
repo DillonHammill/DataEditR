@@ -30,6 +30,9 @@ editr_prepare <- function(x,
                           track = NULL,
                           quiet = FALSE) {
 
+  # COMMENTS ON CELLS (SEE R/comments.R)
+  comments_in <- if (!is_db_input(x)) attr(x, "comments", exact = TRUE)
+
   # DATABASE TABLES
   db <- NULL
   if (is_db_input(x)) {
@@ -88,14 +91,23 @@ editr_prepare <- function(x,
   if (any(duplicated(colnames(x)))) {
     warning("Column names must be unique!")
   }
-  if (!is.null(col_readonly) && !all(col_readonly %in% colnames(x))) {
-    stop("'col_readonly' must contain valid column names.")
+  # SETTINGS FOR OTHER COLUMNS ARE IGNORED: THE SAME SETTINGS APPLY TO DATA
+  # OPENED LATER, WHICH MAY NOT HAVE THESE COLUMNS (AN ERROR WOULD STOP THE APP)
+  known <- function(nms, arg) {
+    bad <- setdiff(nms, colnames(x))
+    if (length(bad) > 0 && !quiet) {
+      message("Ignoring '", arg, "' for columns that are not in the data: ",
+              paste(bad, collapse = ", "), ".")
+    }
+    nms[nms %in% colnames(x)]
   }
-  if (!is.null(col_hide) && !all(col_hide %in% colnames(x))) {
-    stop("'col_hide' must contain valid column names.")
-  }
-  if (!is.null(col_options) && !all(names(col_options) %in% colnames(x))) {
-    stop("'col_options' must be named with valid column names.")
+  if (!is.null(col_readonly)) col_readonly <- known(col_readonly, "col_readonly")
+  if (!is.null(col_hide)) col_hide <- known(col_hide, "col_hide")
+  if (length(col_options) > 0) {
+    if (is.null(names(col_options)) || any(!nzchar(names(col_options)))) {
+      stop("'col_options' must be named by column.", call. = FALSE)
+    }
+    col_options <- col_options[known(names(col_options), "col_options")]
   }
 
   # FACTORS -> CHARACTER FOR EDITING (RETURNED AS FACTORS WITH THEIR LEVELS)
@@ -135,6 +147,7 @@ editr_prepare <- function(x,
 
   # ROW NAMES
   rn <- rownames(x)
+  rn_in <- if (.row_names_info(x) > 0) rn
   ids <- NULL
   rownames_col <- FALSE
   if (is.null(db) && .row_names_info(x) > 0) {
@@ -189,6 +202,8 @@ editr_prepare <- function(x,
   store$factors <- stats::setNames(factors, name_to_cid(names(factors)))
   col_attrs <- col_attrs[names(col_attrs) %in% names(x)]
   store$col_attrs <- stats::setNames(col_attrs, name_to_cid(names(col_attrs)))
+  store$comments <- comments_read(comments_in, names(x), state$ids, cids, rn_in)
+  store$comments_opened <- store$comments
   store$auto_type <- cids[auto]
   store$changed <- character(0)
   # ROWS ARE NAMED IN THE CHANGE LOG BY THEIR KEY OR ROW NAME
@@ -932,26 +947,9 @@ view_changed <- function(store) {
 #' @noRd
 editr_result <- function(store, cfg, view = FALSE) {
   state <- store$state
-  rows <- seq_along(state$ids)
-  cols <- seq_along(state$cids)
-  if (view) {
-    # SERVER VIEW (rows/columns arguments) AND WHAT THE GRID REPORTS AS VISIBLE
-    keep <- rep(TRUE, length(state$ids))
-    if (!is.null(store$view_rows)) keep <- keep & state$ids %in% store$view_rows
-    if (!is.null(store$client_rows)) {
-      keep <- keep & state$ids %in% store$client_rows
-    }
-    rows <- which(keep)
-    keep <- rep(TRUE, length(state$cids))
-    always <- c(store$hidden, cfg$rownames_cid)
-    if (!is.null(store$view_cols)) {
-      keep <- keep & state$cids %in% c(store$view_cols, always)
-    }
-    if (!is.null(store$client_cols)) {
-      keep <- keep & state$cids %in% c(store$client_cols, always)
-    }
-    cols <- which(keep)
-  }
+  index <- result_index(store, cfg, view)
+  rows <- index$rows
+  cols <- index$cols
   data <- state$data[rows, cols, drop = FALSE]
   cids <- state$cids[cols]
   ids <- state$ids[rows]
@@ -1027,4 +1025,34 @@ editr_result <- function(store, cfg, view = FALSE) {
     data <- tibble::as_tibble(data)
   }
   data
+}
+
+#' Rows and columns (positions in the state) of the returned data
+#'
+#' @param view whether only the rows and columns on display are returned.
+#'
+#' @noRd
+result_index <- function(store, cfg, view = FALSE) {
+  state <- store$state
+  rows <- seq_along(state$ids)
+  cols <- seq_along(state$cids)
+  if (view) {
+    # SERVER VIEW (rows/columns arguments) AND WHAT THE GRID REPORTS AS VISIBLE
+    keep <- rep(TRUE, length(state$ids))
+    if (!is.null(store$view_rows)) keep <- keep & state$ids %in% store$view_rows
+    if (!is.null(store$client_rows)) {
+      keep <- keep & state$ids %in% store$client_rows
+    }
+    rows <- which(keep)
+    keep <- rep(TRUE, length(state$cids))
+    always <- c(store$hidden, cfg$rownames_cid)
+    if (!is.null(store$view_cols)) {
+      keep <- keep & state$cids %in% c(store$view_cols, always)
+    }
+    if (!is.null(store$client_cols)) {
+      keep <- keep & state$cids %in% c(store$client_cols, always)
+    }
+    cols <- which(keep)
+  }
+  list(rows = rows, cols = cols)
 }
