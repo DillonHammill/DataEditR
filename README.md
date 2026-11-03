@@ -126,7 +126,7 @@ reproduces your edits.
   selected cells
 - comments on cells, returned with the data
 - filter rows by typing under the column headers (ranges, value lists,
-  text)
+  text) or build complex filters in the `Filter` dialog
 - show or hide columns from the `Columns` menu
 - find values in the data (`Ctrl+F`)
 - status bar with row/column counts and a sum/mean/count of the selected

@@ -26,7 +26,8 @@ returned data (and, for `db`, the SQLite file).
 
 `qa/run_qa.sh` runs end-to-end scenarios covering every feature: data frames,
 matrices, tibbles and data.tables, templates, files, binds, read-only, hidden
-and protected columns, factors, filtered and exported subsets, Cancel, the
+and protected columns, factors, filtered and exported subsets, the filter
+dialog, Cancel, the
 change log and History tab, restoring a draft after R is killed mid-edit
 (`recover_crash` then `recover`), column actions, validation rules, column
 summaries and the record form, every column type, the Open menu, the review

@@ -461,7 +461,7 @@ The columns of a template are typed automatically when the data is returned, so 
 
 ## 5. Data Filtering
 
-`data_edit()` makes it easy to view and edit a subset of your data: filter rows by typing under the column headers and show or hide columns from the `Columns` menu. Edits made to a subset are applied directly to the complete dataset.
+`data_edit()` makes it easy to view and edit a subset of your data: filter rows by typing under the column headers or in the `Filter` dialog, and show or hide columns from the `Columns` menu. Edits made to a subset are applied directly to the complete dataset.
 
 ### 5.1 Row filtering
 
@@ -471,13 +471,39 @@ Every column has a filter box under its name and the box depends on the type of 
 * **columns with a few distinct values** (e.g. `cyl` or `gear`) have a list to pick one or more values (`Any` means no filter);
 * **text** columns keep values that contain what you type; start with `!` (e.g. `!set`) to keep the values that do not contain it.
 
-Clicking a bar of a column's summary (see [Column summaries](#column-summaries)) sets its filter for you, and clicking the share of missing values shows only the rows where the value is missing. Rows must match every filter to be shown. Active filters are listed as chips in the toolbar; click the `x` on a chip to remove that filter or `Clear filters` to remove them all. The status bar shows how many of the rows are on screen.
+Clicking a bar of a column's summary (see [Column summaries](#column-summaries)) sets its filter for you, and clicking the share of missing values shows only the rows where the value is missing. Rows must match every filter to be shown. Active filters are listed as chips in the toolbar; click the `x` on a chip to remove that filter or `Clear filters` to remove them all. With more than four filters the toolbar shows the first three and a `+2 more` button that opens the `Filter` dialog. The status bar shows how many of the rows are on screen.
 
 ```{r, echo = FALSE, fig.align = "center", out.width = "100%"}
 screenshot("filter-rows.gif")
 ```
 
-### 5.2 Column selection
+### 5.2 Filter dialog
+
+Click `Filter` in the toolbar to see and change every filter in one place, which is the easiest way to build a complex combination of filters. Each row of the dialog is one filter: a column, a logic and a value. Click `Add filter` for another row and the `x` at the end of a row to remove it. Rows must match every filter, and a column can have more than one filter.
+
+```{r, echo = FALSE, fig.align = "center", out.width = "100%"}
+screenshot("filter-dialog.png")
+```
+
+| Logic                                                                    | Keeps the rows where the value                  | Columns               |
+|--------------------------------------------------------------------------|-------------------------------------------------|-----------------------|
+| `equal`, `not equal`                                                     | is (or is not) one of the values                | all                   |
+| `greater than`, `less than`, `greater than or equal`, `less than or equal` | compares that way with the value                | numbers, dates, times |
+| `between`, `not between`                                                 | lies (or does not lie) between two values       | numbers, dates, times |
+| `contain`, `not contain`                                                 | includes (or does not include) any of the texts | all except logicals   |
+| `matches regex`, `not matches regex`                                     | matches (or does not match) the pattern         | all except logicals   |
+| `is missing`, `is not missing`                                           | is (or is not) missing                          | all                   |
+
+* `equal`, `not equal`, `contain` and `not contain` take several values: type a value and press `Enter`, or pick one of the values of the column from the list (for a dropdown with names, its names). `NA` matches missing values.
+* `between` includes both of its values, like `dplyr::between()` and the boxes under the column headers, and they can be given in either order. Use `greater than` and `less than` to leave them out.
+* `contain` looks for plain text and ignores case, so `merc` finds `Merc 230`. It searches what the cells show: the names of dropdown choices and the text of HTML columns without their tags. `matches regex` takes a regular expression and respects case, so `^Merc [0-9]+$` finds `Merc 230` and not `Merc 450SE`. The patterns are JavaScript regular expressions, so classes such as `[[:alpha:]]` are written `[a-zA-Z]`.
+* The logics starting with `not` also keep rows where the value is missing.
+
+The dialog shows how many rows match while you work, and nothing changes until you press `Apply`, so `Cancel` leaves your filters as they were. A filter without a value is ignored, and `Clear all` removes every row of the dialog.
+
+Filters set under the column headers or from a column's summary are listed in the dialog as well (`!text` in a header box as `not contain`). They stay where they are if you leave them unchanged; if you change one it becomes a filter of the dialog and its box under the header is cleared. Filters of the dialog are shown as chips with the others.
+
+### 5.3 Column selection
 
 Click `Columns` in the toolbar to show or hide columns, or choose `Hide column` from the menu of a column header. `Show all` and `Hide all` change every column at once, and the button shows how many columns are visible.
 
@@ -487,11 +513,11 @@ screenshot("select-columns.gif")
 
 Columns can also be hidden before the data editor opens (`col_hide`, see [Read-only and hidden columns](#read-only-and-hidden-columns)); those columns are not listed in the `Columns` menu and cannot be shown by the user.
 
-### 5.3 Edits apply to the complete dataset
+### 5.4 Edits apply to the complete dataset
 
 Filtered rows and hidden columns are only *views* onto your data, so any change you make while a filter is active is made directly to the complete dataset, without requiring any additional action (earlier versions of **DataEditR** needed a *sync* button for this). Rows added while a filter is active stay visible until the filters change, so you can fill them in even if they do not match the filters yet.
 
-### 5.4 Return or export data subsets
+### 5.5 Return or export data subsets
 
 `data_edit()` will return the complete dataset as an R object for downstream use by default. If you would like to return just the rows and columns that are on screen, open the menu next to the `Done` button and choose `Only what's on screen` before pressing `Done`. The menu shows the size of the data that each option returns.
 

@@ -240,11 +240,6 @@ test_that("empty and invalid inputs are handled when preparing", {
   expect_identical(nrow(result(p)), 0L)
   expect_warning(prep(data.frame(a = 1, a = 2, check.names = FALSE)),
                  "must be unique")
-  # columns that are not in the data are ignored (with a message)
-  prep_loud <- function(...) DataEditR:::editr_prepare(mtcars, ...)
-  expect_message(prep_loud(col_readonly = "nope"), "'col_readonly'.*: nope")
-  expect_message(prep_loud(col_hide = "nope"), "'col_hide'.*: nope")
-  expect_message(prep_loud(col_options = list(nope = "date")), "'col_options'.*: nope")
   p <- prep(data.frame(a = c("x", "y")), col_options = list(a = c(TRUE, FALSE)))
   expect_identical(result(p)$a, c(NA, NA))
 })
@@ -316,4 +311,19 @@ test_that("tracking keeps up with whole-column changes", {
                                        list(type = "update", cid = "c1",
                                             ids = 99)))
   expect_identical(p$store$changed, "1|c1")
+})
+
+test_that("settings for columns that are not in the data are ignored", {
+  prep_loud <- function(...) DataEditR:::editr_prepare(mtcars, ...)
+  expect_message(prep_loud(col_readonly = "nope"), "'col_readonly'.*: nope")
+  expect_message(prep_loud(col_hide = "nope"), "'col_hide'.*: nope")
+  expect_message(prep_loud(col_options = list(nope = "date")), "'col_options'.*: nope")
+  expect_silent(prep_loud(col_readonly = "nope", quiet = TRUE))
+  # the columns that are there keep their settings
+  p <- prep_loud(col_readonly = c("mpg", "nope"), quiet = TRUE)
+  cols <- DataEditR:::grid_columns(p$store, p$cfg)
+  locked <- vapply(cols, function(col) isTRUE(col$readonly), logical(1))
+  titles <- vapply(cols, function(col) col$title, character(1))
+  expect_identical(titles[locked], "mpg")
+  expect_error(prep_loud(col_options = list("date")), "named by column")
 })

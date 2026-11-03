@@ -105,6 +105,7 @@ res <- switch(
     data_edit(samples, viewer = noview, quiet = TRUE,
               col_options = list(site = c("north", "south", "east", "west")))
   },
+  filter = data_edit(mtcars, viewer = noview, quiet = TRUE),
   labelled = {
     set.seed(3)
     n <- 14

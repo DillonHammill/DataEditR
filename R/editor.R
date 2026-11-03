@@ -105,8 +105,9 @@ editr_prepare <- function(x,
   if (any(duplicated(colnames(x)))) {
     warning("Column names must be unique!")
   }
-  # COLUMNS THAT ARE NOT IN THE DATA ARE IGNORED, SO THE SAME SETTINGS CAN BE
-  # USED FOR DIFFERENT DATA (E.G. IN A SHINY APP)
+  # SETTINGS FOR OTHER COLUMNS ARE IGNORED: THE SAME SETTINGS APPLY TO DATA
+  # OPENED LATER OR TO OTHER DATA IN A SHINY APP, WHICH MAY NOT HAVE THESE
+  # COLUMNS (AN ERROR WOULD STOP THE APP)
   known <- function(nms, arg) {
     bad <- setdiff(nms, colnames(x))
     if (length(bad) > 0 && !quiet) {

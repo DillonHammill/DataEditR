@@ -134,6 +134,15 @@ if (scenario == "df") {
   same(result, e, "ordered factor kept, new level added after the others")
   reproduces(code_text(), input, result)
 
+} else if (scenario == "filter_dialog") {
+  # n >= 4, group c or missing, not epsilon; one cell edited through the filter
+  e <- input[c(6, 8), setdiff(names(input), "extra")]
+  e$n[1] <- 66
+  keep_cols <- setdiff(names(e), "when")
+  same(result[keep_cols], e[keep_cols], "Done returns the rows the dialog's filters show, with the edit")
+  # date-time columns come back as date-times
+  check(identical(format(result$when), e$when), "date-times of those rows")
+
 } else if (scenario == "subset") {
   e <- mtcars[mtcars$cyl == 4, c("mpg", "cyl", "gear", "carb")]
   same(result, e, "Done returns only what's on screen")
@@ -324,6 +333,11 @@ if (scenario == "df") {
   same(result$notes, c(NA_character_, NA, NA), "emptied text area is NA")
   same(result$grp, c("x", "z", NA), "dropdown value pasted")
   same(result$ok, c(TRUE, FALSE, TRUE), "checkbox pasted as yes")
+
+} else if (scenario == "open_settings") {
+  e <- iris
+  e$Sepal.Length[1] <- 9.9
+  same(result, e, "other data opened with settings for columns it does not have")
 
 } else if (scenario == "open") {
   e <- iris

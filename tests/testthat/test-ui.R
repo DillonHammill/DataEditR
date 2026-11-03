@@ -96,3 +96,18 @@ test_that("legacy CSS helpers scope rules to an element", {
   expect_match(names(DataEditR:::modalCSS())[1], ".modal-content",
                fixed = TRUE)
 })
+
+test_that("the toolbar opens the filter dialog", {
+  expect_match(as.character(DataEditR:::editr_icon("filter")), "<path", fixed = TRUE)
+  html <- as.character(dataEditUI("edit1"))
+  expect_match(html, 'id="edit1-filter"', fixed = TRUE)
+  expect_match(html, 'id="edit1-filter_count"', fixed = TRUE)
+  expect_match(html, 'id="edit1-filters"', fixed = TRUE)
+  for (part in c("editr-fd-rows", "editr-fd-add", "editr-fd-clear",
+                 "editr-fd-count", "editr-fd-apply", "editr-fd-cancel")) {
+    expect_match(html, part, fixed = TRUE)
+  }
+  # the grid is told where they are
+  expect_false(grepl("edit1-filters", as.character(dataEditUI("edit1", toolbar = FALSE)),
+                     fixed = TRUE))
+})

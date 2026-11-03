@@ -250,6 +250,10 @@ dataEditUI <- function(id,
                  `aria-expanded` = "false",
                  span(class = "editr-muted", id = ns("columns_count")),
                  editr_icon("chevron", 14)),
+      editr_tool(ns("filter"), label = "Filter", icon = "filter",
+                 title = "Filter rows", class = "editr-tool-collapse",
+                 `aria-haspopup` = "dialog",
+                 span(class = "editr-count", id = ns("filter_count"))),
       # DATABASE TABLES: LOAD OTHER ROWS (SHOWN BY THE GRID)
       editr_tool(ns("load_rows"), label = "Rows", icon = "database",
                  title = "Load other rows from the database", hidden = NA,
@@ -358,6 +362,7 @@ dataEditUI <- function(id,
            tags$button(type = "button", class = "editr-link",
                        onclick = js_panel("changes", FALSE), "Review"))
     ),
+    editr_filter_dialog(ns("filters")),
     editr_shortcuts(ns("shortcuts"))
   )
 }
@@ -566,6 +571,9 @@ dataEditServer <- function(id,
             selection = ns("selection"),
             chips = ns("chips"),
             columns_btn = ns("columns"),
+            filter_btn = ns("filter"),
+            filter_count = ns("filter_count"),
+            filters = ns("filters"),
             rows_btn = ns("load_rows"),
             rows_info = ns("load_info"),
             summary_btn = ns("summary"),
