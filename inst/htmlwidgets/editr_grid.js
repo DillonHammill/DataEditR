@@ -1697,7 +1697,9 @@
         if (p) {
           if (p.kind === "missing") add("missing", []);
           else if (p.kind === "range") range(p.lo, p.hi, p.below);
-          else if (p.kind === "prefix") add("contain", [p.value]);
+          else if (p.kind === "prefix") {
+            add("regex", ["^" + String(p.value).replace(/[.*+?^${}()|[\]\\\/]/g, "\\$&")]);
+          }
           else add("equal", [p.value]);
         } else if (Array.isArray(v)) {
           add("equal", v.map(function (x) {
@@ -4330,16 +4332,29 @@
         clearTimeout(grid.viewTimer);
         grid.viewTimer = setTimeout(function () {
           if (!grid.table || !shinyOpen()) return;
-          var rows = null, cols = null;
-          if (activeFilters().length) {
+          var rows = null, cols = null, filters = null;
+          var active = activeFilters();
+          if (active.length) {
             rows = grid.table.getRows("active").map(function (r) { return r.getIndex(); });
+            // the filters as rules, so that R can write them as code: header
+            // boxes and summary picks must all match, the filters of the
+            // panel all or any
+            filters = {rules: [], conds: [], any: !!grid.matchAny};
+            active.forEach(function (f) {
+              if (f.cond) {
+                filters.conds.push({field: f.cond.field, logic: f.cond.logic,
+                                    values: f.cond.values.map(String)});
+              } else {
+                filters.rules = filters.rules.concat(filterRows(f));
+              }
+            });
           }
           var all = realColumns();
           var vis = all.filter(function (col) { return col.isVisible(); });
           if (vis.length !== all.length) {
             cols = vis.map(function (col) { return col.getField(); });
           }
-          Shiny.setInputValue(el.id + "_view", {rows: rows, cols: cols},
+          Shiny.setInputValue(el.id + "_view", {rows: rows, cols: cols, filters: filters},
                               {priority: "event"});
         }, 200);
       }

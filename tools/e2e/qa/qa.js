@@ -149,6 +149,13 @@ async function setFilters(page, rules) {
   await closeFilters(page);
 }
 
+// the Code tab (the panel is left on it)
+async function codeNow(page) {
+  await page.evaluate(() => DataEditR.panel("edit1-", "code", false));
+  await L.settle(page, 600);
+  return page.$eval("#edit1-code", (e) => e.textContent);
+}
+
 async function canEdit(page, id, field) {
   const p = await L.cellCentre(page, id, field);
   await page.mouse.click(p.x, p.y, { clickCount: 2 });
@@ -1070,6 +1077,16 @@ const scenarios = {
     check(JSON.stringify(await active()) === "[1]", "html contains its text: " + JSON.stringify(await active()));
     await setFilters(page, [[f.photo, "contain", ["href"]]]);
     check(JSON.stringify(await active()) === "[]", "html tags are not searched: " + JSON.stringify(await active()));
+    // the Code tab searches what the cells show too
+    await setFilters(page, [[f.photo, "contain", ["details"]]]);
+    let shownCode = await codeNow(page);
+    check(shownCode.includes('grepl("details", tolower(gsub("<[^>]*>", " ", photo)), fixed = TRUE)') &&
+          !/by position/.test(shownCode),
+          "html searched without its tags in the code: " + JSON.stringify(shownCode.slice(-160)));
+    await setFilters(page, [[f.state, "contain", ["vict"]]]);
+    shownCode = await codeNow(page);
+    check(shownCode.includes('filter(state %in% "VIC")'),
+          "dropdown names searched in the code: " + JSON.stringify(shownCode.slice(-120)));
     await setFilters(page, []);
     check((await active()).length === 5, "panel filters cleared");
     // #53 insert and delete cells
@@ -1293,10 +1310,28 @@ const scenarios = {
       ["when greater than", f.when, "gt", ["2024-03-16 10:30"], [7, 8]],
       ["when contain keeps the text as typed", f.when, "contain", ["2024-03-15"], [5]],
     ];
+    const codes = {};
     for (const [what, field, logic, values, want] of cases) {
       await setFilters(page, [[field, logic, values]]);
       const got = await shownIds(page);
       check(got.join() === want.join(), what + ": " + got.join());
+      // the Code tab writes the filter as code, checked in R by running it
+      const code = await codeNow(page);
+      codes[what] = (code.match(/x_view <- x %>%\n {2}(filter\([^\n]*)/) || [])[1];
+      check(!!codes[what] && !/by position/.test(code), what + ": code " + (codes[what] || code.slice(-200)));
+    }
+    const want = {
+      "n between in either order": "filter(between(n, 2.5, 5))",
+      "n not between keeps missing": "filter(is.na(n) | !between(n, 2.5, 5))",
+      "name contain ignores case": 'filter(grepl("eta", tolower(name), fixed = TRUE))',
+      "d between": 'filter(between(d, as.Date("2024-02-01"), as.Date("2024-04-01")))',
+      "ok equal TRUE or missing": "filter(ok %in% c(TRUE, NA))",
+      "grp equal NA": "filter(is.na(grp))",
+      // a date-time column (col_options) is a date-time in the data
+      "when greater than": 'filter(when > as.POSIXct("2024-03-16 10:30:00"))',
+    };
+    for (const [what, code] of Object.entries(want)) {
+      check(codes[what] === code, what + ": " + codes[what]);
     }
 
     // several filters, also on one column, must all match ...
@@ -1321,6 +1356,9 @@ const scenarios = {
     check((await shownIds(page)).join() === "5,6,7,8", "n ≥ 7 or grp c: " + (await shownIds(page)).join());
     check(await page.$eval("#edit1-filters .editr-fp-join", (e) => e.textContent) === "or", "cards are joined by or");
     check(/^Any of:/.test(await page.$eval("#edit1-chips", (e) => e.textContent)), "the chips say any of");
+    const anyCode = await codeNow(page);
+    check(anyCode.endsWith('x_view <- x %>%\n  filter(n >= 7 | grp == "c")'), "any in the code: " + JSON.stringify(anyCode));
+    await openFilters(page);
     await page.click('#edit1-filters .editr-fp-seg[aria-checked="false"]');
     await L.settle(page, 400);
     check((await shownIds(page)).join() === "", "back to all");
@@ -1489,6 +1527,8 @@ const scenarios = {
     check((await shownIds(page)).join() === "4,6,7,8", "filtered for edits");
     const added = await addRow(page);
     check((await shownIds(page)).includes(added), "added row stays visible");
+    const pinned = await codeNow(page);
+    check(/picked by position/.test(pinned) && /slice\(/.test(pinned), "rows the filters do not explain are picked by position");
     await L.rowMenu(page, added, f.n, "Delete row");
     check(!(await shownIds(page)).includes(added), "added row removed again");
 

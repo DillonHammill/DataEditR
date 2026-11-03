@@ -1089,9 +1089,21 @@ Click `Code` in the toolbar to see the code that reproduces your edits so far. T
 screenshot("code.png")
 ```
 
+When rows are filtered or columns hidden, the code continues with the rows and columns on screen, written as `filter()` and `select()` so that you can take the subset into your script. The filters under the column headers, those from column summaries and those of the `Filters` panel (matching all or any of them) are all included:
+
+```{r, eval = FALSE}
+# The rows and columns on screen
+mtcars_view <- mtcars %>%
+  filter(between(mpg, 15, 25), cyl %in% c(4, 6),
+         !grepl("merc", tolower(rownames(.)), fixed = TRUE)) %>%
+  select(mpg, cyl, disp, hp)
+```
+
+The code is checked by running it on the data before it is shown. When the filters cannot explain the rows on screen (rows added while the data was filtered stay on screen until the filters change), the rows are picked by their position with `slice()` instead, and the code says so.
+
 ### 14.2 Print code to console
 
-Set `code = TRUE` within `data_edit()` to print the generated code to the console when you press `Done`. The code uses `dplyr` verbs such as `rename()`, `select()`, `mutate()`, `slice()`, and `tibble::add_row()` to replicate your edits. Copying and pasting this code into the console will recreate the edited version of your data.
+Set `code = TRUE` within `data_edit()` to print the generated code to the console when you press `Done`. The code uses `dplyr` verbs such as `rename()`, `select()`, `mutate()`, `slice()`, and `tibble::add_row()` to replicate your edits. Copying and pasting this code into the console will recreate the edited version of your data. If you return only what's on screen (see [Return or export data subsets](#return-or-export-data-subsets)), the code ends with the `filter()` and `select()` that give those rows and columns.
 
 ```{r, eval = FALSE}
 data_edit(mtcars,

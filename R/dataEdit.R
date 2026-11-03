@@ -600,6 +600,8 @@ dataEditServer <- function(id,
       v <- input$grid_view
       ed$store$client_rows <- if (is.null(v$rows)) NULL else as.integer(unlist(v$rows))
       ed$store$client_cols <- if (is.null(v$cols)) NULL else as.character(unlist(v$cols))
+      # THE FILTERS, FOR THE CODE OF THE ROWS ON SCREEN
+      ed$store$client_filters <- v$filters
       bump(client_tick)
     })
 
@@ -673,10 +675,12 @@ dataEditServer <- function(id,
     output$code <- shiny::renderText({
       shiny::req(identical(input$panel, "code"))
       data_tick()
+      client_tick()
       ed <- editor()
       shiny::req(ed)
       name <- if (is.function(code_name)) code_name() else code_name
-      editr_code(ed$store, ed$cfg, name)
+      # THE EDITS, THEN THE ROWS AND COLUMNS ON SCREEN
+      editr_code_view(ed$store, ed$cfg, name)
     })
 
     # EARLIER SESSIONS FOR THE HISTORY TAB (TIDIED ONCE)

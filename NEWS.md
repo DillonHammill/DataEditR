@@ -311,7 +311,12 @@ shiny modals and with data that changes), these were fixed or added:
   `dataSelect` module is still exported).
 * Review panel: lists every edited, added, removed or renamed cell, row and
   column with a button to revert it (reverts can be undone), plus "Revert
-  all", and a Code tab that shows the `data_code()` output as you edit.
+  all", and a Code tab that shows the `data_code()` output as you edit. When
+  rows are filtered or columns hidden, the Code tab adds the `filter()` and
+  `select()` that give the rows and columns on screen (header boxes, column
+  summaries and the Filters panel, matching all or any), checked by running
+  it; rows it cannot explain are picked by position. `code =` with "Only
+  what's on screen" ends with the same steps.
 * Status bar: rows and columns on screen, Excel-style sum/mean/count of the
   selected cells, and a summary of changes.
 * Typing text into a number or date column asks whether to store `NA`,

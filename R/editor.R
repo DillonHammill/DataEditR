@@ -745,6 +745,26 @@ editr_code <- function(store, cfg, name = "data", start, end = NULL) {
   code %||% data_code(start, end, name = name)
 }
 
+#' Code of the edits, then the code that gives the rows and columns on screen
+#'
+#' @param target name the on-screen data is assigned to (by default the name
+#'   followed by "_view").
+#'
+#' @noRd
+editr_code_view <- function(store, cfg, name = "data", target = NULL, ...) {
+  code <- editr_code(store, cfg, name, ...)
+  if (is.null(name) || !nzchar(name)) return(code)
+  view <- tryCatch(
+    editr_view_code(store, cfg, name, target %||% paste0(name, "_view")),
+    error = function(e) NULL
+  )
+  if (is.null(view)) return(code)
+  if (!grepl("library(dplyr)", code, fixed = TRUE)) {
+    code <- paste0("library(dplyr)\n\n", code)
+  }
+  paste0(code, "\n", view)
+}
+
 #' List of changes for the review panel
 #'
 #' @param store editor store.

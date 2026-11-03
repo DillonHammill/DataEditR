@@ -96,7 +96,8 @@ if (scenario == "df") {
     row.names = paste0("r", 1:8),
     stringsAsFactors = FALSE
   )
-  keep(x, quietly(x, col_options = list(pw = "password", when = "datetime")))
+  keep(x, quietly(x, col_options = list(pw = "password", when = "datetime"),
+                  code = code_file))
 
 } else if (scenario == "log") {
   x <- mtcars[1:5, 1:4]

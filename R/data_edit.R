@@ -814,10 +814,16 @@ data_edit <- function(x = NULL,
       # CODE (DATABASES: WORKED OUT BEFORE THE COMMIT)
       ed <- editor()
       if (!isFALSE(code) && !is.null(ed) && is.null(ed$cfg$db)) {
-        session_info$code <- editr_code(ed$store, ed$cfg,
-                                        name = session_info$name,
-                                        start = session_info$original,
-                                        end = result)
+        on_screen <- !hide && identical(input$return_what, "view")
+        session_info$code <- if (on_screen) {
+          # THE EDITS, THEN filter() AND select() FOR WHAT IS ON SCREEN
+          editr_code_view(ed$store, ed$cfg, name = session_info$name,
+                          target = session_info$name,
+                          start = session_info$original)
+        } else {
+          editr_code(ed$store, ed$cfg, name = session_info$name,
+                     start = session_info$original, end = result)
+        }
       }
       save <- !is.null(save_as) && !isFALSE(input$save_file)
       if (!is.null(result) && save) {

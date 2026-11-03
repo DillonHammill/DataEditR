@@ -142,6 +142,16 @@ if (scenario == "df") {
   same(result[keep_cols], e[keep_cols], "Done returns the rows the dialog's filters show, with the edit")
   # date-time columns come back as date-times
   check(identical(format(result$when), e$when), "date-times of those rows")
+  # the code: the edits, then the filters as filter()
+  code <- code_text()
+  check(grepl("x <- x %>%\n  filter(\n", code, fixed = TRUE) &&
+          grepl('!grp %in% c("a", "b")', code, fixed = TRUE), "code filters what is on screen")
+  check(!grepl("slice(", code, fixed = TRUE), "no rows picked by position")
+  # (the code does not turn the text of the date-time column into date-times)
+  env <- new.env()
+  assign("x", input, envir = env)
+  suppressMessages(eval(parse(text = code), envir = env))
+  same(get("x", envir = env)[keep_cols], result[keep_cols], "the code gives the rows returned")
 
 } else if (scenario == "subset") {
   e <- mtcars[mtcars$cyl == 4, c("mpg", "cyl", "gear", "carb")]
