@@ -47,7 +47,8 @@ test_that("edits, undo and redo update the returned data", {
     expect_identical(out()$mpg, mtcars$mpg[1:3])
     session$setInputs(redo = 1)
     expect_identical(out()$mpg, c(21, 1.5, 22.8))
-    expect_identical(attr(out, "editor")()$cfg$track, FALSE)
+    # edited cells are highlighted by default
+    expect_identical(attr(out, "editor")()$cfg$track, TRUE)
   })
 })
 

@@ -234,7 +234,7 @@ Every change can be undone with `Ctrl+Z` (or the undo button in the toolbar) and
 
 ### 3.5 Addition or removal of rows or columns
 
-Rows or columns can be added to the data from within the data editor by right clicking on a cell or a column header. This will display a context menu with the options to insert rows above or below, delete the selected rows, fill down, or rename, insert, hide or delete columns.
+Rows or columns can be added to the data from within the data editor by right clicking on a cell or a column header. Right-clicking a cell offers to insert rows above or below, delete the selected rows, fill down and insert a column to the left or right of the cell; right-clicking a column header offers to rename, insert, hide or delete columns.
 
 ```{r, echo = FALSE, fig.align = "center", out.width = "100%"}
 screenshot("rows-columns.gif")
@@ -766,6 +766,34 @@ screenshot("problems.png")
 
 When rules are broken, `Done` asks whether to return the data anyway or keep editing. In shiny apps, `dataEditProblems()` returns the problems, for example to disable a *Save* button until they are fixed.
 
+### 7.7 Conditional formatting
+
+Conditional formats colour cells by their values, to make the data easier to read. They change how cells look, not the data. Supply them to `formats`:
+
+```{r, eval = FALSE}
+data_edit(mtcars,
+          formats = list(
+            # cells of mpg above 22 in green
+            "Fast" = list(~ mpg > 22, fill = "#DCFCE7", color = "#166534"),
+            # whole rows of V8 cars in yellow
+            "V8" = list(~ cyl == 8, fill = "lightyellow", columns = "all"),
+            # hp shaded from white (lowest) to red (highest)
+            list(scale = c("white", "#F87171"), columns = "hp")
+          ))
+```
+
+```{r, echo = FALSE, fig.align = "center", out.width = "100%"}
+screenshot("formats.png")
+```
+
+A rule is a one-sided formula that is `TRUE` for the rows to colour, with a `fill`, a text `color` and/or `bold = TRUE` (a formula on its own gets a yellow fill). It colours the cells of the columns the formula uses; give `columns` to colour other columns, or `columns = "all"` to colour whole rows. A colour scale shades the numbers of its `columns` from the first colour (the lowest value) to the last (the highest); give three colours for a middle colour, `limits = c(0, 300)` to fix the values of the end colours and `mid` for the value of the middle one. Colours can be R colour names or hex codes. When several formats colour a cell, the later one wins.
+
+Formats are updated after every change. You can also add them from a column's menu (`Conditional formatting...`): highlight the cells of the column, or whole rows, where the value is greater or less than a value, between two values, equal to a value, contains some text, is blank, duplicated, above or below average, among the highest or lowest, or makes a formula `TRUE`; or shade the column with a colour scale. The dialog shows how many rows match before the format is added, and lists the column's formats with the code to add each one to `formats`, so that it can be kept in your script.
+
+```{r, echo = FALSE, fig.align = "center", out.width = "100%"}
+screenshot("formats-dialog.png")
+```
+
 ## 8. Customisation
 
 `data_edit()` has been designed to be simple, but does come with some customisation options including column stretching, addition of logos and/or titles, custom themes and the option to hide the menus.
@@ -848,18 +876,13 @@ screenshot("review.gif")
 
 ### 9.2 Highlight changed cells
 
-Set `track = TRUE` to highlight cells that have been edited or added compared to the original data with a blue tint. Any cell whose value differs from the original, as well as all cells in newly added rows or columns, will be highlighted. Highlights follow undo, redo and reverts, and inserting rows or columns does not cause other cells to appear changed.
-
-```{r, eval = FALSE}
-data_edit(mtcars,
-          track = TRUE)
-```
+Cells that have been edited or added compared to the original data are highlighted with a blue tint and border. Any cell whose value differs from the original, as well as all cells in newly added rows or columns, is highlighted. Highlights follow undo, redo and reverts, and inserting rows or columns does not cause other cells to appear changed.
 
 ```{r, echo = FALSE, fig.align = "center", out.width = "100%"}
 screenshot("track.png")
 ```
 
-You can pass any valid CSS color to `track` to customise the highlight colour. For example, to use red:
+You can pass any valid CSS color to `track` to customise the highlight colour, or `track = FALSE` to turn the highlighting off. For example, to use red:
 
 ```{r, eval = FALSE}
 data_edit(mtcars,

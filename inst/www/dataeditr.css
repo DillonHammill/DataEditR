@@ -408,9 +408,28 @@
   flex: 1;
 }
 
+/* buttons as tall as the inputs next to them, with their text centred
+   (themes with large button padding pushed the text down) */
 .editr-open-row .btn {
   height: calc(1.5em + 0.75rem + 2px);
   margin-bottom: 0;
+  padding: 0 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.2;
+}
+
+.editr-open-menu .input-group > .input-group-btn {
+  display: flex;
+  margin-bottom: 0;
+}
+
+.editr-open-menu .btn-file {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 16px;
+  line-height: 1.2;
 }
 
 .editr-open-dims .shiny-input-container {
@@ -1149,4 +1168,93 @@ button.editr-change-title:hover {
    default), where button and flex styles would show them */
 .editr-editor [hidden] {
   display: none !important;
+}
+
+/* conditional formatting dialog (R/formats.R) ------------------------------ */
+
+.editr-fmt-swatch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  height: 22px;
+  padding: 0 6px;
+  margin-right: 8px;
+  border: 1px solid var(--editr-border, #E3E6EA);
+  border-radius: 4px;
+  background: #FFFFFF;
+  font-size: 12px;
+  vertical-align: middle;
+}
+
+.editr-fmt-gradient {
+  min-width: 64px;
+}
+
+.editr-formats .shiny-options-group .radio label,
+.editr-formats .shiny-options-group .form-check-label {
+  display: inline-flex;
+  align-items: center;
+}
+
+.editr-formats .shiny-options-group input[type="radio"] {
+  flex: none;
+}
+
+/* styles and scales in two columns */
+.editr-formats .editr-fmt-choices .shiny-options-group {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 12px;
+}
+
+.editr-formats .editr-fmt-choices .shiny-options-group > .radio,
+.editr-formats .editr-fmt-choices .shiny-options-group > .form-check {
+  margin-top: 0;
+  margin-bottom: 4px;
+}
+
+.editr-formats .modal-body hr,
+.editr-formats hr {
+  margin: 12px 0;
+}
+
+.editr-fmt-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.editr-fmt-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--editr-border, #E3E6EA);
+}
+
+.editr-fmt-item:last-child {
+  border-bottom: 0;
+}
+
+.editr-fmt-label {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.editr-fmt-code {
+  display: block;
+  margin-top: 2px;
+  font-size: 11.5px;
+  color: var(--editr-muted, #52606D);
+}
+
+.editr-fmt-error {
+  color: #B91C1C;
+}
+
+.editr-fmt-remove {
+  padding: 0 4px;
+  flex: none;
 }

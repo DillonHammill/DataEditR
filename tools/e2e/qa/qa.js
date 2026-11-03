@@ -764,6 +764,93 @@ const scenarios = {
     await done(page);
   },
 
+  // conditional formatting (R/formats.R)
+  async formats(page) {
+    const t = (fn, ...a) => page.evaluate(fn, ...a);
+    const st = (id, f) => t((id, f) => { const e = document.querySelector(".editr_grid").__editr.table.getRow(id).getCell(f).getElement();
+      const s = getComputedStyle(e); return { bg: s.backgroundColor, color: s.color, weight: s.fontWeight,
+        changed: e.classList.contains("editr-changed") }; }, id, f);
+    const plain = "rgba(0, 0, 0, 0)";
+    // formats from code: cells, whole rows and a colour scale
+    check((await st(3, "c2")).bg === "rgb(220, 252, 231)" && (await st(3, "c2")).color === "rgb(22, 101, 52)",
+          "mpg 22.8 > 22 is green: " + JSON.stringify(await st(3, "c2")));
+    check((await st(1, "c2")).bg === plain, "mpg 21 is not formatted: " + (await st(1, "c2")).bg);
+    check((await st(5, "c4")).bg === "rgb(255, 255, 224)" && (await st(5, "c1")).bg === "rgb(255, 255, 224)",
+          "V8 row 5 is light yellow in every column: " + (await st(5, "c4")).bg);
+    const hpMax = await st(7, "c5"), hpMin = await st(8, "c5");
+    check(hpMax.bg === "rgb(248, 113, 113)" && hpMin.bg === "rgb(255, 255, 255)",
+          "hp scale from white (62) to red (245): " + hpMin.bg + " " + hpMax.bg);
+    await page.screenshot({ path: path.join(out, "formats.png") });
+    // an edit changes the formatting, and edited cells are highlighted by default
+    await L.editCell(page, 1, "c2", "30");
+    await L.settle(page, 1000);
+    const e1 = await st(1, "c2");
+    check(e1.bg === "rgb(220, 252, 231)" && e1.changed, "edited mpg 30 is green and highlighted: " + JSON.stringify(e1));
+    await L.editCell(page, 2, "c3", "8");
+    await L.settle(page, 1000);
+    check((await st(2, "c6")).bg === "rgb(255, 255, 224)", "row 2 is V8 after the edit: " + (await st(2, "c6")).bg);
+    // a format from the column menu: whole rows where disp is above 200, in red
+    await columnMenu(page, "c4", "Conditional formatting");
+    const m = await modalText(page);
+    check(/Conditional formatting for disp/.test(m) && /set by the app/.test(m), "dialog lists the app's formats: " + m.slice(0, 160));
+    await page.select("#edit1-fm_op", "gt");
+    await sleep(300);
+    await typeInto(page, "#edit1-fm_value", "200");
+    await page.click('input[name="edit1-fm_apply"][value="row"]');
+    await page.click('input[name="edit1-fm_style"][value="red"]');
+    await sleep(900);
+    const pv = await page.$eval("#edit1-formats_preview", (e) => e.textContent.trim());
+    check(/^4 rows match/.test(pv), "preview: " + pv);
+    await page.screenshot({ path: path.join(out, "formats-dialog.png") });
+    await page.click("#edit1-format_add");
+    await L.settle(page, 1200);
+    const r4 = await st(4, "c2");
+    check(r4.bg === "rgb(254, 226, 226)" && r4.color === "rgb(153, 27, 27)", "row 4 (disp 258) is red: " + JSON.stringify(r4));
+    // a colour scale from the menu on drat, then remove the red rows again
+    await columnMenu(page, "c6", "Conditional formatting");
+    await modalText(page);
+    await page.click('input[name="edit1-fm_type"][value="scale"]');
+    await sleep(300);
+    await page.click('input[name="edit1-fm_scale"][value="white_blue"]');
+    await sleep(900);
+    const pv2 = await page.$eval("#edit1-formats_preview", (e) => e.textContent.trim());
+    check(/^Shades 8 values from 2.76 to 3.9\b/.test(pv2), "scale preview: " + pv2);
+    await page.click("#edit1-format_add");
+    await L.settle(page, 1200);
+    await L.selectCell(page, 1, "c1"); // the menu selected the column
+    check((await st(6, "c6")).bg === "rgb(255, 255, 255)" && (await st(1, "c6")).bg === "rgb(96, 165, 250)",
+          "drat scale: " + (await st(6, "c6")).bg + " " + (await st(1, "c6")).bg);
+    await columnMenu(page, "c4", "Conditional formatting");
+    const m2 = await modalText(page);
+    check(/list\(~ disp > 200, fill = "#FEE2E2", color = "#991B1B", columns = "all"\)/.test(m2),
+          "the format's code is shown: " + m2.slice(0, 300));
+    await page.screenshot({ path: path.join(out, "formats-list.png") });
+    await page.evaluate(() => [...document.querySelectorAll("#shiny-modal .editr-fmt-remove")][0].click());
+    await L.settle(page, 1000);
+    check(!/disp > 200/.test(await modalText(page)), "removed from the list");
+    await page.keyboard.press("Escape");
+    await L.settle(page, 800);
+    check((await st(4, "c2")).bg === plain, "row 4 is plain again: " + (await st(4, "c2")).bg);
+    // columns inserted from the cell menu, left and right of the clicked cell
+    await L.rowMenu(page, 1, "c2", "Insert column left");
+    await L.rowMenu(page, 1, "c3", "Insert column right");
+    const titles = (await L.columns(page)).map((c) => c.title).filter((x) => x.trim());
+    check(titles.join(",") === "V1,mpg,cyl,V2,disp,hp,drat,wt", "columns: " + titles.join(","));
+    // a row is not redrawn while one of its cells is being edited (that
+    // removed the editor); it is redrawn when the edit ends
+    const c6 = await L.cellCentre(page, 6, "c2");
+    await page.mouse.click(c6.x, c6.y, { clickCount: 2 });
+    await page.waitForSelector(".tabulator-cell.tabulator-editing", { timeout: 3000 });
+    await t(() => { const g = document.querySelector(".editr_grid").__editr;
+      g.handle("set_formats", { formats: [{ type: "rule", ids: [6], all: true, fill: "#E5E7EB" }] }); });
+    await sleep(300);
+    check(!!(await page.$(".tabulator-cell.tabulator-editing")), "the editor stays open while its row's format changes");
+    await page.keyboard.press("Escape");
+    await sleep(400);
+    check((await st(6, "c4")).bg === "rgb(229, 231, 235)", "row 6 redrawn after the edit: " + (await st(6, "c4")).bg);
+    await done(page);
+  },
+
   // issues reported for DataEditR 1.x
   async issues(page) {
     const t = (fn, ...a) => page.evaluate(fn, ...a);

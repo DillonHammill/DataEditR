@@ -656,6 +656,8 @@
           // comments on cells (see R/comments.R)
           var comment = grid.comments[key];
           element.classList.toggle("editr-commented", !!comment);
+          // conditional formatting (see R/formats.R)
+          applyFormat(element, formatStyle(cell.getRow().getIndex(), cell.getField(), v));
           var tips = [];
           if (bad) tips.push("\u201c" + v + "\u201d " + bad);
           else if (problem) tips.push(problem);
@@ -1780,6 +1782,17 @@
           }});
           items.push({separator: true});
         }
+        // columns next to the clicked cell (as in the column menu)
+        var column = field && grid.colMap[field] ? grid.table.getColumn(field) : null;
+        if (grid.opts.col_edit && column) {
+          if (!grid.colMap[field].frozen) {
+            items.push({label: "Insert column left",
+                        action: function () { insertColumn(column, false); }});
+          }
+          items.push({label: "Insert column right",
+                      action: function () { insertColumn(column, true); }});
+          items.push({separator: true});
+        }
         return items.concat(historyItems());
       }
 
@@ -1938,8 +1951,11 @@
                       action: function (e, col) { startRename(col); }});
         }
         if (grid.opts.col_edit) {
-          items.push({label: "Insert column left",
-                      action: function (e, col) { insertColumn(col, false); }});
+          // nothing goes before the row names (frozen on the left)
+          if (!c.frozen) {
+            items.push({label: "Insert column left",
+                        action: function (e, col) { insertColumn(col, false); }});
+          }
           items.push({label: "Insert column right",
                       action: function (e, col) { insertColumn(col, true); }});
           if (!c.frozen) {
@@ -2005,6 +2021,7 @@
           items.push({label: "Labels\u2026", action: ask("labels")});
         }
         items.push({label: "Rules\u2026", action: ask("rules")});
+        items.push({label: "Conditional formatting\u2026", action: ask("formats")});
         return items;
       }
 
@@ -3437,11 +3454,136 @@
         return out;
       }
 
+      /* conditional formatting (see R/formats.R) ----------------------- */
+
+      // formats in order (later ones win): rules with the rows (and columns)
+      // they colour, and colour scales of a column with their limits
+      function formatList(arr) {
+        return toArray(arr).map(function (f) {
+          if (f.type === "scale") {
+            var cols = toArray(f.colours).map(hexRgb);
+            return {type: "scale", cid: f.cid, colours: cols, min: Number(f.min),
+                    mid: f.mid === undefined || f.mid === null ? null : Number(f.mid),
+                    max: Number(f.max),
+                    sig: JSON.stringify([f.cid, f.colours, f.min, f.mid, f.max])};
+          }
+          var ids = {};
+          toArray(f.ids).forEach(function (i) { ids[i] = true; });
+          var cids = {};
+          toArray(f.cids).forEach(function (c) { cids[c] = true; });
+          return {type: "rule", ids: ids, all: !!f.all, cids: cids,
+                  fill: f.fill || null, color: f.color || null, bold: !!f.bold,
+                  fillText: f.fill ? textOn(hexRgb(f.fill)) : null,
+                  sig: JSON.stringify([f.all, f.cids, f.fill, f.color, f.bold])};
+        });
+      }
+
+      function hexRgb(h) {
+        var m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})/i.exec(String(h));
+        return m ? [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)] : [255, 255, 255];
+      }
+
+      // the colour of a value on a scale (two colours, or three with a middle)
+      function scaleColour(f, x) {
+        var lo = f.min, hi = f.max, cs = f.colours;
+        var clamp = function (t) { return isFinite(t) ? Math.max(0, Math.min(1, t)) : 0; };
+        if (cs.length === 3) {
+          var mid = f.mid === null ? (lo + hi) / 2 : f.mid;
+          if (x <= mid) {
+            return {rgb: cs[0], to: cs[1], t: mid > lo ? clamp((x - lo) / (mid - lo)) : 1};
+          }
+          return {rgb: cs[1], to: cs[2], t: hi > mid ? clamp((x - mid) / (hi - mid)) : 0};
+        }
+        return {rgb: cs[0], to: cs[1], t: hi > lo ? clamp((x - lo) / (hi - lo)) : 0};
+      }
+
+      // dark text on light fills, white text on dark ones (also in dark
+      // themes, where the text of other cells is light)
+      function textOn(rgb) {
+        var lum = (0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2]) / 255;
+        return lum < 0.5 ? "#FFFFFF" : "#1F2933";
+      }
+
+      function formatStyle(id, field, v) {
+        var fs = grid.formats;
+        if (!fs || !fs.length) return null;
+        var st = null;
+        fs.forEach(function (f) {
+          if (f.type === "scale") {
+            if (f.cid !== field || v === null || v === undefined || v === "") return;
+            var x = typeof v === "number" ? v : Number(v);
+            if (!isFinite(x)) return;
+            var s = scaleColour(f, x);
+            var rgb = [0, 1, 2].map(function (i) {
+              return Math.round(s.rgb[i] + (s.to[i] - s.rgb[i]) * s.t);
+            });
+            st = st || {};
+            st.fill = "rgb(" + rgb.join(",") + ")";
+            st.color = textOn(rgb);
+          } else if (f.ids[id] && (f.all || f.cids[field])) {
+            st = st || {};
+            if (f.fill) {
+              st.fill = f.fill;
+              st.color = f.fillText;
+            }
+            if (f.color) st.color = f.color;
+            if (f.bold) st.bold = true;
+          }
+        });
+        return st;
+      }
+
+      function applyFormat(element, st) {
+        var fill = st && st.fill, color = st && st.color, bold = !!(st && st.bold);
+        element.classList.toggle("editr-fmt-fill", !!fill);
+        element.classList.toggle("editr-fmt-color", !!color);
+        element.classList.toggle("editr-fmt-bold", bold);
+        if (fill) element.style.setProperty("--editr-fmt-fill", fill);
+        else element.style.removeProperty("--editr-fmt-fill");
+        if (color) element.style.setProperty("--editr-fmt-color", color);
+        else element.style.removeProperty("--editr-fmt-color");
+      }
+
+      // redraw the rows whose formatting changed
+      function setFormats(next) {
+        var before = grid.formats || [];
+        grid.formats = next;
+        var same = before.length === next.length && before.every(function (f, i) {
+          return f.type === next[i].type && f.sig === next[i].sig;
+        });
+        if (!same) {
+          reformatRows(grid.table.getRows().map(function (r) { return r.getIndex(); }));
+          return;
+        }
+        var touched = {};
+        next.forEach(function (f, i) {
+          if (f.type !== "rule") return;
+          var a = before[i].ids, b = f.ids;
+          Object.keys(a).forEach(function (k) { if (!b[k]) touched[k] = true; });
+          Object.keys(b).forEach(function (k) { if (!a[k]) touched[k] = true; });
+        });
+        reformatRows(Object.keys(touched).map(Number));
+      }
+
+      // redraw rows; a row with a cell being edited is redrawn when the edit
+      // ends (redrawing it would remove the open editor)
       function reformatRows(ids) {
+        var cur = grid.table.modules.edit && grid.table.modules.edit.currentCell;
         ids.forEach(function (id) {
           var row = grid.table.getRow(id);
-          if (row) row.reformat();
+          if (!row) return;
+          if (cur && row._getSelf && row._getSelf() === cur.row) {
+            grid.reformatLater[row.getIndex()] = true;
+            return;
+          }
+          row.reformat();
         });
+      }
+
+      function reformatPending() {
+        var ids = Object.keys(grid.reformatLater || {}).map(Number);
+        grid.reformatLater = {};
+        if (ids.length) setTimeout(function () { reformatRows(ids); }, 0);
       }
 
       grid.handle = function (method, args) {
@@ -3489,6 +3631,8 @@
             });
             reformatRows(Object.keys(touchedC).map(Number));
             if (formVisible()) refreshForm();
+          } else if (method === "set_formats") {
+            setFormats(formatList(args.formats));
           } else if (method === "set_problems") {
             var nextP = problemMap(args);
             var touchedP = {};
@@ -3528,6 +3672,8 @@
         grid.changed = {};
         toArray(opts.changed).forEach(function (k) { grid.changed[k] = true; });
         grid.problems = problemMap(opts.problems);
+        grid.formats = formatList(opts.formats);
+        grid.reformatLater = {};
         grid.comments = commentSet(opts.comments);
         grid.rColours = {};
         if (opts.colours) {
@@ -3642,7 +3788,9 @@
         });
         table.on("cellEdited", function () {
           if (formVisible()) setTimeout(refreshForm, 0);
+          reformatPending();
         });
+        table.on("cellEditCancelled", reformatPending);
         table.on("dataFiltered", function () {
           if (!grid.ready) return;
           setTimeout(function () {

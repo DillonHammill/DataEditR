@@ -543,6 +543,20 @@ input.editr-rename {
   background-repeat: no-repeat;
 }
 
+/* conditional formatting (see R/formats.R): over the change highlight and
+   read-only tint, under rule problems and the range selection */
+.editr_grid .tabulator .tabulator-cell.editr-fmt-fill {
+  background-color: var(--editr-fmt-fill);
+}
+
+.editr_grid .tabulator .tabulator-cell.editr-fmt-color {
+  color: var(--editr-fmt-color);
+}
+
+.editr_grid .tabulator .tabulator-cell.editr-fmt-bold {
+  font-weight: 600;
+}
+
 /* cells that break a validation rule: red corner and a light tint */
 .editr_grid .tabulator .tabulator-cell.editr-problem {
   background-color: #FEF2F2;
