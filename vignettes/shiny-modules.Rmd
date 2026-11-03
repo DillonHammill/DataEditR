@@ -242,7 +242,7 @@ observeEvent(input$save, {
 
 ## 2. The other modules
 
-Earlier versions of **DataEditR** combined several modules inside `data_edit()`. These are still exported and can be combined with `dataEdit` in your own apps. They use `shinyjs`, so add `shinyjs::useShinyjs()` to your UI.
+Earlier versions of **DataEditR** combined several modules inside `data_edit()`. These are still exported and can be combined with `dataEdit` in your own apps. They use `shinyjs`, which their UI functions now load themselves, so `hide = TRUE` works without adding `shinyjs::useShinyjs()` to your UI.
 
 | Module       | What it does                                                                  |
 |--------------|-------------------------------------------------------------------------------|
@@ -256,11 +256,9 @@ Earlier versions of **DataEditR** combined several modules inside `data_edit()`.
 
 ```{r}
 library(shiny)
-library(shinyjs)
 library(DataEditR)
 
 ui <- bslib::page_fluid(
-  useShinyjs(),
   dataInputUI("input"),
   dataFilterUI("filter"),
   dataSelectUI("select"),

@@ -22,7 +22,7 @@
 #'   reactiveValues observe observeEvent showModal modalDialog tagList insertUI
 #'   removeUI removeModal
 #' @importFrom htmltools tags
-#' @importFrom shinyjs hidden show
+#' @importFrom shinyjs hidden show useShinyjs
 #'
 #' @author Dillon Hammill, \email{dillon.hammill21@gmail.com}
 #'
@@ -63,13 +63,17 @@ NULL
 dataSelectUI <- function(id) {
   
   # USER INTERFACE
-  hidden(
-    actionButton(
-      NS(id, "select"),
-      label = NULL,
-      icon = icon("crosshairs"),
-      title = "Select columns",
-      style = "margin-left: 0px;"
+  # shinyjs is included so apps do not need useShinyjs()
+  tagList(
+    useShinyjs(),
+    hidden(
+      actionButton(
+        NS(id, "select"),
+        label = NULL,
+        icon = icon("crosshairs"),
+        title = "Select columns",
+        style = "margin-left: 0px;"
+      )
     )
   )
 

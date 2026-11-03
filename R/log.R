@@ -13,7 +13,8 @@
 #   time    when the change was made (POSIXct)
 #   user    who made it
 #   step    number of the action, counting from 1 in each session
-#   how     "edit", "paste", "fill", "clear", "undo", "redo" or "revert"
+#   how     "edit", "paste", "fill", "shift", "clear", "undo", "redo" or
+#           "revert"
 #   action  "edit", "add row", "remove row", "add column", "remove column" or
 #           "rename column"
 #   row     row name, database key or row number of the row
@@ -300,6 +301,8 @@ log_step_title <- function(entries) {
       paste0("pasted ", plural(cells, "cell"), where)
     } else if (how == "fill") {
       paste0("filled ", plural(cells, "cell"), where)
+    } else if (how == "shift") {
+      paste0("moved ", plural(cells, "cell"), where)
     } else if (how == "clear") {
       paste0("cleared ", plural(cells, "cell"), where)
     } else if (cells == 1) {
@@ -346,6 +349,7 @@ log_step_tag <- function(entries) {
                recode = c("Recode", "edited"), type = c("Type", "renamed"),
                sort = c("Sort", "renamed"),
                paste = c("Paste", "edited"), fill = c("Fill", "edited"),
+               shift = c("Shift", "edited"),
                clear = c("Clear", "removed"), undo = c("Undo", "renamed"),
                redo = c("Redo", "renamed"), revert = c("Revert", "renamed"))
   if (how %in% names(tags)) {

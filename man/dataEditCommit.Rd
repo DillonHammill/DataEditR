@@ -71,7 +71,8 @@ session.}
 a value, a paste, a fill, an undo, ...) is one step, the same unit that
 undo works with.}
 \item{how}{how the change was made: \code{"edit"}, \code{"paste"},
-\code{"fill"}, \code{"clear"}, \code{"undo"}, \code{"redo"} or
+\code{"fill"}, \code{"shift"} (cells inserted or deleted, moving the
+cells below), \code{"clear"}, \code{"undo"}, \code{"redo"} or
 \code{"revert"} (from the review panel), or the column action:
 \code{"formula"}, \code{"replace"}, \code{"recode"}, \code{"type"} or
 \code{"sort"}.}

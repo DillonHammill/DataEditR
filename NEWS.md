@@ -53,6 +53,47 @@
   no longer converted to numbers. Dates stay dates, and matrices, tibbles and
   data.tables are returned with their original class.
 
+## Issues reported for DataEditR 1.x
+
+Every issue opened on GitHub for earlier versions was checked against this
+release. Besides the changes above (edits returned by `Done` without a
+`sync` button, undo, validation, date pickers, sliders, find and replace,
+hidden columns, filters that keep working with any number of filters and
+with filtered edits, factors, pasting that adds rows and columns, editing in
+shiny modals and with data that changes), these were fixed or added:
+
+* A named list of choices in `col_options` (as for `shiny::selectInput()`)
+  makes a dropdown that shows the names and stores the values (#76).
+* `col_widths` sets the starting width of columns in pixels, and columns
+  with long text start at most 320 pixels wide (#74).
+* `col_options` type `"html"` shows cells as HTML (links, line breaks,
+  images, ...) without scripts, styles or event handlers (#69).
+* `Insert cells, shift down` and `Delete cells, shift up` in the cell menu
+  move the cells below a selection, in its columns only (#53).
+* `Ctrl+Shift+V` pastes a block with its first row as column names (#36).
+* `row_names = FALSE` keeps row names out of sight while returning them
+  (#40). A row name that another row already has is refused, instead of
+  the row names being moved to a column on return (#1).
+* Text filters starting with `!` keep the rows that do not contain the text,
+  as the old `not contain` filter did (#67).
+* `sf` objects are returned as `sf` objects: their geometry, and any other
+  list column, is shown as text and kept read-only while the other columns
+  are edited (#52). Rows can be added to data with list columns.
+* `read_fun` and `write_fun` accept `"pkg::fun"`, e.g.
+  `"readxl::read_excel"` (#70). `save_as` that is not a file (e.g. a Google
+  Sheet written by `write_fun`) no longer breaks the `Done` and `Export`
+  menus (#26). Data without row names is written without a column of row
+  numbers (#71), and `data_edit()` says where it saved the data (#62).
+* Data without rows opens with one row to type in, which is only returned
+  once something has been entered in it (#34).
+* The RStudio add-in opens the highlighted data frame (#72).
+* `dataInputUI()`, `dataOutputUI()`, `dataFilterUI()`, `dataSelectUI()` and
+  `dataSyncUI()` load `shinyjs` themselves, so `hide = TRUE` works without
+  `useShinyjs()` (#19, #28). Hidden toolbar buttons stay hidden in apps that
+  use shiny's default Bootstrap 3 theme.
+* No code relies on partial argument matching, so the editor works with
+  `options(warnPartialMatchArgs = TRUE, warn = 2)` (#64).
+
 ## Comments, drag to fill and a colour picker
 
 * Cells can carry comments: right-click a cell (or press `Shift+F2`) to add,

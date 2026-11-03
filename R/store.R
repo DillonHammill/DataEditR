@@ -360,9 +360,9 @@ rbind_rows <- function(x, y) {
     }
     c(a, b)
   })
-  names(out) <- names(x)
-  as.data.frame(out, stringsAsFactors = FALSE, check.names = FALSE,
-                optional = TRUE)
+  # LIST COLUMNS STAY ONE COLUMN (as.data.frame() WOULD SPLIT THEM UP)
+  structure(out, names = names(x), class = "data.frame",
+            row.names = .set_row_names(nrow(x) + nrow(y)))
 }
 
 #' cbind three pieces keeping names exactly as supplied

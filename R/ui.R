@@ -117,6 +117,7 @@ editr_shortcuts <- function(id) {
     c("New line in a text area", "Shift Enter"),
     c("Undo / redo", "Ctrl Z", "Ctrl Y"),
     c("Copy / paste range", "Ctrl C", "Ctrl V"),
+    c("Paste with the first row as column names", "Ctrl Shift V"),
     c("Clear selected cells", "Delete"),
     c("Fill down", "Ctrl D"),
     c("Find in data", "Ctrl F"),

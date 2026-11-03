@@ -41,6 +41,8 @@ dataEditServer(
   rules = NULL,
   col_summary = TRUE,
   history = NULL,
+  row_names = TRUE,
+  col_widths = NULL,
   ...
 )
 }
@@ -84,6 +86,8 @@ use for each column:
 \item \code{"textarea"}: text over several lines;
 \item \code{"password"}: hidden text;
 \item \code{"url"}: web addresses with a button to open them;
+\item \code{"html"}: cells shown as HTML (links, line breaks, bold,
+images, ...) without scripts or styles; double-click to edit the HTML;
 \item \code{"colour"} (or \code{"color"}): colours (R colour names such
 as \code{"grey50"} or hex codes such as \code{"#1D4ED8"}) shown with a
 swatch and edited with a colour picker. Set the colours the picker
@@ -199,6 +203,16 @@ database table, read back with \code{DBI::dbReadTable()}. The
 \code{session} column tells the sessions apart (entries of the current
 session are left out). \code{data_edit(log = "file.csv")} reads the
 earlier sessions of the data from its file.}
+
+\item{row_names}{logical indicating whether the row names of the data are
+shown in the editor, set to \code{TRUE} by default. When \code{FALSE} the
+row names are kept out of sight but still returned; rows added in the
+editor are named by their row number.}
+
+\item{col_widths}{widths of the columns in pixels: one number for every
+column, or numbers named by column, e.g. \code{c(notes = 400, id = 60)}.
+Other columns are as wide as their values, up to 320 pixels; drag the
+edge of a column header to resize it.}
 
 \item{...}{not in use.}
 }

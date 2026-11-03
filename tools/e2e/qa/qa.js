@@ -764,6 +764,130 @@ const scenarios = {
     await done(page);
   },
 
+  // issues reported for DataEditR 1.x
+  async issues(page) {
+    const t = (fn, ...a) => page.evaluate(fn, ...a);
+    const text = (id, f) => t((id, f) => document.querySelector(".editr_grid").__editr.table.getRow(id)
+      .getCell(f).getElement().innerText.trim(), id, f);
+    const html = (id, f) => t((id, f) => document.querySelector(".editr_grid").__editr.table.getRow(id)
+      .getCell(f).getElement().innerHTML, id, f);
+    const col = async (f) => (await L.gridData(page)).map((r) => r[f]);
+    const cols = await L.columns(page);
+    const f = Object.fromEntries(cols.map((c) => [c.title, c.field]));
+    // #40 row names out of sight
+    check(cols.every((c) => c.title.trim() !== ""), "row names column hidden");
+    // #76 dropdown shows the names
+    check(await text(1, f.state) === "New South Wales", "dropdown shows the name: " + await text(1, f.state));
+    // #69 html cells, without scripts or handlers
+    const h1 = await html(1, f.photo), h2 = await html(2, f.photo);
+    check(/<br>/.test(h1) && /target="_blank"/.test(h1) && /<b>bold<\/b>/.test(h2) &&
+          !/script|onerror/.test(h2), "html shown and cleaned");
+    // #74 widths
+    const widths = await t(() => Object.fromEntries(document.querySelector(".editr_grid").__editr.table
+      .getColumns().map((c) => [c.getField(), c.getWidth()])));
+    check(widths[f.n] === 80 && widths[f.note] <= 320, "col_widths and long text at most 320 px: " +
+          widths[f.n] + ", " + widths[f.note]);
+    await page.screenshot({ path: path.join(out, "issues.png") });
+    // #76 pick a name; paste a name
+    let p = await L.cellCentre(page, 4, f.state);
+    await page.mouse.click(p.x, p.y, { clickCount: 2 });
+    await page.waitForSelector(".tabulator-edit-list-item");
+    await sleep(300);
+    const it = await t(() => { const e = [...document.querySelectorAll(".tabulator-edit-list-item")]
+      .find((x) => x.textContent.trim() === "Victoria"); const b = e.getBoundingClientRect();
+      return { x: b.x + 10, y: b.y + b.height / 2 }; });
+    await page.mouse.click(it.x, it.y);
+    await L.settle(page, 800);
+    await L.selectCell(page, 5, f.state);
+    await L.paste(page, "queensland\n");
+    check(await text(4, f.state) === "Victoria" && await text(5, f.state) === "Queensland",
+          "names picked and pasted");
+    // #67 "!" filter; #68 three filters together
+    await page.click('.tabulator-col[tabulator-field="' + f.code + '"] .tabulator-header-filter input');
+    await page.keyboard.type("!ab");
+    await L.settle(page, 900);
+    const active = () => t(() => document.querySelector(".editr_grid").__editr.table.getRows("active")
+      .map((r) => r.getIndex()));
+    check(JSON.stringify(await active()) === JSON.stringify([3, 4]), "!ab keeps rows 3 and 4: " + JSON.stringify(await active()));
+    check(/code does not contain/.test(await page.$eval("#edit1-chips", (e) => e.textContent)), "chip says does not contain");
+    await t((fs, fst) => { const tb = document.querySelector(".editr_grid").__editr.table;
+      tb.setHeaderFilterValue(fs, ["virginica", "setosa"]); tb.setHeaderFilterValue(fst, ["VIC"]); },
+            f.species, f.state);
+    await L.settle(page, 900);
+    check(JSON.stringify(await active()) === JSON.stringify([4]), "three filters together: " + JSON.stringify(await active()));
+    await page.click("#edit1-chips .editr-chip-clear");
+    await L.settle(page, 900);
+    check((await active()).length === 5, "filters cleared");
+    // #53 insert and delete cells
+    await L.selectCell(page, 2, f.n);
+    await L.rowMenu(page, 2, f.n, "Insert cells, shift down");
+    check(JSON.stringify(await col(f.n)) === JSON.stringify([1, null, 2, 3, 4]), "cells moved down: " + JSON.stringify(await col(f.n)));
+    await L.selectCell(page, 1, f.n);
+    await L.rowMenu(page, 1, f.n, "Delete cells, shift up");
+    check(JSON.stringify(await col(f.n)) === JSON.stringify([null, 2, 3, 4, null]), "cells moved up: " + JSON.stringify(await col(f.n)));
+    // #36 paste with the first row as column names
+    await L.selectCell(page, 1, f.species);
+    await page.keyboard.down("Control"); await page.keyboard.down("Shift");
+    await page.keyboard.press("KeyV");
+    await page.keyboard.up("Shift"); await page.keyboard.up("Control");
+    await L.paste(page, "kind\textra\nA\tB\n");
+    await L.settle(page, 900);
+    const titles = (await L.columns(page)).map((c) => c.title);
+    check(titles.includes("kind") && titles.includes("extra") && !titles.includes("species"),
+          "columns named by the pasted header: " + titles.join(","));
+    await done(page);
+  },
+
+  async shiny_modal(page) {
+    const t = (fn, ...a) => page.evaluate(fn, ...a);
+    const info = () => t(() => { const g = document.getElementById("edit-grid"); const tb = g.__editr.table;
+      return { rows: tb.getRows().length, shown: g.querySelectorAll(".tabulator-row").length,
+               height: g.getBoundingClientRect().height,
+               cols: tb.getColumns().map((c) => c.getDefinition().title).filter((x) => x && x.trim()) }; });
+    const open = async () => {
+      await t(() => document.getElementById("modify").click());
+      await page.waitForFunction(() => { const g = document.getElementById("edit-grid");
+        return g && g.__editr && g.__editr.ready; }, { timeout: 10000 });
+      await sleep(1200);
+    };
+    const close = async () => {
+      await page.keyboard.press("Escape");
+      await sleep(300);
+      await t(() => { const b = document.querySelector("#shiny-modal button[data-dismiss], #shiny-modal button[data-bs-dismiss]"); if (b) b.click(); });
+      await page.waitForFunction(() => !document.getElementById("edit-grid"), { timeout: 5000 }).catch(() => null);
+      await sleep(800);
+    };
+    await sleep(1500); // the modal fades in
+    let g = await info();
+    check(g.rows === 5 && g.shown === 5 && g.height > 100, "the grid is drawn in the modal (#25): " + g.shown + " rows");
+    // the modal may still be settling: try the double-click again if needed
+    for (let i = 0; i < 3; i++) {
+      try {
+        await L.renameColumn(page, "c2", "MPG");
+        break;
+      } catch (e) {
+        await sleep(1000);
+      }
+    }
+    await L.editCell(page, 1, "c3", "8");
+    const tab = await page.$eval("#tab", (e) => e.textContent.replace(/\s+/g, " "));
+    check(/MPG/.test(tab) && /8\.00/.test(tab), "rename and edit in the modal reach R (#24)");
+    await page.screenshot({ path: path.join(out, "modal.png") });
+    await close();
+    await t(() => Shiny.setInputValue("ds", "iris"));
+    await sleep(1500);
+    await open();
+    g = await info();
+    check(g.rows === 20 && g.cols.includes("Species"), "other data shown after switching (#61): " + g.rows + " rows");
+    await close();
+    await t(() => Shiny.setInputValue("ds", "mtcars"));
+    await sleep(1500);
+    await open();
+    g = await info();
+    check(g.rows === 5 && g.cols.includes("mpg"), "the first data again, not repeated (#58): " + g.rows + " rows");
+    await close();
+  },
+
   async cancel(page) {
     await L.editCell(page, 1, "c2", "99");
     await L.rowMenu(page, 2, "c2", "Delete row");

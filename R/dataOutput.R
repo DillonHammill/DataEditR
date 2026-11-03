@@ -21,7 +21,7 @@
 #'
 #' @importFrom shiny downloadButton downloadHandler reactive moduleServer
 #'   is.reactive
-#' @importFrom shinyjs disable enable hidden show
+#' @importFrom shinyjs disable enable hidden show useShinyjs
 #'
 #' @author Dillon Hammill, \email{dillon.hammill21@gmail.com}
 #'
@@ -60,12 +60,15 @@ NULL
 #' @export
 dataOutputUI <- function(id,
                          icon = "download") {
-  hidden(
-    customDownloadButton(
-      NS(id, "save"),
-      label = NULL,
-      icon = icon,
-      style = "margin-left: 0px;"
+  tagList(
+    useShinyjs(),
+    hidden(
+      customDownloadButton(
+        NS(id, "save"),
+        label = NULL,
+        icon = icon,
+        style = "margin-left: 0px;"
+      )
     )
   )
 }
@@ -132,7 +135,7 @@ dataOutputServer <- function(id,
       },
       content = function(file) {
         write_args <- c(list(values$data, file), write_args)
-        do.call(write_fun, write_args)
+        do.call(editr_fun(write_fun), write_args)
       }
     )
   })

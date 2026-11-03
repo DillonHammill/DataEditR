@@ -140,6 +140,12 @@ grid_values <- function(x) {
   if (is.logical(x) || is.character(x)) {
     return(x)
   }
+  # LIST COLUMNS (sf GEOMETRIES, ...) AS format() SHOWS THEM
+  if (is.list(x)) {
+    return(vapply(seq_along(x), function(i) {
+      paste(format(x[i]), collapse = " ")
+    }, character(1)))
+  }
   as.character(x)
 }
 
@@ -173,6 +179,8 @@ grid_columns <- function(store, cfg) {
     )
     # VARIABLE AND VALUE LABELS (R/labelled.R)
     spec$labels <- grid_labels(col, attrs[[cid]])
+    # WIDTH IN PIXELS (col_widths)
+    spec$width <- cfg$col_widths[[cid]]
     spec
   })
 }
@@ -248,7 +256,7 @@ grid_col_options <- function(col_options) {
 # NAMED COLUMN TYPES (col_options = list(x = "textarea"))
 EDITR_COL_TYPES <- c("date", "datetime", "time", "password", "textarea",
                      "url", "colour", "rating", "slider", "number",
-                     "checkbox", "dropdown")
+                     "checkbox", "dropdown", "html")
 
 #' Option spec for one column
 #'
@@ -277,6 +285,12 @@ col_option_spec <- function(o) {
   if (!is.list(o) && "type" %in% names(o)) {
     o <- as.list(o)
   }
+  # A LIST OF CHOICES (AS FOR shiny::selectInput()): A DROPDOWN, WHOSE NAMES
+  # ARE SHOWN IN THE MENU AND THE CELLS
+  if (is.list(o) && is.null(o$type) && length(o) > 0 &&
+      !(!is.null(names(o)) && all(names(o) %in% c("min", "max", "step")))) {
+    return(dropdown_spec(unlist(o, use.names = FALSE), names(o)))
+  }
   if (is.list(o)) {
     type <- tolower(as.character(o$type %||% "number")[1])
     if (type == "color") type <- "colour"
@@ -294,7 +308,7 @@ col_option_spec <- function(o) {
       spec$max <- as.numeric(o$stars %||% o$max %||% 5)[1]
       spec$step <- 1
     } else if (type == "dropdown") {
-      spec$values <- I(as.character(unlist(o$values)))
+      spec <- dropdown_spec(unlist(o$values, use.names = FALSE), names(o$values))
     } else if (type == "colour" && !is.null(o$palette)) {
       spec$palette <- I(as.character(unlist(o$palette)))
     }
@@ -314,7 +328,20 @@ col_option_spec <- function(o) {
       return(col_option_spec(list(type = type)))
     }
   }
-  list(type = "dropdown", values = I(as.character(o)))
+  dropdown_spec(o, names(o))
+}
+
+#' Dropdown of values, shown by their names (labels) when they have some
+#' @noRd
+dropdown_spec <- function(values, labels = NULL) {
+  values <- as.character(values)
+  spec <- list(type = "dropdown", values = I(values))
+  if (!is.null(labels) && length(labels) == length(values)) {
+    labels <- as.character(labels)
+    labels[is.na(labels) | !nzchar(labels)] <- values[is.na(labels) | !nzchar(labels)]
+    if (!identical(labels, values)) spec$labels <- I(labels)
+  }
+  spec
 }
 
 #' Convert a column to the type its input needs

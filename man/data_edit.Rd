@@ -39,6 +39,8 @@ data_edit(
   col_actions = TRUE,
   rules = NULL,
   col_summary = TRUE,
+  row_names = TRUE,
+  col_widths = NULL,
   ...
 )
 }
@@ -68,6 +70,8 @@ use for each column:
 \item \code{"textarea"}: text over several lines;
 \item \code{"password"}: hidden text;
 \item \code{"url"}: web addresses with a button to open them;
+\item \code{"html"}: cells shown as HTML (links, line breaks, bold,
+images, ...) without scripts or styles; double-click to edit the HTML;
 \item \code{"colour"} (or \code{"color"}): colours (R colour names such
 as \code{"grey50"} or hex codes such as \code{"#1D4ED8"}) shown with a
 swatch and edited with a colour picker. Set the colours the picker
@@ -127,7 +131,10 @@ default.}
 \item{viewer}{can be either \code{"dialog"}, \code{"browser"} or
 \code{"pane"} to open the application in a dialog box, browser or RStudio
 viewer pane. First letter abbreviations are allowed, set to \code{"dialog"}
-by default. A function accepting the application URL can also be supplied.}
+by default. A function accepting the application URL can also be supplied.
+Outside RStudio the dialog opens in the browser. If code that runs after
+\code{data_edit()} inside a function of yours stops when the RStudio
+dialog closes, use \code{viewer = "pane"} or \code{"browser"} there.}
 
 \item{viewer_height}{numeric to control the height of the viewer in pixels
 when \code{viewer} is set to \code{"dialog"}, set 800 by default.}
@@ -144,7 +151,8 @@ is the name of a file, set to \code{read.csv} by default. SPSS
 (\code{.sav}, \code{.por}), Stata (\code{.dta}) and SAS
 (\code{.sas7bdat}, \code{.xpt}) files are read with the haven package
 unless another function is given (see the \emph{Labelled data}
-section).}
+section). Functions of other packages can be named with
+\code{"pkg::fun"}, e.g. \code{read_fun = "readxl::read_excel"}.}
 
 \item{read_args}{a named list of additional arguments to pass to
 \code{read_fun}.}
@@ -154,7 +162,11 @@ section).}
 that the first argument accepts the edited data and the second argument
 accepts the file name supplied to \code{save_as}. When \code{save_as}
 ends in \code{.sav}, \code{.dta} or \code{.xpt} the data is written with
-haven, keeping variable and value labels.}
+haven, keeping variable and value labels. Data without row names (only
+row numbers) is written by \code{write.csv()} without them, unless
+\code{write_args} sets \code{row.names}. \code{"pkg::fun"} names a
+function of another package, e.g. \code{"googlesheets4::write_sheet"},
+whose \code{save_as} need not be a file name.}
 
 \item{write_args}{a named list of additional arguments to pass to
 \code{write_fun}.}
@@ -221,6 +233,16 @@ values. Click a bar to show only those rows, the missing share to show
 the rows where the value is missing, or the number of values for the
 details (smallest, largest, mean, ...). Set to \code{TRUE} by default;
 the toolbar button hides the summaries.}
+
+\item{row_names}{logical indicating whether the row names of the data are
+shown in the editor, set to \code{TRUE} by default. When \code{FALSE} the
+row names are kept out of sight but still returned; rows added in the
+editor are named by their row number.}
+
+\item{col_widths}{widths of the columns in pixels: one number for every
+column, or numbers named by column, e.g. \code{c(notes = 400, id = 60)}.
+Other columns are as wide as their values, up to 320 pixels; drag the
+edge of a column header to resize it.}
 
 \item{...}{not in use.}
 }

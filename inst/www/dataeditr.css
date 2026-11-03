@@ -1144,3 +1144,9 @@ button.editr-change-title:hover {
   font-size: 12px;
   white-space: pre-wrap;
 }
+
+/* hidden parts of the editor stay hidden in apps on Bootstrap 3 (shiny's
+   default), where button and flex styles would show them */
+.editr-editor [hidden] {
+  display: none !important;
+}

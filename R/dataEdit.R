@@ -57,6 +57,14 @@
 #'   \code{session} column tells the sessions apart (entries of the current
 #'   session are left out). \code{data_edit(log = "file.csv")} reads the
 #'   earlier sessions of the data from its file.
+#' @param row_names logical indicating whether the row names of the data are
+#'   shown in the editor, set to \code{TRUE} by default. When \code{FALSE} the
+#'   row names are kept out of sight but still returned; rows added in the
+#'   editor are named by their row number.
+#' @param col_widths widths of the columns in pixels: one number for every
+#'   column, or numbers named by column, e.g. \code{c(notes = 400, id = 60)}.
+#'   Other columns are as wide as their values, up to 320 pixels; drag the
+#'   edge of a column header to resize it.
 #' @param data a reactive expression containing an array (e.g. data.frame,
 #'   matrix or data.table), a database table (see \code{\link{db_table}}) or a
 #'   vector indicating the dimensions of the array (e.g. c(10,10)) or column
@@ -79,6 +87,8 @@
 #'   \item \code{"textarea"}: text over several lines;
 #'   \item \code{"password"}: hidden text;
 #'   \item \code{"url"}: web addresses with a button to open them;
+#'   \item \code{"html"}: cells shown as HTML (links, line breaks, bold,
+#'   images, ...) without scripts or styles; double-click to edit the HTML;
 #'   \item \code{"colour"} (or \code{"color"}): colours (R colour names such
 #'   as \code{"grey50"} or hex codes such as \code{"#1D4ED8"}) shown with a
 #'   swatch and edited with a colour picker. Set the colours the picker
@@ -354,6 +364,8 @@ dataEditServer <- function(id,
                            rules = NULL,
                            col_summary = TRUE,
                            history = NULL,
+                           row_names = TRUE,
+                           col_widths = NULL,
                            ...) {
 
   data_r <- if (is.reactive(data)) data else reactive(data)
@@ -426,7 +438,9 @@ dataEditServer <- function(id,
         read_fun = read_fun,
         read_args = read_args,
         track = track,
-        quiet = quiet
+        quiet = quiet,
+        row_names = row_names,
+        col_widths = col_widths
       )
     }
 
@@ -1228,7 +1242,8 @@ dataEditServer <- function(id,
 #' a value, a paste, a fill, an undo, ...) is one step, the same unit that
 #' undo works with.}
 #' \item{how}{how the change was made: \code{"edit"}, \code{"paste"},
-#' \code{"fill"}, \code{"clear"}, \code{"undo"}, \code{"redo"} or
+#' \code{"fill"}, \code{"shift"} (cells inserted or deleted, moving the
+#' cells below), \code{"clear"}, \code{"undo"}, \code{"redo"} or
 #' \code{"revert"} (from the review panel), or the column action:
 #' \code{"formula"}, \code{"replace"}, \code{"recode"}, \code{"type"} or
 #' \code{"sort"}.}

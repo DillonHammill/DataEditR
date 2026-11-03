@@ -21,7 +21,7 @@
 #'
 #' @importFrom shiny fluidRow splitLayout textInput fileInput NS moduleServer
 #'   reactive updateTextInput observeEvent eventReactive
-#' @importFrom shinyjs hidden show
+#' @importFrom shinyjs hidden show useShinyjs
 #'
 #' @author Dillon Hammill, \email{dillon.hammill21@gmail.com}
 #'
@@ -54,8 +54,10 @@ NULL
 dataInputUI <- function(id,
                         cellWidths = c("50%", "48%")) {
   
-  # USER INTERFACE
+  # USER INTERFACE (shinyjs shows the inputs unless hide = TRUE; it is
+  # included here so apps do not have to call useShinyjs() themselves)
   list(
+    useShinyjs(),
     splitLayout(
       hidden(
         fileInput(
@@ -242,7 +244,7 @@ dataInputServer <- function(id,
       if (!is.null(input$file)) {
         # READ ARGUMENTS
         read_args <- c(list(input$file$datapath), read_args)
-        upload <<- do.call(read_fun, read_args)
+        upload <<- do.call(editr_fun(read_fun), read_args)
         # FLUSH DATA INPUT - PREVIOUS FILE UPLOAD
         updateTextInput(
           session,

@@ -173,6 +173,27 @@ if (scenario == "df") {
   ), log, "x")
   keep(x, data_edit(x, viewer = noview, quiet = TRUE, log = log, code = code_file))
 
+} else if (scenario == "issues") {
+  # issues reported for DataEditR 1.x
+  x <- data.frame(
+    state = c("NSW", "VIC", "QLD", NA, NA),
+    photo = c('Photo:<br/><a href="https://example.org/p1.jpg">details</a>',
+              "<b>bold</b> <script>alert(1)</script><img src=x onerror=alert(2)>",
+              NA, NA, NA),
+    n = c(1, 2, 3, 4, NA),
+    note = c(paste(rep("a long piece of text", 8), collapse = " "), "short",
+             NA, NA, NA),
+    species = c("setosa", "versicolor", "setosa", "virginica", "setosa"),
+    code = c("ab1", "ab2", "cd3", "ef4", "ab5"),
+    row.names = paste0("r", 1:5),
+    stringsAsFactors = FALSE
+  )
+  keep(x, quietly(x, code = code_file, row_names = FALSE, col_widths = c(n = 80),
+                  col_options = list(state = list(`New South Wales` = "NSW",
+                                                  Victoria = "VIC",
+                                                  Queensland = "QLD"),
+                                     photo = "html")))
+
 } else if (scenario == "cancel") {
   x <- mtcars[1:3, 1:3]
   keep(x, quietly(x))
@@ -249,6 +270,32 @@ if (scenario == "df") {
                db = DBI::dbGetQuery(con, "SELECT * FROM cars ORDER BY id")),
           file.path(out, "result.rds"))
   DBI::dbDisconnect(con)
+
+} else if (scenario == "shiny_modal") {
+  # the editor in a modal, with data that changes (#24, #25, #58, #61)
+  ui <- fluidPage(
+    selectInput("ds", "Data", c("mtcars", "iris")),
+    actionButton("modify", "Modify"),
+    tableOutput("tab")
+  )
+  server <- function(input, output, session) {
+    dataset <- reactive(head(get(input$ds), if (input$ds == "mtcars") 5 else 20))
+    show <- function() {
+      showModal(modalDialog(dataEditUI("edit", height = "50vh"), size = "l",
+                            easyClose = TRUE))
+    }
+    observeEvent(input$modify, show())
+    session$onFlushed(show)
+    edited <- dataEditServer("edit", data = dataset)
+    seen <- list()
+    observe({
+      d <- edited()
+      seen[[length(seen) + 1]] <<- list(names = names(d), rows = nrow(d))
+      saveRDS(seen, file.path(out, "seen.rds"))
+    })
+    output$tab <- renderTable(head(edited(), 3), rownames = TRUE)
+  }
+  runApp(shinyApp(ui, server), port = port, launch.browser = FALSE)
 
 } else if (scenario == "shiny" || scenario == "shiny_db") {
   if (scenario == "shiny_db") {

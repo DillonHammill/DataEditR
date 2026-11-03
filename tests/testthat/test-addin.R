@@ -57,3 +57,13 @@ test_that("data supplied to data_edit() wins over the selection", {
   mock_gadget(function(session) session$setInputs(done = 1))
   expect_identical(data_edit(iris[1:2, ]), iris[1:2, ])
 })
+
+test_that("#72 the add-in finds the highlighted object in the global environment", {
+  mock_rstudio("issue72_cars")
+  assign("issue72_cars", mtcars[1:2, 1:2], envir = globalenv())
+  withr::defer(rm("issue72_cars", envir = globalenv()))
+  # RStudio runs the add-in from its own environment
+  sel <- DataEditR:::editr_addin_selection(new.env(parent = baseenv()))
+  expect_identical(sel$name, "issue72_cars")
+  expect_identical(sel$data, mtcars[1:2, 1:2])
+})

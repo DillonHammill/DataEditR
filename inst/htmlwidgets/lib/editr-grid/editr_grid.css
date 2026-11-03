@@ -783,3 +783,29 @@ input.editr-rename {
   color: #B91C1C;
   padding-left: 0;
 }
+
+/* "html" columns */
+.editr_grid .editr-html {
+  display: block;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+}
+
+.editr_grid .editr-html p,
+.editr_grid .editr-html ul,
+.editr_grid .editr-html ol,
+.editr_grid .editr-html pre,
+.editr_grid .editr-html blockquote {
+  margin: 0;
+}
+
+.editr_grid .editr-html img {
+  max-height: 64px;
+  max-width: 100%;
+  vertical-align: middle;
+}
+
+.editr_grid .editr-html a {
+  color: #1D4ED8;
+}

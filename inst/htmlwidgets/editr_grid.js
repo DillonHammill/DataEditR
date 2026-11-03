@@ -200,6 +200,29 @@
     return hit === undefined ? null : hit;
   }
 
+  // dropdowns given as a named list (as for shiny::selectInput()) show the
+  // names and store the values
+  function choiceLabel(c, v) {
+    var o = c && c.option;
+    if (!o || o.type !== "dropdown" || !o.labels || v === null || v === undefined) return null;
+    var i = toArray(o.values).map(String).indexOf(String(v));
+    return i === -1 ? null : String(toArray(o.labels)[i]);
+  }
+
+  function choiceValue(c, s) {
+    var o = c && c.option;
+    if (!o || o.type !== "dropdown" || !o.labels || typeof s !== "string") return undefined;
+    var t = s.trim();
+    var values = toArray(o.values).map(String);
+    if (values.indexOf(t) !== -1) return t;
+    var low = t.toLowerCase();
+    var hits = toArray(o.labels).map(String).reduce(function (acc, l, i) {
+      if (l.toLowerCase() === low) acc.push(values[i]);
+      return acc;
+    }, []);
+    return hits.length === 1 ? hits[0] : undefined;
+  }
+
   // a value with its label, as the cell editor offers it: "1 \u00b7 Male"
   function labelledText(c, v) {
     var lab = valueLabel(c, v);
@@ -242,6 +265,10 @@
     if (typeof v === "string" && labelsOf(c)) {
       var lv = labelValue(c, v);
       if (lv !== undefined) return lv;
+    }
+    if (typeof v === "string" && o.type === "dropdown" && o.labels) {
+      var cv = choiceValue(c, v);
+      if (cv !== undefined) return cv;
     }
     if (c.kind === "numeric") return normalizeNumber(v);
     if (c.kind === "date" || c.kind === "datetime") {
@@ -631,6 +658,13 @@
             return document.createTextNode("");
           }
           if (base === "colour") return colourNode(v);
+          if (base === "html") return safeHTML(v);
+          if (base === "choice") {
+            var shown = choiceLabel(grid.colMap[cell.getField()], v);
+            if (shown !== null && !tips.length) element.title = String(v);
+            return document.createTextNode(shown !== null ? shown :
+              (v === null || v === undefined ? "" : String(v)));
+          }
           if (base) {
             var f = builtinFormatter(base);
             if (f) {
@@ -736,6 +770,59 @@
           sw.title = "Not a colour R knows";
         }
         return sw;
+      }
+
+      // "html" columns: the HTML of a cell, kept to text formatting, links
+      // (opening in a new tab) and images; scripts, styles, forms, frames and
+      // event handlers are removed
+      var HTML_KEEP = {A: 1, B: 1, STRONG: 1, I: 1, EM: 1, U: 1, S: 1, BR: 1,
+                       P: 1, DIV: 1, SPAN: 1, SMALL: 1, SUB: 1, SUP: 1, CODE: 1,
+                       PRE: 1, UL: 1, OL: 1, LI: 1, IMG: 1, MARK: 1, HR: 1,
+                       H1: 1, H2: 1, H3: 1, H4: 1, H5: 1, H6: 1, BLOCKQUOTE: 1};
+      var HTML_DROP = {SCRIPT: 1, STYLE: 1, IFRAME: 1, FRAME: 1, OBJECT: 1,
+                       EMBED: 1, LINK: 1, META: 1, BASE: 1, FORM: 1, INPUT: 1,
+                       BUTTON: 1, TEXTAREA: 1, SELECT: 1, SVG: 1, MATH: 1,
+                       NOSCRIPT: 1, TEMPLATE: 1, AUDIO: 1, VIDEO: 1, SOURCE: 1};
+      function safeHTML(v) {
+        var tpl = document.createElement("template");
+        tpl.innerHTML = v === null || v === undefined ? "" : String(v);
+        var clean = function (node) {
+          Array.prototype.slice.call(node.childNodes).forEach(function (ch) {
+            if (ch.nodeType === 3) return;
+            if (ch.nodeType !== 1 || HTML_DROP[ch.tagName.toUpperCase()]) {
+              node.removeChild(ch);
+              return;
+            }
+            var tag = ch.tagName.toUpperCase();
+            clean(ch);
+            if (!HTML_KEEP[tag]) {
+              // other elements: keep what is inside them
+              while (ch.firstChild) node.insertBefore(ch.firstChild, ch);
+              node.removeChild(ch);
+              return;
+            }
+            Array.prototype.slice.call(ch.attributes).forEach(function (a) {
+              var name = a.name.toLowerCase(), val = String(a.value).trim();
+              var ok = name === "title" || name === "alt" ||
+                (name === "href" && tag === "A" && /^(https?:|mailto:)/i.test(val)) ||
+                (name === "src" && tag === "IMG" && /^(https?:|data:image\/)/i.test(val));
+              if (!ok) ch.removeAttribute(a.name);
+            });
+            if (tag === "A") {
+              ch.setAttribute("target", "_blank");
+              ch.setAttribute("rel", "noopener noreferrer");
+            }
+          });
+        };
+        clean(tpl.content);
+        var out = document.createElement("span");
+        out.className = "editr-html";
+        out.appendChild(tpl.content);
+        // links open without selecting or editing the cell
+        out.addEventListener("mousedown", function (e) {
+          if (e.target.closest && e.target.closest("a")) e.stopPropagation();
+        });
+        return out;
       }
 
       // a swatch next to the colour
@@ -1292,11 +1379,15 @@
         return selected.indexOf(v) !== -1;
       }
 
+      // "set" keeps values containing set; "!set" those that do not
       function textFilter(value, rowValue, rowData) {
         if (pinnedRow(rowData)) return true;
-        if (rowValue === null || rowValue === undefined) return false;
-        return String(rowValue).toLowerCase()
-          .indexOf(String(value).toLowerCase()) !== -1;
+        var q = String(value);
+        var not = q.charAt(0) === "!" && q.length > 1;
+        if (not) q = q.slice(1);
+        if (rowValue === null || rowValue === undefined) return not;
+        var has = String(rowValue).toLowerCase().indexOf(q.toLowerCase()) !== -1;
+        return not ? !has : has;
       }
 
       function addHeaderFilter(def, c) {
@@ -1327,6 +1418,9 @@
           def.headerFilter = "input";
           def.headerFilterFunc = textFilter;
           def.headerFilterPlaceholder = "Contains\u2026";
+          def.headerFilterParams = {elementAttributes: {
+            title: "Rows containing this text; start with ! for rows that do not"
+          }};
         }
       }
 
@@ -1371,9 +1465,22 @@
           def.hozAlign = "center";
         } else if (o && o.type === "dropdown") {
           def.editor = c.readonly ? false : "list";
-          def.editorParams = {values: toArray(o.values), autocomplete: true,
-                              listOnEmpty: true, allowEmpty: true,
-                              clearable: true};
+          var choiceLabels = toArray(o.labels);
+          def.editorParams = {
+            values: choiceLabels.length ? toArray(o.values).map(function (v, i) {
+              return {label: String(choiceLabels[i]), value: v};
+            }) : toArray(o.values),
+            autocomplete: true, listOnEmpty: true, allowEmpty: true,
+            clearable: true
+          };
+          if (choiceLabels.length) {
+            def.formatter = makeFormatter("choice");
+            if (def.headerFilter === "list") {
+              def.headerFilterParams.itemFormatter = function (label, value) {
+                return escapeHTML(choiceLabel(c, value) || String(value));
+              };
+            }
+          }
         } else if (o && o.type === "date") {
           def.editor = c.readonly ? false : "date";
         } else if (o && o.type === "password") {
@@ -1396,6 +1503,14 @@
           def.maxInitialWidth = 360;
         } else if (o && o.type === "url") {
           def.formatter = makeFormatter("url");
+        } else if (o && o.type === "html") {
+          // edited as HTML text over several lines
+          def.editor = c.readonly ? false : "textarea";
+          def.editorParams = {enterSubmit: true, shiftEnterNewLine: true,
+                              altEnterNewLine: true, verticalNavigation: "editor"};
+          def.formatter = makeFormatter("html");
+          def.variableHeight = true;
+          def.minWidth = Math.max(def.minWidth, 140);
         } else if (o && o.type === "colour") {
           def.formatter = makeFormatter("colour");
           def.editor = c.readonly ? false : colourEditor;
@@ -1418,6 +1533,14 @@
                                          color: "#93B4F5", legendColor: "#1F2933",
                                          legendAlign: "center"});
           def.minWidth = Math.max(def.minWidth, 120);
+        }
+        // widths set with col_widths; other columns fit their values but
+        // long text starts at most 320 px wide (drag the header to widen it)
+        if (c.width) {
+          def.width = Math.max(Number(c.width), 40);
+          def.minWidth = Math.min(def.minWidth, def.width);
+        } else if (!def.maxInitialWidth) {
+          def.maxInitialWidth = 320;
         }
         return def;
       }
@@ -1615,6 +1738,13 @@
                       }});
         }
         items.push({label: "Fill down  (Ctrl+D)", action: fillDown});
+        // move the cells below the selection down (or up), in its columns only
+        var filtered = activeFilters().length > 0;
+        var shiftNote = filtered ? "  (clear the filters first)" : "";
+        items.push({label: "Insert cells, shift down" + shiftNote, disabled: filtered,
+                    action: function () { shiftCells(true); }});
+        items.push({label: "Delete cells, shift up" + shiftNote, disabled: filtered,
+                    action: function () { shiftCells(false); }});
         items.push({separator: true});
         if (grid.opts.row_edit) {
           items.push({label: "Insert row above",
@@ -2103,7 +2233,15 @@
         var mod = table.modules.selectRange;
         var range = mod && mod.activeRange;
         var block = parsed && parsed.rows;
-        if (!range || !block || !block.length) return [];
+        // Ctrl+Shift+V: the first row names the columns
+        var names = null;
+        if (grid.pasteHeaders && Date.now() - grid.pasteHeaders < 3000 &&
+            block && block.length) {
+          names = block[0];
+          block = block.slice(1);
+        }
+        grid.pasteHeaders = 0;
+        if (!range || !block || (!block.length && !names)) return [];
         var bounds = range.getBounds();
         if (!bounds.start || !bounds.end) return [];
         var rows = table.rowManager.activeRows.slice();
@@ -2114,7 +2252,8 @@
         var c1 = cols.indexOf(bounds.end.column);
         if (r0 < 0 || c0 < 0) return [];
         var dataRows = block.length;
-        var dataCols = Math.max.apply(null, block.map(function (r) { return r.length; }));
+        var dataCols = Math.max.apply(null, (names ? [names] : []).concat(block)
+          .map(function (r) { return r.length; }));
         var selRows = Math.max(1, r1 - r0 + 1), selCols = Math.max(1, c1 - c0 + 1);
         var nRows = selRows > dataRows && selRows % dataRows === 0 ? selRows : dataRows;
         var nCols = selCols > dataCols && selCols % dataCols === 0 ? selCols : dataCols;
@@ -2143,6 +2282,18 @@
         var existing = rows.slice(r0, r0 + nRows);
         var extra = grid.opts.row_edit ? nRows - existing.length : 0;
 
+        // column names from the first row: new columns are created with them,
+        // other columns are renamed (when their names can be edited)
+        var renames = [];
+        if (names) {
+          targets.forEach(function (c, j) {
+            var nm = j < names.length ? String(names[j]).trim() : "";
+            if (!c || !nm) return;
+            if (c.added) c.title = nm;
+            else if (c.rename && nm !== c.title) renames.push({c: c, name: nm});
+          });
+        }
+
         // cell values by column, normalised to the format R expects
         var cells = [];
         targets.forEach(function (c, j) {
@@ -2161,7 +2312,7 @@
           cells.push({c: c, values: vals});
         });
         writeBlock(bounds.start.getComponent(), existing, extra, cells,
-                   {label: "paste"});
+                   {label: "paste", renames: renames});
         return [];
       }
 
@@ -2215,6 +2366,11 @@
           emit({type: "insert_col", cid: cid, name: col.c.title,
                 anchor: after, right: true}, label);
           after = cid;
+        });
+        // COLUMNS RENAMED FROM THE FIRST ROW OF A PASTE (Ctrl+Shift+V)
+        (how.renames || []).forEach(function (r) {
+          setTitle(r.c.field, r.name);
+          emit({type: "rename_col", cid: r.c.field, name: r.name}, label);
         });
         if (act === "text") {
           cells.forEach(function (col) {
@@ -2297,6 +2453,81 @@
           updateStatus();
           selectionSummary();
         });
+      }
+
+      // Insert empty cells where the selection is and move the cells below
+      // down (down = TRUE), or delete the selected cells and move the cells
+      // below up, in the selected columns only (Excel's "shift cells").
+      // Values pushed past the last row get new rows (when rows can be
+      // added). One undo step.
+      function shiftCells(down) {
+        var table = grid.table;
+        var mod = table.modules.selectRange;
+        var range = mod && mod.activeRange;
+        if (!range || activeFilters().length) return;
+        var bounds = range.getBounds();
+        if (!bounds.start || !bounds.end) return;
+        var rows = table.rowManager.activeRows.slice();
+        var cols = table.columnManager.getVisibleColumnsByIndex();
+        var r0 = rows.indexOf(bounds.start.row), r1 = rows.indexOf(bounds.end.row);
+        var c0 = cols.indexOf(bounds.start.column), c1 = cols.indexOf(bounds.end.column);
+        if (r0 < 0 || r1 < 0 || c0 < 0 || c1 < 0) return;
+        if (r1 < r0) { var t = r0; r0 = r1; r1 = t; }
+        if (c1 < c0) { var u = c0; c0 = c1; c1 = u; }
+        var k = r1 - r0 + 1;
+        var below = rows.slice(r0);
+        var cells = [], extra = 0;
+        for (var j = c0; j <= c1; j++) {
+          var c = grid.colMap[cols[j].getField()];
+          if (!c || c.readonly) continue;
+          var vals = below.map(function (row) {
+            var v = row.getData()[c.field];
+            return v === undefined ? null : v;
+          });
+          var blanks = vals.slice(0, k).map(function () { return null; });
+          var out = down ? blanks.concat(vals) : vals.slice(k).concat(blanks);
+          if (down) {
+            // values pushed past the last row
+            var over = out.slice(below.length);
+            var last = -1;
+            over.forEach(function (v, i) { if (!isBlank(v)) last = i; });
+            extra = Math.max(extra, last + 1);
+          }
+          cells.push({c: c, values: out});
+        }
+        if (!cells.length) return;
+        if (extra > 0 && !grid.opts.row_edit) {
+          shiftRefused(bounds.start.getComponent(), extra);
+          return;
+        }
+        cells.forEach(function (col) {
+          col.values = col.values.slice(0, below.length + extra);
+          while (col.values.length < below.length + extra) col.values.push(null);
+        });
+        var first = rows[r0].getComponent(), lastRow = rows[r1].getComponent();
+        writeBlock(bounds.start.getComponent(), below, extra, cells, {
+          label: "shift",
+          select: [first, lastRow, cols[c0].getField(), cols[c1].getField()]
+        });
+      }
+
+      function shiftRefused(anchor, n) {
+        var box = document.createElement("div");
+        box.className = "editr-popup editr-guard";
+        box.setAttribute("role", "alertdialog");
+        box.setAttribute("aria-label", "Cells cannot be inserted");
+        box.innerHTML =
+          '<div class="editr-guard-msg"><span class="editr-guard-icon">' + ICONS.alert +
+          '</span><div><div class="editr-guard-title">No room to move the cells down</div>' +
+          '<div class="editr-guard-sub">' + n + ' value' + (n === 1 ? "" : "s") +
+          ' would move past the last row, and rows cannot be added.</div></div></div>' +
+          '<div class="editr-guard-actions"><button type="button" class="btn btn-primary btn-sm" data-act="ok">OK</button></div>';
+        box.addEventListener("click", function (e) {
+          if (e.target.closest && e.target.closest("[data-act]")) closePopup();
+        });
+        openPopup(anchor.getElement(), box);
+        var ok = box.querySelector("button");
+        if (ok) ok.focus();
       }
 
       /* ---------------------------------------------------------------- */
@@ -2599,10 +2830,12 @@
               c.title + " " + p.lo + "\u2013" + p.hi;
           }
           if (p.kind === "prefix") return c.title + " in " + p.value;
-          return c.title + " is " + (valueLabel(c, p.value) || p.value);
+          return c.title + " is " + (valueLabel(c, p.value) || choiceLabel(c, p.value) || p.value);
         }
         if (Array.isArray(v)) {
-          var vals = v.map(function (x) { return valueLabel(c, x) || String(x); });
+          var vals = v.map(function (x) {
+            return valueLabel(c, x) || choiceLabel(c, x) || String(x);
+          });
           if (vals.length === 1) return c.title + " is " + vals[0];
           return c.title + " is " + vals.slice(0, -1).join(", ") + " or " +
             vals[vals.length - 1];
@@ -2614,6 +2847,10 @@
           if (v.min !== "" && v.max !== "") return c.title + " " + v.min + "\u2013" + v.max;
           if (v.min !== "") return c.title + " \u2265 " + v.min;
           return c.title + " \u2264 " + v.max;
+        }
+        var sv = String(v);
+        if (sv.charAt(0) === "!" && sv.length > 1) {
+          return c.title + " does not contain \u201c" + sv.slice(1) + "\u201d";
         }
         return c.title + " contains \u201c" + v + "\u201d";
       }
@@ -2897,7 +3134,7 @@
           [""].concat(opts).forEach(function (x) {
             var op = document.createElement("option");
             op.value = x;
-            op.textContent = x === "" ? "\u2014" : x;
+            op.textContent = x === "" ? "\u2014" : (choiceLabel(c, x) || x);
             input.appendChild(op);
           });
           var current = v === null || v === undefined ? "" :
@@ -3476,6 +3713,14 @@
       el.addEventListener("dragstart", function (e) {
         if (e.target && e.target.closest && e.target.closest(".tabulator-editing")) {
           e.preventDefault();
+        }
+      }, true);
+
+      // Ctrl+Shift+V pastes with the first row as column names (the browser
+      // still fires the paste event; pasteRange() checks this flag)
+      el.addEventListener("keydown", function (e) {
+        if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === "v") {
+          grid.pasteHeaders = Date.now();
         }
       }, true);
 

@@ -70,7 +70,20 @@ test_that("character row names are editable and restored", {
   expect_identical(p$cfg$rownames_cid, "c1")
   ops(p, op_update("c1", 2, "Renamed"))
   expect_identical(rownames(result(p))[2], "Renamed")
-  ops(p, op_update("c1", 3, "Renamed"))
+  # a name another row has is refused (and sent back to the grid)
+  out <- ops(p, op_update("c1", 3, "Renamed"))
+  expect_match(out$messages, "Row names must be unique: 'Renamed' is already used.")
+  expect_identical(rownames(result(p))[3], "Datsun 710")
+  expect_identical(out$patches[[1]]$method, "update_cells")
+  # swapping names in one go is fine; the same new name twice is not
+  out <- ops(p, op_update("c1", c(1, 2), c("Renamed", "Mazda RX4")))
+  expect_length(out$messages, 0)
+  expect_identical(rownames(result(p))[1:2], c("Renamed", "Mazda RX4"))
+  out <- ops(p, op_update("c1", c(2, 3), c("X", "X")))
+  expect_match(out$messages, "'X' is already used")
+  expect_identical(rownames(result(p))[2:3], c("X", "Datsun 710"))
+  # row names that are not unique all the same are kept in a column
+  p$store$state$data[[1]][3] <- "X"
   expect_message(res <- DataEditR:::editr_result(p$store,
                                                  modifyList(p$cfg, list(quiet = FALSE))),
                  "non-unique")
@@ -215,8 +228,16 @@ test_that("status counts match net changes", {
 })
 
 test_that("empty and invalid inputs are handled when preparing", {
+  # data without rows gets a row to type in, left out while it is empty
   p <- prep(data.frame())
-  expect_identical(dim(result(p)), c(1L, 1L))
+  expect_identical(dim(result(p)), c(0L, 1L))
+  p <- prep(mtcars[0, 1:2])
+  expect_identical(dim(result(p)), c(0L, 2L))
+  expect_identical(p$cfg$blank_rows, 1L)
+  ops(p, op_update("c1", 1, "5"))
+  expect_identical(result(p)$mpg, 5)
+  ops(p, op_update("c1", 1, list(NULL)))
+  expect_identical(nrow(result(p)), 0L)
   expect_warning(prep(data.frame(a = 1, a = 2, check.names = FALSE)),
                  "must be unique")
   expect_error(prep(mtcars, col_readonly = "nope"), "col_readonly")
