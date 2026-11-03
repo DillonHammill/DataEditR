@@ -106,6 +106,8 @@ res <- switch(
               col_options = list(site = c("north", "south", "east", "west")))
   },
   filter = data_edit(mtcars, viewer = noview, quiet = TRUE),
+  pages = data_edit(mtcars, viewer = noview, quiet = TRUE, page_rows = 10,
+                    page_cols = 6),
   labelled = {
     set.seed(3)
     n <- 14

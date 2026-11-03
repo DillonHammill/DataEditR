@@ -747,15 +747,23 @@ editr_code <- function(store, cfg, name = "data", start, end = NULL) {
 
 #' Code of the edits, then the code that gives the rows and columns on screen
 #'
+#' @param name name of the data in the code, or two names: the data the code
+#'   starts from and the name the result is given (the data was renamed).
 #' @param target name the on-screen data is assigned to (by default the name
 #'   followed by "_view").
+#' @param view whether to add the code for the rows and columns on screen.
 #'
 #' @noRd
-editr_code_view <- function(store, cfg, name = "data", target = NULL, ...) {
-  code <- editr_code(store, cfg, name, ...)
-  if (is.null(name) || !nzchar(name)) return(code)
+editr_code_view <- function(store, cfg, name = "data", target = NULL,
+                            view = TRUE, ...) {
+  from <- name[1]
+  to <- name[length(name)]
+  code <- editr_code(store, cfg, from, ...)
+  if (is.null(from) || !nzchar(from) || !is.null(cfg$db)) return(code)
+  code <- code_rename(code, from, to)
+  if (!view) return(code)
   view <- tryCatch(
-    editr_view_code(store, cfg, name, target %||% paste0(name, "_view")),
+    editr_view_code(store, cfg, to, target %||% paste0(to, "_view")),
     error = function(e) NULL
   )
   if (is.null(view)) return(code)
@@ -763,6 +771,31 @@ editr_code_view <- function(store, cfg, name = "data", target = NULL, ...) {
     code <- paste0("library(dplyr)\n\n", code)
   }
   paste0(code, "\n", view)
+}
+
+#' The code assigns the data to another name
+#'
+#' The first statement that assigns the data assigns it to the new name; later
+#' ones start from the new name. Without any (no changes), the data is copied.
+#'
+#' @noRd
+code_rename <- function(code, from, to) {
+  if (is.null(to) || identical(from, to) || !nzchar(to)) return(code)
+  lines <- strsplit(code, "\n", fixed = TRUE)[[1]]
+  head <- paste0(from, " <- ")
+  first <- TRUE
+  for (i in seq_along(lines)) {
+    if (!startsWith(lines[i], head)) next
+    rhs <- substring(lines[i], nchar(head) + 1)
+    if (!first && (identical(rhs, from) || startsWith(rhs, paste0(from, " ")))) {
+      rhs <- paste0(to, substring(rhs, nchar(from) + 1))
+    }
+    lines[i] <- paste0(to, " <- ", rhs)
+    first <- FALSE
+  }
+  out <- paste0(paste(lines, collapse = "\n"), "\n")
+  if (first) out <- paste0(out, "\n", to, " <- ", from, "\n")
+  out
 }
 
 #' List of changes for the review panel

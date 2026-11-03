@@ -153,6 +153,23 @@ if (scenario == "df") {
   suppressMessages(eval(parse(text = code), envir = env))
   same(get("x", envir = env)[keep_cols], result[keep_cols], "the code gives the rows returned")
 
+} else if (scenario == "pages") {
+  e <- input
+  e$v15[30] <- 999
+  e[1, c("v9", "v10", "v11")] <- c(1, 2, 3)
+  e[61, ] <- NA
+  e$id[61] <- 61L
+  rownames(e)[61] <- "61"
+  same(result, e, "edits on other pages, a paste across pages and a new row")
+  # the code assigns the result to the name given in the header
+  env <- new.env()
+  assign("x", input, envir = env)
+  suppressMessages(eval(parse(text = code_text()), envir = env))
+  check(exists("tidy.data", envir = env, inherits = FALSE), "code assigns tidy.data")
+  if (exists("tidy.data", envir = env, inherits = FALSE)) {
+    same(get("tidy.data", envir = env), result, "code reproduces the result")
+  }
+
 } else if (scenario == "subset") {
   e <- mtcars[mtcars$cyl == 4, c("mpg", "cyl", "gear", "carb")]
   same(result, e, "Done returns only what's on screen")

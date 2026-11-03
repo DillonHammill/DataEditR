@@ -306,7 +306,20 @@ shiny modals and with data that changes), these were fixed or added:
   listed. `between` now includes its end points and `contains` looks for plain
   text, ignoring case (1.x used regular expressions; use `matches the
   pattern`). The `dataFilter` module is still exported.
-* Show or hide columns from the Columns menu (or a column's right-click menu),
+* **Pages:** *Pages* in the status bar shows the rows and the columns a page
+  at a time (`page_rows` and `page_cols` open the editor in pages), with
+  buttons to move between them. Filters, find, paste, new rows, Done and
+  exports work across every page.
+* A `+` in the corner above the row numbers adds a row or a column (a menu
+  with both), instead of a bar under the grid and a `+` after the last column.
+* The toolbar buttons are labelled `Summaries`, `Select` (was `Columns`),
+  `Filters`, `Form` and `Review` (was `Review changes`), and *Find in data* is
+  in the status bar. The side panel's `Record` tab is now `Form`.
+* Click the name of the data in the header to rename it: the code assigns the
+  result to the new name and exported files are named after it.
+* In the Filters panel, words and pattern filters list the values of the
+  column with their counts to pick from.
+* Show or hide columns from the Select menu (or a column's right-click menu),
   replacing the column selection dialog inside `data_edit()` (the
   `dataSelect` module is still exported).
 * Review panel: lists every edited, added, removed or renamed cell, row and

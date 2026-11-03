@@ -112,3 +112,8 @@ test_that("the toolbar opens the Filters tab of the side panel", {
   expect_false(grepl("edit1-filters", as.character(dataEditUI("edit1", toolbar = FALSE)),
                      fixed = TRUE))
 })
+
+test_that("the status bar has room for the pages of rows and columns", {
+  html <- as.character(dataEditUI("edit1"))
+  expect_match(html, '<span class="editr-pages" id="edit1-pages"></span>', fixed = TRUE)
+})

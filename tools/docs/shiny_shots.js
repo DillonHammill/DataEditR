@@ -42,7 +42,10 @@ async function edit(page, id, field, text) {
   const items = await page.$$(".tabulator-menu .tabulator-menu-item");
   for (const it of items) { if ((await page.evaluate((e) => e.textContent.trim(), it)).startsWith("Delete row")) { await it.click(); break; } }
   await settle(page);
-  await page.click(".editr-addrow");
+  await page.click(".editr-add-btn");
+  if (await page.waitForSelector('.editr-add-menu [data-add="row"]', { timeout: 2000 }).catch(() => null)) {
+    await page.click('.editr-add-menu [data-add="row"]');
+  }
   await settle(page);
   const id = await page.evaluate((g) => document.getElementById(g).__editr.nextId - 1, G);
   await edit(page, id, "c2", "Mini Cooper");

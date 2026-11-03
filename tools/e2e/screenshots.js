@@ -26,7 +26,10 @@ const G = "edit1-grid";
     await T((g) => document.getElementById(g).__editr.table.setHeaderFilterValue("c3", [4, 6]));
     await L.settle(page, 800);
     // new row
-    await page.click(".editr-addrow");
+    await page.click(".editr-add-btn");
+    if (await page.waitForSelector('.editr-add-menu [data-add="row"]', { timeout: 2000 }).catch(() => null)) {
+      await page.click('.editr-add-menu [data-add="row"]');
+    }
     await L.settle(page);
     const newId = await T((g) => document.getElementById(g).__editr.nextId - 1);
     await L.editCell(page, newId, "c1", "My car");

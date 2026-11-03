@@ -44,6 +44,8 @@ dataEditServer(
   history = NULL,
   row_names = TRUE,
   col_widths = NULL,
+  page_rows = NULL,
+  page_cols = NULL,
   ...
 )
 }
@@ -171,7 +173,8 @@ to turn the highlighting off.}
 
 \item{code_name}{name of the data used in the code shown in the review
 panel, set to \code{"data"} by default. Can also be a reactive expression
-returning the name.}
+returning the name. Two names, e.g. \code{c("mtcars", "cars")}, give the
+data the code starts from and the name the code assigns the result to.}
 
 \item{autosave}{logical indicating whether changes should be saved as a
 draft while editing, so that they can be restored if the app is closed
@@ -241,6 +244,12 @@ editor are named by their row number.}
 column, or numbers named by column, e.g. \code{c(notes = 400, id = 60)}.
 Other columns are as wide as their values, up to 320 pixels; drag the
 edge of a column header to resize it.}
+
+\item{page_rows, page_cols}{number of rows and columns to show at a time,
+or \code{NULL} (the default) to show them all. The status bar has buttons
+to move between the pages, and \code{Pages} in the status bar changes the
+page sizes while editing. Pages only change what is on screen: filters,
+find, \code{Done} and exports cover every page.}
 
 \item{...}{not in use.}
 }

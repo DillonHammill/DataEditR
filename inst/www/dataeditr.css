@@ -43,11 +43,58 @@
 }
 
 .editr-header-title .editr-name {
+  position: relative;
+  min-width: 0;
+  max-width: 100%;
+  padding: 2px 26px 2px 8px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
   font-size: 15px;
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  cursor: text;
+}
+
+/* a pencil shows that the name can be changed */
+.editr-header-title .editr-name::after {
+  content: "";
+  position: absolute;
+  right: 7px;
+  top: 50%;
+  width: 13px;
+  height: 13px;
+  margin-top: -6.5px;
+  background: currentColor;
+  opacity: 0.35;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 20h9'/%3E%3Cpath d='M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 20h9'/%3E%3Cpath d='M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+.editr-header-title .editr-name:hover,
+.editr-header-title .editr-name:focus-visible {
+  border-color: #D5D9DF;
+  background: #FFFFFF;
+}
+
+.editr-header-title .editr-name:hover::after,
+.editr-header-title .editr-name:focus-visible::after {
+  opacity: 0.7;
+}
+
+.editr-header-title .editr-name:focus-visible {
+  outline: 2px solid var(--editr-accent, #1D4ED8);
+  outline-offset: 1px;
+}
+
+.editr-header-title .editr-name-input {
+  height: 30px;
+  font-size: 15px;
+  font-weight: 600;
 }
 
 .editr-pill {
@@ -302,8 +349,7 @@
   display: none;
 }
 
-/* narrower editors: a smaller find box without the shortcut hint keeps the
-   toolbar on one line for longer */
+/* the toolbar is a container so that its buttons can drop their labels */
 .editr-toolbar {
   container-type: inline-size;
   /* a container can be a stacking context (Chromium 123 is, 153 is not), and
@@ -312,16 +358,8 @@
   z-index: 5;
 }
 
-@container (max-width: 1060px) {
-  .editr-find {
-    flex-basis: 120px;
-    min-width: 110px;
-  }
-  .editr-find kbd,
-  .editr-find-count:empty + kbd {
-    display: none;
-  }
-  /* "Review changes" and "Code" keep their icons (and the count) */
+/* narrower editors: the labelled buttons keep their icons (and counts) */
+@container (max-width: 1000px) {
   .editr-tool-collapse .editr-tool-label {
     position: absolute;
     width: 1px;
@@ -337,7 +375,7 @@
 
 /* filter chips and the Rows button of database tables need the room in
    wider editors too */
-@container (max-width: 1300px) {
+@container (max-width: 1180px) {
   .editr-toolbar:has(.editr-chips:not(:empty)) .editr-tool-collapse .editr-tool-label,
   .editr-toolbar:has(.editr-rows-btn:not([hidden])) .editr-tool-collapse .editr-tool-label {
     position: absolute;
@@ -941,6 +979,64 @@
   text-overflow: ellipsis;
 }
 
+/* the values of the column under a words or pattern card */
+.editr-fp-common {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.editr-fp-common-label {
+  width: 100%;
+  margin-bottom: 2px;
+  color: #616E7C;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.editr-fp-value {
+  max-width: 100%;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 9px;
+  border: 1px solid #D5D9DF;
+  border-radius: 999px;
+  background: #FFFFFF;
+  color: #3E4C59;
+  font: inherit;
+  font-size: 12px;
+}
+
+.editr-fp-value:hover {
+  border-color: #9AA5B1;
+}
+
+.editr-fp-value:focus-visible {
+  outline: 2px solid var(--editr-accent, #1D4ED8);
+  outline-offset: 1px;
+}
+
+.editr-fp-value .editr-fp-val {
+  min-width: 0;
+}
+
+.editr-fp-value .editr-fp-n {
+  min-width: 0;
+  font-size: 11px;
+}
+
+.editr-fp-value[aria-pressed="true"] {
+  border-color: var(--editr-accent, #1D4ED8);
+  background: #EFF4FF;
+  color: #1E3A8A;
+}
+
 .editr-fp-pattern {
   height: 32px;
   font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -1475,6 +1571,120 @@ button.editr-change-title:hover {
 .editr-statusbar > span:empty:not(.editr-spacer),
 .editr-statusbar > span:empty + .editr-sep {
   display: none;
+}
+
+/* find, in the status bar */
+.editr-statusbar .editr-find {
+  flex: 0 1 220px;
+  min-width: 150px;
+  height: 26px;
+  gap: 6px;
+  padding: 0 8px;
+  font-size: 12px;
+}
+
+.editr-statusbar .editr-find svg {
+  width: 14px;
+  height: 14px;
+}
+
+.editr-statusbar .editr-find kbd {
+  padding: 0 5px;
+  font-size: 10px;
+}
+
+/* pages: the Pages button and, when on, where you are */
+.editr-statusbar .editr-pages {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.editr-statusbar .editr-pages-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 4px;
+  color: #52606D;
+  font-size: 12px;
+}
+
+.editr-statusbar .editr-pages-btn.editr-pages-on {
+  color: var(--editr-accent, #1D4ED8);
+}
+
+.editr-pager {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+}
+
+.editr-pager-label {
+  margin-right: 4px;
+}
+
+.editr-pager-text {
+  min-width: 9ch;
+  padding: 0 4px;
+  color: #1F2933;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.editr-pager-btn {
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: #3E4C59;
+  font-size: 15px;
+  line-height: 1;
+}
+
+.editr-pager-btn:hover:not(:disabled) {
+  background: #E3E6EA;
+}
+
+.editr-pager-btn:focus-visible {
+  outline: 2px solid var(--editr-accent, #1D4ED8);
+  outline-offset: 1px;
+}
+
+.editr-pager-btn:disabled {
+  color: #C1C7CF;
+}
+
+.editr-pages-menu {
+  min-width: 240px;
+  padding: 6px 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.editr-pages-menu .editr-menu-label {
+  padding: 4px 0 0;
+}
+
+.editr-pages-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.editr-pages-field label {
+  margin: 0;
+  font-size: 13px;
+}
+
+.editr-pages-field select {
+  width: 9.5rem;
 }
 
 .editr-swatch {

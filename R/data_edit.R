@@ -270,6 +270,11 @@
 #'   column, or numbers named by column, e.g. \code{c(notes = 400, id = 60)}.
 #'   Other columns are as wide as their values, up to 320 pixels; drag the
 #'   edge of a column header to resize it.
+#' @param page_rows,page_cols number of rows and columns to show at a time,
+#'   or \code{NULL} (the default) to show them all. The status bar has buttons
+#'   to move between the pages, and \code{Pages} in the status bar changes the
+#'   page sizes while editing. Pages only change what is on screen: filters,
+#'   find, \code{Done} and exports cover every page.
 #' @param rules a list of rules the data should follow, each a one-sided
 #'   formula that is \code{TRUE} for valid rows and named with the message
 #'   to show, e.g. \code{list("Age is between 0 and 120" = ~ age >= 0 & age <=
@@ -355,12 +360,18 @@ data_edit <- function(x = NULL,
                       col_summary = TRUE,
                       row_names = TRUE,
                       col_widths = NULL,
+                      page_rows = NULL,
+                      page_cols = NULL,
                       ...) {
 
   # DATA ENVIRONMENT -----------------------------------------------------------
 
   # SEARCH DATA OUTSIDE DATA_EDIT
   envir <- parent.frame()
+
+  # PAGES (CHECKED BEFORE THE EDITOR OPENS)
+  page_rows <- editr_page_size(page_rows, "page_rows")
+  page_cols <- editr_page_size(page_cols, "page_cols")
 
   # CODE GENERATION - CAPTURE NAME EARLY (before x is modified)
   x_text <- tryCatch(
@@ -414,6 +425,8 @@ data_edit <- function(x = NULL,
   session_info$code <- NULL
   session_info$original <- x_original
   session_info$name <- x_name
+  # THE NAME GIVEN IN THE HEADER (THE CODE ASSIGNS THE RESULT TO IT)
+  session_info$renamed <- NULL
   # WHAT THE CHANGE LOG CALLS THE DATA
   session_info$label <- if (is.character(x) && length(x) == 1 &&
                             file.exists(x)) {
@@ -451,7 +464,9 @@ data_edit <- function(x = NULL,
     div(
       class = "editr-header-title",
       if (!grepl("^r", logo_side, ignore.case = TRUE)) logo_tag,
-      span(class = "editr-name", id = "dataset_name", label),
+      tags$button(type = "button", class = "editr-name", id = "dataset_name",
+                  title = "Rename the data", onclick = "DataEditR.renameData(this)",
+                  label),
       span(class = "editr-pill", id = "dataset_meta"),
       if (grepl("^r", logo_side, ignore.case = TRUE)) logo_tag
     ),
@@ -629,7 +644,9 @@ data_edit <- function(x = NULL,
       col_summary = col_summary,
       history = history,
       row_names = row_names,
-      col_widths = col_widths
+      col_widths = col_widths,
+      page_rows = page_rows,
+      page_cols = page_cols
     )
     data_active <- attr(data_update, "view")
     editor <- attr(data_update, "editor")
@@ -698,9 +715,18 @@ data_edit <- function(x = NULL,
       # THE CODE NOW STARTS FROM THE OPENED DATA (A NEW TABLE IS CREATED)
       session_info$original <- if (!is_db_input(obj) && !identical(code, "")) obj
       session_info$name <- if (identical(code, "")) "data" else code
+      session_info$renamed <- NULL
       code_name(session_info$name)
       session$sendCustomMessage("editr_close_dropdown", list(id = "open_toggle"))
     }
+    # RENAME (THE NAME IN THE HEADER): THE CODE STARTS FROM THE DATA AND
+    # ASSIGNS THE RESULT TO THE NEW NAME, AND EXPORTS ARE NAMED AFTER IT
+    observeEvent(input$dataset_rename, {
+      name <- trimws(as.character(input$dataset_rename))
+      req(length(name) == 1, nzchar(name))
+      session_info$renamed <- name
+      code_name(c(session_info$name, make.names(name)))
+    })
     observeEvent(input$open_load, {
       txt <- trimws(input$open_object)
       req(nzchar(txt))
@@ -730,13 +756,24 @@ data_edit <- function(x = NULL,
     })
 
     # EXPORT
+    # name of exported files without the extension: save_as, the name given
+    # in the header, or the date
+    export_stem <- function() {
+      if (!is.null(save_file)) {
+        sub("\\.[^.]+$", "", basename(save_file))
+      } else if (!is.null(session_info$renamed)) {
+        gsub("[^[:alnum:]._-]+", "_", session_info$renamed)
+      } else {
+        paste0(format(Sys.Date(), "%Y%m%d"), "-data")
+      }
+    }
     export_handler <- function(view) {
       downloadHandler(
         filename = function() {
           base <- if (!is.null(save_file)) {
             basename(save_file)
           } else {
-            paste0(format(Sys.Date(), "%Y%m%d"), "-data.csv")
+            paste0(export_stem(), ".csv")
           }
           if (view) sub("(\\.[^.]+)?$", "-subset\\1", base) else base
         },
@@ -757,12 +794,7 @@ data_edit <- function(x = NULL,
     haven_handler <- function(ext) {
       downloadHandler(
         filename = function() {
-          base <- if (!is.null(save_file)) {
-            sub("\\.[^.]+$", "", basename(save_file))
-          } else {
-            paste0(format(Sys.Date(), "%Y%m%d"), "-data")
-          }
-          paste0(base, ".", ext)
+          paste0(export_stem(), ".", ext)
         },
         content = function(file) {
           editr_write(data_update(), file, name = paste0("data.", ext))
@@ -815,14 +847,14 @@ data_edit <- function(x = NULL,
       ed <- editor()
       if (!isFALSE(code) && !is.null(ed) && is.null(ed$cfg$db)) {
         on_screen <- !hide && identical(input$return_what, "view")
+        nm <- isolate(code_name())
         session_info$code <- if (on_screen) {
           # THE EDITS, THEN filter() AND select() FOR WHAT IS ON SCREEN
-          editr_code_view(ed$store, ed$cfg, name = session_info$name,
-                          target = session_info$name,
+          editr_code_view(ed$store, ed$cfg, name = nm, target = nm[length(nm)],
                           start = session_info$original)
         } else {
-          editr_code(ed$store, ed$cfg, name = session_info$name,
-                     start = session_info$original, end = result)
+          editr_code_view(ed$store, ed$cfg, name = nm, view = FALSE,
+                          start = session_info$original, end = result)
         }
       }
       save <- !is.null(save_as) && !isFALSE(input$save_file)

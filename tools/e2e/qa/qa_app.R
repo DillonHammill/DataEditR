@@ -99,6 +99,16 @@ if (scenario == "df") {
   keep(x, quietly(x, col_options = list(pw = "password", when = "datetime"),
                   code = code_file))
 
+} else if (scenario == "pages") {
+  # 60 rows and 26 columns in pages of 25 rows and 10 columns
+  x <- data.frame(id = 1:60,
+                  matrix(round(seq_len(60 * 24) / 7, 2), nrow = 60,
+                         dimnames = list(NULL, paste0("v", 1:24))),
+                  grp = rep(c("a", "b", "c"), 20),
+                  row.names = paste0("s", 1:60),
+                  stringsAsFactors = FALSE)
+  keep(x, quietly(x, page_rows = 25, page_cols = 10, code = code_file))
+
 } else if (scenario == "log") {
   x <- mtcars[1:5, 1:4]
   keep(x, quietly(x, log = file.path(out, "log.csv")))

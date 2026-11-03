@@ -361,3 +361,48 @@ test_that("editr_load resolves every kind of input", {
   expect_identical(colnames(load("fun", envir = environment())), "fun")
   expect_identical(dim(load(c(2, 3))), c(2L, 3L))
 })
+
+test_that("the data can be renamed in the header: code and exports use the name", {
+  out <- list()
+  mock_gadget(function(session) {
+    edit_mpg(session)
+    session$setInputs(dataset_rename = "cars clean")
+    out$all <<- basename(session$getOutput("export_all"))
+    out$view <<- basename(session$getOutput("export_view"))
+    session$setInputs(done = 1)
+  })
+  expect_output(res <- data_edit(mtcars, code = TRUE), "cars.clean <- mtcars %>%",
+                fixed = TRUE)
+  expect_identical(out$all, "cars_clean.csv")
+  expect_identical(out$view, "cars_clean-subset.csv")
+  # the header has the name as a button that renames
+  html <- tag_text(gadget$ui)
+  expect_match(html, '<button type="button" class="editr-name" id="dataset_name"', fixed = TRUE)
+  expect_match(html, "DataEditR.renameData(this)", fixed = TRUE)
+  # without changes the code copies the data to the new name
+  mock_gadget(function(session) {
+    session$setInputs(dataset_rename = "cars")
+    session$setInputs(done = 1)
+  })
+  expect_output(data_edit(mtcars, code = TRUE), "cars <- mtcars", fixed = TRUE)
+  # with only what is on screen, the code filters the renamed data
+  mock_gadget(function(session) {
+    session$setInputs(dataset_rename = "four")
+    session$setInputs(`edit1-grid_view` = list(
+      rows = as.list(which(mtcars$cyl == 4)), cols = NULL,
+      filters = list(rules = list(list(field = "c3", logic = "equal", values = list("4"))),
+                     conds = list(), any = FALSE)))
+    session$setInputs(return_what = "view")
+    session$setInputs(done = 1)
+  })
+  code <- capture.output(res <- data_edit(mtcars, code = TRUE))
+  code <- paste(code, collapse = "\n")
+  expect_match(code, "four <- mtcars\n", fixed = TRUE)
+  expect_match(code, "four <- four %>%\n  filter(cyl == 4)", fixed = TRUE)
+  expect_identical(res, mtcars[mtcars$cyl == 4, ])
+})
+
+test_that("page sizes are checked and passed to the grid", {
+  expect_error(data_edit(mtcars, page_rows = 0), "'page_rows' must be a positive number")
+  expect_error(data_edit(mtcars, page_cols = "a"), "'page_cols' must be a positive number")
+})

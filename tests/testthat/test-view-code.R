@@ -162,3 +162,17 @@ test_that("text is searched as the cells show it: dropdown names and HTML withou
   code <- on_screen(p, integer(0), conds = list(list("photo", "contain", "href")))
   expect_false(grepl("by position", code))
 })
+
+test_that("renamed data: the code assigns to the new name and the view starts from it", {
+  x <- view_data()
+  p <- prep(x)
+  p$store$client_rows <- 6:8
+  p$store$client_filters <- list(rules = list(), any = FALSE, conds = list(
+    list(field = p$store$state$cids[match("n", names(p$store$state$data))],
+         logic = "gt", values = list("5"))))
+  code <- DataEditR:::editr_code_view(p$store, p$cfg, c("x", "y"))
+  expect_match(code, "y <- x\n\n# The rows and columns on screen\ny_view <- y %>%\n  filter(n > 5)\n",
+               fixed = TRUE)
+  expect_identical(DataEditR:::code_rename("x <- x %>%\n  a()\n\nx <- x %>%\n  b()\n", "x", "y"),
+                   "y <- x %>%\n  a()\n\ny <- y %>%\n  b()\n")
+})

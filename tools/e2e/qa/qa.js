@@ -14,9 +14,18 @@ const fieldOf = async (page, title) => {
 };
 const nextId = (page) => page.evaluate(() => document.querySelector(".editr_grid").__editr.nextId - 1);
 
-async function addRow(page) {
-  await page.click(".editr-addrow");
+// the "+" in the corner above the row numbers: a menu to add a row or a
+// column (or the one that can be added)
+async function addVia(page, what) {
+  await page.click(".editr-add-btn");
+  const item = await page.waitForSelector(`.editr-add-menu [data-add="${what}"]`, { timeout: 2000 })
+    .catch(() => null);
+  if (item) await item.click();
   await L.settle(page);
+}
+
+async function addRow(page) {
+  await addVia(page, "row");
   return nextId(page);
 }
 
@@ -70,9 +79,12 @@ const cardsNow = (page) => editr(page, (g) => g.fp.cards.map((c) => [c.field, c.
 const openCard = (page) => page.$("#edit1-filters .editr-fp-card.editr-fp-open");
 const cardText = (page, sel) => page.$eval("#edit1-filters .editr-fp-card.editr-fp-open " + sel, (e) => e.textContent);
 async function addCard(page, field) {
+  // (puppeteer scrolls a button just into view, under the panel's row count)
+  await page.$eval("#edit1-filters .editr-fp-add", (b) => b.scrollIntoView({ block: "center" }));
   await page.click("#edit1-filters .editr-fp-add");
   const opt = `#edit1-filters .editr-fp-colopt[data-field="${field}"]`;
   await page.waitForSelector(opt);
+  await page.$eval(opt, (b) => b.scrollIntoView({ block: "center" }));
   await page.click(opt);
   await sleep(150);
 }
@@ -1263,6 +1275,18 @@ const scenarios = {
     check((await cardsNow(page)).slice(-1)[0] === `${f.name} equal`, "names start with a list of them");
     check(await page.$$eval("#edit1-filters .editr-fp-open .editr-fp-opt", (o) => o.length) === 8, "every name and missing");
 
+    // words and patterns list the values of the column to pick from
+    await addCard(page, f.grp);
+    await setLogic(page, "contain");
+    const common = await page.$$eval("#edit1-filters .editr-fp-open .editr-fp-value", (b) => b.map((x) => x.textContent));
+    check(common.join("|") === "a3|b2|c2", "values to pick from: " + common.join("|"));
+    await page.click("#edit1-filters .editr-fp-open .editr-fp-value");
+    await sleep(300);
+    check((await cardsNow(page)).slice(-1)[0] === `${f.grp} contain a`, "a value becomes a word: " + (await cardsNow(page)).slice(-1)[0]);
+    await setLogic(page, "regex");
+    await page.evaluate(() => document.querySelectorAll("#edit1-filters .editr-fp-open .editr-fp-value")[1].click());
+    await sleep(300);
+    check((await cardsNow(page)).slice(-1)[0] === `${f.grp} regex ^b$`, "a value becomes a pattern: " + (await cardsNow(page)).slice(-1)[0]);
     // passwords are typed, never listed
     await addCard(page, f.pw);
     await setLogic(page, "equal");
@@ -1540,6 +1564,169 @@ const scenarios = {
     await done(page, "view");
   },
 
+  // pages of rows and columns, the add row corner and renaming the data
+  async pages(page) {
+    const f = {};
+    for (const n of ["id", "v1", "v9", "v10", "v11", "v15", "v20", "grp"]) f[n] = await fieldOf(page, n);
+    const st = () => editr(page, (g) => ({
+      page: g.table.getPage(), max: g.table.getPageMax(),
+      rows: g.table.rowManager.getDisplayRows().map((r) => r.getData()[Object.keys(r.getData()).find((k) => /id__$/.test(k))]),
+      cols: g.table.getColumns().filter((c) => c.isVisible() && g.colMap[c.getField()] && !g.colMap[c.getField()].frozen)
+        .map((c) => c.getDefinition().title),
+      // the row names stay on every page
+      names: g.table.getColumns().some((c) => c.isVisible() && g.colMap[c.getField()] && g.colMap[c.getField()].frozen),
+      pager: document.getElementById("edit1-pages").textContent,
+      status: document.getElementById("edit1-rows").textContent,
+    }));
+    const nav = async (label) => {
+      await page.click(`#edit1-pages button[aria-label="${label}"]`);
+      await L.settle(page, 500);
+    };
+    // data_edit(page_rows = 25, page_cols = 10)
+    let s = await st();
+    check(s.rows.length === 25 && s.rows[0] === 1 && s.max === 3, "25 rows a page: " + s.rows.length + " " + s.max);
+    check(s.cols.join() === "id,v1,v2,v3,v4,v5,v6,v7,v8,v9", "10 columns a page: " + s.cols.join());
+    check(/Rows.*1–25 of 60/.test(s.pager) && /Columns.*1–10 of 26/.test(s.pager), "pager: " + s.pager);
+    check(s.status === "60 rows · 26 columns", "pages hide nothing: " + s.status);
+    // the add row button is in the corner, not under the grid
+    const corner = await page.evaluate(() => {
+      const b = document.querySelector(".editr-add-btn");
+      return b && !!b.closest(".tabulator-col.editr-rowheader") && !document.querySelector(".tabulator-footer") &&
+        !document.querySelector(".tabulator-col.editr-addcol");
+    });
+    check(corner, "add button in the corner above the row numbers, no + column");
+
+    // move between pages
+    await nav("Next rows");
+    await nav("Next columns");
+    s = await st();
+    check(s.rows[0] === 26 && s.rows.length === 25, "rows 26-50: " + s.rows[0]);
+    check(s.cols[0] === "v10" && s.cols.length === 10, "columns 11-20: " + s.cols.join());
+    check(s.names, "row names stay on every page of columns");
+    // edit a cell on those pages
+    await L.editCell(page, 30, f.v15, "999");
+    await nav("Last page of rows");
+    s = await st();
+    check(s.rows[0] === 51 && s.rows.length === 10 && /51–60 of 60/.test(s.pager), "last page: " + s.pager);
+    await nav("First page of rows");
+    await nav("Previous columns");
+
+    // find goes to the page of rows and of columns of a match
+    await page.click("#edit1-find");
+    await page.keyboard.type("170");
+    await L.settle(page, 900);
+    s = await st();
+    check(s.page === 2 && s.cols[0] === "v20", "find shows the match's pages: " + s.page + " " + s.cols.join());
+    const sel = await editr(page, (g) => {
+      const r = g.table.getRanges()[0];
+      const c = r && r.getCells()[0][0];
+      return c ? [c.getRow().getIndex(), c.getField()] : null;
+    });
+    check(sel && sel[0] === 50 && sel[1] === f.v20, "find selects the cell: " + JSON.stringify(sel));
+    await page.click("#edit1-find", { clickCount: 3 });
+    await page.keyboard.press("Escape");
+    await nav("First page of columns");
+
+    // filters count the rows of every page; "on screen" is every page
+    await editr(page, (g, fg) => g.table.setHeaderFilterValue(fg, ["a"]), f.grp);
+    await L.settle(page, 800);
+    s = await st();
+    check(/1–20 of 20/.test(s.pager) && s.rows.length === 20, "filtered rows in one page: " + s.pager);
+    const view = await page.evaluate(() => Shiny.shinyapp.$inputValues["edit1-grid_view"]);
+    check(view.rows.length === 20 && view.cols === null, "on screen: every page of rows and columns");
+    await editr(page, (g, fg) => g.table.setHeaderFilterValue(fg, ""), f.grp);
+    await L.settle(page, 800);
+
+    // the Columns menu lists paged columns as shown; hiding one re-pages
+    await page.click("#edit1-columns");
+    await page.waitForSelector(".editr-columns-menu");
+    const unchecked = await page.$$eval(".editr-columns-list input", (b) => b.filter((x) => !x.checked).length);
+    check(unchecked === 0, "every column is shown in the Columns menu");
+    await page.evaluate(() => [...document.querySelectorAll(".editr-columns-list label")]
+      .find((l) => l.textContent.trim() === "v1").querySelector("input").click());
+    await page.mouse.click(5, 790);
+    await L.settle(page, 600);
+    s = await st();
+    check(s.cols.join() === "id,v2,v3,v4,v5,v6,v7,v8,v9,v10" && /Columns.*1–10 of 25/.test(s.pager),
+          "hiding a column re-pages: " + s.cols.join() + " " + s.pager);
+    check(/60 rows · 25 of 26 columns/.test(s.status), "status counts the hidden column: " + s.status);
+    await page.click("#edit1-columns");
+    await page.waitForSelector(".editr-columns-menu");
+    await page.evaluate(() => [...document.querySelectorAll(".editr-columns-list label")]
+      .find((l) => l.textContent.trim() === "v1").querySelector("input").click());
+    await page.mouse.click(5, 790);
+    await L.settle(page, 600);
+
+    // paste wider than the page fills the columns of the next page
+    await L.selectCell(page, 1, f.v9);
+    await L.paste(page, "1\t2\t3\n");
+    await L.settle(page, 800);
+    const row1 = await editr(page, (g, a, b, c) => {
+      const d = g.table.getRow(1).getData();
+      return [d[a], d[b], d[c], g.table.getColumns().length];
+    }, f.v9, f.v10, f.v11);
+    check(String(row1.slice(0, 3)) === "1,2,3", "paste fills v9, v10 and v11: " + row1);
+    check(/26 columns/.test((await st()).status), "no columns added: " + (await st()).status);
+
+    // the Pages menu changes the sizes
+    await page.click("#edit1-pages .editr-pages-btn");
+    await page.waitForSelector(".editr-pages-menu");
+    await page.select("#edit1-grid-pages-rows", "50");
+    await L.settle(page, 500);
+    s = await st();
+    check(s.rows.length === 50 && /1–50 of 60/.test(s.pager), "50 rows a page: " + s.pager);
+    await page.select("#edit1-grid-pages-columns", "");
+    await L.settle(page, 500);
+    s = await st();
+    check(s.cols.length === 26 && !/Columns/.test(s.pager), "every column: " + s.cols.length);
+    await page.keyboard.press("Escape");
+
+    // add a row from the corner: the last page shows it
+    await addVia(page, "row");
+    await L.settle(page, 600);
+    s = await st();
+    check(s.page === 2 && s.rows.includes(61) && /61 rows/.test(s.status), "added row on the last page: " + s.pager);
+    const selected = await editr(page, () => {
+      const r = document.querySelector(".editr_grid").__editr.table.getRanges()[0];
+      return r ? r.getCells()[0][0].getRow().getIndex() : null;
+    });
+    check(selected === 61, "the new row is selected: " + selected);
+    await L.editCell(page, 61, f.id, "61");
+    const id61 = await editr(page, (g, a) => g.table.getRow(61).getData()[a], f.id);
+    check(String(id61) === "61", "typed into the new row: " + id61);
+    // a column from the corner menu: its page is shown and its cell selected
+    await page.click("#edit1-pages .editr-pages-btn");
+    await page.waitForSelector(".editr-pages-menu");
+    await page.select("#edit1-grid-pages-columns", "10");
+    await page.keyboard.press("Escape");
+    await L.settle(page, 500);
+    await addVia(page, "col");
+    await L.settle(page, 600);
+    s = await st();
+    check(s.cols[s.cols.length - 1] === "V1" && /Columns.*21–27 of 27/.test(s.pager) && s.names,
+          "added column on the last page of columns: " + s.cols.join() + " " + s.pager);
+    await page.click("#edit1-undo");
+    await L.settle(page, 900);
+    s = await st();
+    check(!s.cols.includes("V1") && /of 26/.test(s.pager), "undo removes it: " + s.pager);
+
+    // rename the data in the header; Escape keeps the name
+    await page.click("#dataset_name");
+    await page.keyboard.type("nothing");
+    await page.keyboard.press("Escape");
+    await sleep(300);
+    check(await page.$eval("#dataset_name", (b) => b.textContent) === "x", "Escape keeps the name");
+    await page.click("#dataset_name");
+    await page.keyboard.down("Control"); await page.keyboard.press("KeyA"); await page.keyboard.up("Control");
+    await page.keyboard.type("tidy data");
+    await page.keyboard.press("Enter");
+    await L.settle(page, 600);
+    check(await page.$eval("#dataset_name", (b) => b.textContent) === "tidy data", "renamed");
+    const code = await codeNow(page);
+    check(/^tidy\.data <- x %>%$/m.test(code), "the code assigns to the new name: " + JSON.stringify(code.slice(0, 200)));
+    await done(page);
+  },
+
   async log(page) {
     await L.editCell(page, 1, "c2", "30");
     await L.selectCell(page, 1, "c3");
@@ -1794,8 +1981,7 @@ const scenarios = {
     await L.rowMenu(page, 4, "c2", "Insert row below");
     const id = await nextId(page);
     await L.editCell(page, id, "c1", "New");
-    await page.click(".editr-addcol-btn");
-    await L.settle(page);
+    await addVia(page, "col");
     const v1 = await fieldOf(page, "V1");
     await L.editCell(page, 1, v1, "x");
     await page.click("#edit1-open_changes");

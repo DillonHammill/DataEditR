@@ -114,6 +114,8 @@ database.</p>
 <span>  col_summary <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  row_names <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  col_widths <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  page_rows <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  page_cols <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -412,6 +414,14 @@ editor are named by their row number.</p></dd>
 column, or numbers named by column, e.g. <code>c(notes = 400, id = 60)</code>.
 Other columns are as wide as their values, up to 320 pixels; drag the
 edge of a column header to resize it.</p></dd>
+
+
+<dt>page_rows, page_cols</dt>
+<dd><p>number of rows and columns to show at a time,
+or <code>NULL</code> (the default) to show them all. The status bar has buttons
+to move between the pages, and <code>Pages</code> in the status bar changes the
+page sizes while editing. Pages only change what is on screen: filters,
+find, <code>Done</code> and exports cover every page.</p></dd>
 
 
 <dt>...</dt>

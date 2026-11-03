@@ -284,7 +284,10 @@ const scenarios = {
     await page.keyboard.type("horsepower");
     await page.keyboard.press("Enter");
     await settle(page);
-    await page.click(".editr-addrow");
+    await page.click(".editr-add-btn");
+    if (await page.waitForSelector('.editr-add-menu [data-add="row"]', { timeout: 2000 }).catch(() => null)) {
+      await page.click('.editr-add-menu [data-add="row"]');
+    }
     await settle(page);
     const id = await T(page, (g) => document.getElementById(g).__editr.nextId - 1);
     await edit(page, id, "c1", "My car");
@@ -459,7 +462,8 @@ const scenarios = {
     }, G, field);
     const pick = (label) => page.evaluate((l) => [...document.querySelectorAll(".tabulator-menu .tabulator-menu-item")]
       .find((x) => x.textContent.trim().startsWith(l)).click(), label);
-    // the column menu
+    // the column menu (once the summaries have settled the header)
+    await settle(page, 1200);
     let p = await menuButton("c3");
     await page.mouse.click(p.x, p.y);
     await page.waitForSelector(".tabulator-menu");
@@ -596,6 +600,19 @@ const scenarios = {
     await settle(page, 600);
     const box =await (await page.$("#edit1-panel")).boundingBox();
     await shot(page, "filter-values", { x: box.x, y: box.y, width: box.width, height: box.height });
+  },
+
+  // pages of rows and columns, with the Pages menu open
+  async pages(page) {
+    await sleep(1000);
+    await page.click('#edit1-pages button[aria-label="Next rows"]');
+    await settle(page, 600);
+    await page.click("#edit1-pages .editr-pages-btn");
+    await page.waitForSelector(".editr-pages-menu");
+    await page.evaluate(() => document.activeElement.blur());
+    await page.mouse.move(5, 5);
+    await settle(page, 500);
+    await shot(page, "pages");
   },
 
   async labelled(page) {

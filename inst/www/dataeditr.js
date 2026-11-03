@@ -76,6 +76,51 @@
     input.addEventListener("blur", function () { save(true); });
   };
 
+  // rename the data from the name in the header: Enter or leaving the box
+  // keeps the new name, Escape the old one
+  DataEditR.renameData = function (button) {
+    if (!button || button.hidden) return;
+    var current = button.textContent;
+    var input = document.createElement("input");
+    input.type = "text";
+    input.className = "form-control form-control-sm editr-name-input";
+    input.value = current;
+    input.maxLength = 120;
+    input.spellcheck = false;
+    input.setAttribute("aria-label", "Name of the data");
+    input.style.width = Math.max(140, Math.min(360, button.offsetWidth + 48)) + "px";
+    button.hidden = true;
+    button.parentNode.insertBefore(input, button.nextSibling);
+    input.focus();
+    input.select();
+    var done = false;
+    var finish = function (keep) {
+      if (done) return;
+      done = true;
+      var name = input.value.trim();
+      if (input.parentNode) input.parentNode.removeChild(input);
+      button.hidden = false;
+      if (keep && name && name !== current) {
+        button.textContent = name;
+        if (window.Shiny && Shiny.setInputValue) {
+          Shiny.setInputValue("dataset_rename", name, {priority: "event"});
+        }
+      }
+      button.focus();
+    };
+    input.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        finish(true);
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
+        finish(false);
+      }
+    });
+    input.addEventListener("blur", function () { finish(true); });
+  };
+
   DataEditR.copy = function (id, button) {
     var node = document.getElementById(id);
     if (!node) return;

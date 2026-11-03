@@ -131,6 +131,13 @@ async function clickAt(page, p, opts = {}) {
   await page.mouse.click(p.x, p.y, opts);
 }
 
+// the "+" in the corner above the row numbers, then "Add row" or "Add column"
+async function addFromCorner(page, what) {
+  await clickAt(page, await el(page, ".editr-add-btn"));
+  await sleep(500);
+  await clickAt(page, await el(page, `.editr-add-menu [data-add="${what}"]`));
+}
+
 async function type(page, text, delay = 85) {
   for (const ch of text) { await page.keyboard.type(ch); await sleep(delay); }
 }
@@ -288,8 +295,8 @@ const scenarios = {
       await clickAt(page, await header(page, "c4"), { button: "right" });
       await menu(page, "Insert column right");
       await sleep(400);
-      await caption(page, "Or add a row at the end with + Add row");
-      await clickAt(page, await el(page, ".editr-addrow"));
+      await caption(page, "Or add a row at the end with the + above the row numbers");
+      await addFromCorner(page, "row");
       await settle(page, 700);
       id = await nextId(page);
       await editCell(page, id, "c1", "Another car");
@@ -359,7 +366,7 @@ const scenarios = {
     });
     await reload(page);
     await record(page, "select-columns", async () => {
-      await caption(page, "Show or hide columns from the Columns menu");
+      await caption(page, "Show or hide columns from the Select menu");
       await clickAt(page, await el(page, "#edit1-columns"));
       await page.waitForSelector(".editr-columns-menu");
       await sleep(500);
@@ -441,7 +448,7 @@ const scenarios = {
       await clickAt(page, await cell(page, 5, "c2"), { button: "right" });
       await menu(page, "Delete row");
       await rename(page, "c5", "horsepower");
-      await caption(page, "Review changes lists every change");
+      await caption(page, "Review lists every change");
       await clickAt(page, await el(page, "#edit1-open_changes"));
       await settle(page, 1500);
       await caption(page, "Revert one change, or restore a removed row");
@@ -461,14 +468,14 @@ const scenarios = {
       await editCell(page, 1, "c1", "2024-03-01");
       await editCell(page, 1, "c2", "Australia");
       await editCell(page, 1, "c3", "24.5");
-      await clickAt(page, await el(page, ".editr-addrow"));
+      await addFromCorner(page, "row");
       await settle(page, 600);
       const id = await nextId(page);
       await editCell(page, id, "c1", "2024-03-02");
       await editCell(page, id, "c2", "New Zealand");
       await editCell(page, id, "c3", "18.2");
-      await caption(page, "Add columns with the + header");
-      await clickAt(page, await el(page, ".editr-addcol-btn"));
+      await caption(page, "Add columns from the same + menu");
+      await addFromCorner(page, "col");
       await settle(page, 900);
       await caption(page, "");
     });

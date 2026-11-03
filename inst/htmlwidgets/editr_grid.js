@@ -14,7 +14,6 @@
   "use strict";
 
   var ID = "__editr_id__";
-  var ADD_FIELD = "__editr_add__";
   var pending = {}; // messages that arrive before a grid is built
 
   function registerHandler() {
@@ -456,6 +455,7 @@
 
   var ICONS = {
     lock: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Read-only"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>',
+    pages: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 10v10"/></svg>',
     plus: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>',
     x: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>',
     external: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6"/><path d="M20 4 10 14"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>',
@@ -590,6 +590,10 @@
     mod.__editrPatched = true;
     var original = mod.layoutElement;
     mod.layoutElement = function () {
+      // not for a table that has been replaced (new rows loaded while a
+      // layout was pending)
+      var t = this.table;
+      if (!t || t.destroyed || !t.element || !t.element.isConnected) return;
       return original.call(this, true);
     };
   }
@@ -2467,6 +2471,37 @@
         return body;
       }
 
+      // the values of a column with how many rows have each, to pick from as
+      // in the column summaries (the most common when there are many; never
+      // for passwords)
+      function fpCommon(c, pick, picked) {
+        if (fpSecret(c)) return null;
+        var vals = fpValues(c);
+        var keys = vals.keys.slice(0, FP_FEW);
+        if (!keys.length) return null;
+        var wrap = fpEl("div", {class: "editr-fp-common", role: "group",
+                                "aria-label": "Values of " + columnName(c)}, [
+          fpEl("span", {class: "editr-fp-common-label",
+                        text: vals.keys.length > keys.length ? "Most common values" : "Values"})
+        ]);
+        var buttons = keys.map(function (k) {
+          var label = shownText(c, k);
+          var b = fpEl("button", {
+            type: "button", class: "editr-fp-value", title: label,
+            onclick: function () { pick(label); }
+          }, [fpEl("span", {class: "editr-fp-val", text: label}),
+              fpEl("span", {class: "editr-fp-n", text: vals.counts[k].toLocaleString("en-US")})]);
+          wrap.appendChild(b);
+          return [b, label];
+        });
+        wrap.update = function () {
+          buttons.forEach(function (x) {
+            x[0].setAttribute("aria-pressed", picked(x[1]) ? "true" : "false");
+          });
+        };
+        return wrap;
+      }
+
       function fpWordsUI(card, c, ui) {
         var box = fpEl("div", {class: "editr-fp-words"});
         var input = fpEl("input", {type: "text", "aria-label": "Text to look for",
@@ -2507,10 +2542,22 @@
             box.insertBefore(chip, input);
           });
           input.placeholder = card.values.length ? "" : "Type a word and press Enter";
+          if (common) common.update();
         };
         box.appendChild(input);
         box.addEventListener("click", function (e) { if (e.target === box) input.focus(); });
-        return box;
+        // the values to look for, unless they are typed (passwords)
+        var low = function (s) { return String(s).toLowerCase(); };
+        var common = fpKind(card, c) === "words" && /contain/.test(card.logic) ? fpCommon(c, function (label) {
+          var at = card.values.map(low).indexOf(low(label));
+          fpTouch(card);
+          if (at === -1) card.values.push(label);
+          else card.values.splice(at, 1);
+          fpChanged(card, true);
+        }, function (label) {
+          return card.values.map(low).indexOf(low(label)) !== -1;
+        }) : null;
+        return common ? fpEl("div", {}, [box, common]) : box;
       }
 
       function fpPatternUI(card, c, ui) {
@@ -2523,8 +2570,18 @@
           card.values = [input.value];
           fpChanged(card, false);
         });
-        ui.update = function () {};
-        return input;
+        // a value picked below becomes a pattern for exactly that value
+        var exact = function (label) {
+          return "^" + label.replace(/[.*+?^${}()|[\]\\\/]/g, "\\$&") + "$";
+        };
+        var common = fpCommon(c, function (label) {
+          fpTouch(card);
+          card.values = [exact(label)];
+          input.value = card.values[0];
+          fpChanged(card, true);
+        }, function (label) { return card.values[0] === exact(label); });
+        ui.update = function () { if (common) common.update(); };
+        return common ? fpEl("div", {}, [input, common]) : input;
       }
 
       function fpCardUI(card) {
@@ -2664,7 +2721,7 @@
         grid.fp.cards.forEach(function (x) { filtered[x.field] = true; });
         var cols = realColumns().map(function (col) {
           var c = grid.colMap[col.getField()];
-          return {c: c, name: columnName(c), hidden: !col.isVisible()};
+          return {c: c, name: columnName(c), hidden: !shownCol(col)};
         });
         var picker = fpEl("div", {class: "editr-fp-picker", role: "dialog",
                                   "aria-label": "Choose a column to filter"});
@@ -2931,31 +2988,10 @@
         return def;
       }
 
-      // a narrow last column whose header adds a column at the end
-      function addColumnDef() {
-        return {
-          field: ADD_FIELD, title: "", width: 44, minWidth: 44,
-          resizable: false, headerSort: false, editor: false, clipboard: false,
-          cssClass: "editr-addcol",
-          titleFormatter: function () {
-            return '<button type="button" class="editr-addcol-btn" ' +
-              'aria-label="Add column" title="Add column">' + ICONS.plus +
-              '</button>';
-          },
-          headerClick: function () {
-            var cols = realColumns();
-            if (cols.length) insertColumn(cols[cols.length - 1], true);
-          },
-          formatter: function () { return ""; }
-        };
-      }
-
       function setColumns(cols) {
         grid.colMap = {};
         toArray(cols).forEach(function (c) { grid.colMap[c.field] = c; });
-        var defs = toArray(cols).map(buildColumn);
-        if (grid.opts.col_edit) defs.push(addColumnDef());
-        return defs;
+        return toArray(cols).map(buildColumn);
       }
 
       // column definitions for the same data sent again from R (undo/redo
@@ -2965,7 +3001,9 @@
         var hidden = {};
         if (grid.table) {
           grid.table.getColumns().forEach(function (col) {
-            if (!col.isVisible()) hidden[col.getField()] = true;
+            if (!col.isVisible() && !(grid.paged && grid.paged[col.getField()])) {
+              hidden[col.getField()] = true;
+            }
           });
         }
         var defs = setColumns(cols);
@@ -3476,7 +3514,12 @@
         el.style.top = (rect.bottom + window.scrollY + 4) + "px";
         el.style.left = (rect.left + window.scrollX) + "px";
         document.body.appendChild(el);
-        // keep inside the window
+        // keep inside the window: above the button when there is no room
+        // below (the Pages button in the status bar)
+        var h = el.getBoundingClientRect().height;
+        if (rect.bottom + 4 + h > document.documentElement.clientHeight && rect.top - 4 - h > 0) {
+          el.style.top = (rect.top + window.scrollY - 4 - h) + "px";
+        }
         var w = el.getBoundingClientRect().width;
         var maxLeft = window.scrollX + document.documentElement.clientWidth - w - 8;
         if (rect.left + window.scrollX > maxLeft) el.style.left = Math.max(8, maxLeft) + "px";
@@ -3525,9 +3568,11 @@
           var label = document.createElement("label");
           var box = document.createElement("input");
           box.type = "checkbox";
-          box.checked = col.isVisible();
+          box.checked = shownCol(col);
           box.addEventListener("change", function () {
             keepRanges(function () {
+              // a column on another page of columns is hidden by the user
+              delete grid.paged[col.getField()];
               if (box.checked) col.show(); else col.hide();
             });
             updateStatus();
@@ -3652,7 +3697,10 @@
         var rows = table.rowManager.activeRows.slice();
         var r0 = rows.indexOf(bounds.start.row);
         var r1 = rows.indexOf(bounds.end.row);
-        var cols = table.columnManager.getVisibleColumnsByIndex();
+        // with pages of columns, the columns of the next pages come next
+        var cols = table.columnManager.columnsByIndex.filter(function (col) {
+          return col.visible || !!grid.paged[col.getField()];
+        });
         var c0 = cols.indexOf(bounds.start.column);
         var c1 = cols.indexOf(bounds.end.column);
         if (r0 < 0 || c0 < 0) return [];
@@ -4207,6 +4255,223 @@
         }), conditions);
       }
 
+      /* ---------------------------------------------------------------- */
+      /* pages: rows and columns shown a page at a time                    */
+      /* ---------------------------------------------------------------- */
+
+      // Rows use Tabulator's local pagination, which is always on and shows
+      // every row on one page until a page size is chosen. Columns are paged
+      // here: the columns of other pages are hidden and listed in
+      // grid.paged, so they still count as shown (Columns menu, status bar,
+      // "only what's on screen", find, paste). Sizes and pages are kept on
+      // the widget element, so they survive new data and re-renders.
+
+      var PAGE_ROWS = [25, 50, 100, 250, 500, 1000];
+      var PAGE_COLS = [5, 10, 20, 50];
+
+      function paging() {
+        return el.__editrPaging;
+      }
+
+      // shown by the user: on screen or only on another page of columns
+      function shownCol(col) {
+        return col.isVisible() || !!(grid.paged && grid.paged[col.getField()]);
+      }
+
+      // the columns that are paged (not the row names, which always show)
+      function pageColumns() {
+        return realColumns().filter(function (col) {
+          return !grid.colMap[col.getField()].frozen && shownCol(col);
+        });
+      }
+
+      // hide the columns of other pages (blockRedraw keeps it to one redraw)
+      function applyColPage() {
+        var table = grid.table;
+        var p = paging();
+        if (!table || grid.applyingPage) return;
+        grid.applyingPage = true;
+        try {
+          var cols = pageColumns();
+          var size = p.cols;
+          var max = size ? Math.max(1, Math.ceil(cols.length / size)) : 1;
+          p.colPage = Math.min(Math.max(1, p.colPage || 1), max);
+          var from = size ? (p.colPage - 1) * size : 0;
+          var to = size ? from + size : cols.length;
+          var change = cols.filter(function (col, i) {
+            return (i >= from && i < to) !== col.isVisible();
+          });
+          if (change.length) {
+            table.blockRedraw();
+            keepRanges(function () {
+              change.forEach(function (col) {
+                var f = col.getField();
+                if (col.isVisible()) {
+                  grid.paged[f] = true;
+                  col.hide();
+                } else {
+                  delete grid.paged[f];
+                  col.show();
+                }
+              });
+            });
+            table.restoreRedraw();
+          }
+        } finally {
+          grid.applyingPage = false;
+        }
+        renderPager();
+      }
+
+      // the column pages after columns were added, removed, hidden or shown
+      function syncColPage() {
+        var p = paging();
+        if (!grid.table || grid.applyingPage) return;
+        if (!p.cols) {
+          if (Object.keys(grid.paged).length) applyColPage();
+          return;
+        }
+        var cols = pageColumns();
+        var from = (Math.max(1, p.colPage || 1) - 1) * p.cols;
+        var right = cols.every(function (col, i) {
+          return (i >= from && i < from + p.cols) === col.isVisible();
+        });
+        if (!right) applyColPage();
+      }
+
+      function setRowPaging(size) {
+        var p = paging();
+        p.rows = size || null;
+        p.rowPage = 1;
+        var table = grid.table;
+        table.setPageSize(p.rows || true);
+        Promise.resolve(table.setPage(1)).catch(function () {}).then(renderPager);
+      }
+
+      function setColPaging(size) {
+        var p = paging();
+        p.cols = size || null;
+        p.colPage = 1;
+        applyColPage();
+        updateStatus();
+      }
+
+      // show the page of rows with the row, and the page of columns with the
+      // field (before going to a cell)
+      function showPageOf(row, field) {
+        var p = paging();
+        var wait = null;
+        if (p.rows && row && grid.table.setPageToRow &&
+            grid.table.rowManager.getDisplayRows().indexOf(row._row) === -1) {
+          wait = grid.table.setPageToRow(row);
+        }
+        if (p.cols && field && grid.paged[field]) {
+          var cols = pageColumns();
+          var at = cols.map(function (col) { return col.getField(); }).indexOf(field);
+          if (at !== -1) {
+            p.colPage = Math.floor(at / p.cols) + 1;
+            applyColPage();
+          }
+        }
+        return Promise.resolve(wait).catch(function () {});
+      }
+
+      function openPagesMenu(anchor) {
+        if (grid.popup && grid.popup.kind === "pages") {
+          closePopup();
+          return;
+        }
+        var p = paging();
+        var menu = document.createElement("div");
+        menu.className = "editr-popup editr-pages-menu";
+        menu.setAttribute("role", "dialog");
+        menu.setAttribute("aria-label", "Pages");
+        var field = function (label, sizes, value, unit, onChange) {
+          var id = el.id + "-pages-" + unit;
+          var sel = fpEl("select", {class: "form-select form-select-sm", id: id});
+          sel.appendChild(fpEl("option", {value: "", text: "All " + unit}));
+          // a size given to data_edit() that is not in the list
+          if (value && sizes.indexOf(value) === -1) {
+            sizes = sizes.concat([value]).sort(function (a, b) { return a - b; });
+          }
+          sizes.forEach(function (n) {
+            sel.appendChild(fpEl("option", {value: String(n), text: n.toLocaleString("en-US") + " " + unit}));
+          });
+          sel.value = value ? String(value) : "";
+          sel.addEventListener("change", function () {
+            onChange(sel.value ? Number(sel.value) : null);
+          });
+          return fpEl("div", {class: "editr-pages-field"}, [
+            fpEl("label", {for: id, text: label}), sel
+          ]);
+        };
+        menu.appendChild(fpEl("div", {class: "editr-menu-label", text: "Show the data in pages"}));
+        menu.appendChild(field("Rows per page", PAGE_ROWS, p.rows, "rows", setRowPaging));
+        menu.appendChild(field("Columns per page", PAGE_COLS, p.cols, "columns", setColPaging));
+        var popup = openPopup(anchor, menu);
+        popup.kind = "pages";
+        anchor.setAttribute("aria-expanded", "true");
+        popup.onClose = function () { anchor.setAttribute("aria-expanded", "false"); };
+        var first = menu.querySelector("select");
+        if (first) first.focus();
+      }
+
+      // the Pages button and, when pages are on, where you are and the
+      // buttons to move
+      function renderPager() {
+        var box = byId(grid.ui.pages);
+        var table = grid.table;
+        if (!box || !table || !grid.ready) return;
+        var p = paging();
+        var fmt = function (n) { return n.toLocaleString("en-US"); };
+        box.innerHTML = "";
+        var btn = fpEl("button", {
+          type: "button", class: "editr-link editr-pages-btn" + (p.rows || p.cols ? " editr-pages-on" : ""),
+          title: "Show the data in pages", "aria-haspopup": "dialog", "aria-expanded": "false",
+          html: ICONS.pages + "<span>Pages</span>"
+        });
+        btn.addEventListener("click", function () { openPagesMenu(btn); });
+        box.appendChild(btn);
+        var group = function (what, text, page, max, go) {
+          var nav = function (label, sym, target, ok) {
+            return fpEl("button", {
+              type: "button", class: "editr-pager-btn", "aria-label": label, title: label,
+              disabled: !ok, text: sym, onclick: function () { go(target); }
+            });
+          };
+          var kids = [fpEl("span", {class: "editr-pager-label", text: what})];
+          if (max > 2) kids.push(nav("First page of " + what.toLowerCase(), "«", 1, page > 1));
+          kids.push(nav("Previous " + what.toLowerCase(), "‹", page - 1, page > 1));
+          kids.push(fpEl("span", {class: "editr-pager-text", text: text}));
+          kids.push(nav("Next " + what.toLowerCase(), "›", page + 1, page < max));
+          if (max > 2) kids.push(nav("Last page of " + what.toLowerCase(), "»", max, page < max));
+          return fpEl("span", {class: "editr-pager", role: "group", "aria-label": what + " pages"}, kids);
+        };
+        if (p.rows) {
+          var n = table.getDataCount("active");
+          var page = table.getPage() || 1;
+          var max = Math.max(1, table.getPageMax() || 1);
+          var from = n ? (page - 1) * p.rows + 1 : 0;
+          var to = Math.min(n, page * p.rows);
+          box.appendChild(group("Rows", fmt(from) + "–" + fmt(to) + " of " + fmt(n), page, max,
+                                function (target) {
+                                  Promise.resolve(table.setPage(target)).catch(function () {}).then(renderPager);
+                                }));
+        }
+        if (p.cols) {
+          var cols = pageColumns();
+          var cmax = Math.max(1, Math.ceil(cols.length / p.cols));
+          var cpage = Math.min(p.colPage || 1, cmax);
+          var cfrom = cols.length ? (cpage - 1) * p.cols + 1 : 0;
+          var cto = Math.min(cols.length, cpage * p.cols);
+          box.appendChild(group("Columns", fmt(cfrom) + "–" + fmt(cto) + " of " + fmt(cols.length),
+                                cpage, cmax, function (target) {
+                                  p.colPage = target;
+                                  applyColPage();
+                                }));
+        }
+      }
+
       function updateStatus() {
         var table = grid.table;
         if (!table || !grid.ready) return;
@@ -4215,7 +4480,7 @@
         var cols = realColumns().filter(function (col) {
           return !grid.colMap[col.getField()].frozen;
         });
-        var visible = cols.filter(function (col) { return col.isVisible(); });
+        var visible = cols.filter(shownCol);
         var plural = function (n, w) { return n + " " + w + (n === 1 ? "" : "s"); };
         var rows = shown === total ? plural(total, "row") :
           shown + " of " + plural(total, "row");
@@ -4225,6 +4490,8 @@
         setText(grid.ui.columns_count,
                 visible.length === cols.length ? "" :
                   visible.length + " of " + cols.length);
+        syncColPage();
+        renderPager();
       }
 
       function chipText(f) {
@@ -4350,7 +4617,7 @@
             });
           }
           var all = realColumns();
-          var vis = all.filter(function (col) { return col.isVisible(); });
+          var vis = all.filter(shownCol);
           if (vis.length !== all.length) {
             cols = vis.map(function (col) { return col.getField(); });
           }
@@ -4408,7 +4675,9 @@
             new Promise(function (r) { setTimeout(r, 250); })
           ]);
         };
-        return briefly(table.scrollToRow(id, "center", false)).then(function () {
+        return showPageOf(row, field).then(function () {
+          return briefly(table.scrollToRow(id, "center", false));
+        }).then(function () {
           return briefly(table.scrollToColumn(field, "middle", false));
         }).then(function () {
           var cell = row.getCell(field);
@@ -4430,9 +4699,8 @@
         f.index = -1;
         if (query) {
           var q = query.toLowerCase();
-          var fields = realColumns().filter(function (col) {
-            return col.isVisible();
-          }).map(function (col) { return col.getField(); });
+          var fields = realColumns().filter(shownCol)
+            .map(function (col) { return col.getField(); });
           grid.table.getRows("active").forEach(function (row) {
             var d = row.getData();
             fields.forEach(function (field) {
@@ -4730,7 +4998,7 @@
         realColumns().forEach(function (col) {
           var field = col.getField();
           var c = grid.colMap[field];
-          if (!col.isVisible()) return;
+          if (!shownCol(col)) return;
           var wrap = document.createElement("div");
           wrap.className = "editr-form-field";
           wrap.setAttribute("data-field", field);
@@ -4826,7 +5094,7 @@
       function showRecord(id, focus) {
         renderForm(id);
         if (grid.formRow !== null && grid.formRow !== undefined) {
-          var first = realColumns().filter(function (col) { return col.isVisible(); })[0];
+          var first = realColumns().filter(shownCol)[0];
           if (first) selectCell(grid.formRow, first.getField());
         }
         if (focus) {
@@ -4839,17 +5107,95 @@
         var p = insertRow(null, true);
         var id = grid.nextId - 1;
         Promise.resolve(p).then(function () {
-          var first = realColumns().filter(function (col) {
-            var c = grid.colMap[col.getField()];
-            return col.isVisible() && !c.readonly;
-          })[0];
+          var editable = realColumns().filter(function (col) {
+            return shownCol(col) && !grid.colMap[col.getField()].readonly;
+          });
+          var first = editable.filter(function (col) { return col.isVisible(); })[0] || editable[0];
           if (first) {
-            selectCell(id, first.getField());
+            // ready to type into the new row
+            Promise.resolve(selectCell(id, first.getField())).then(function () {
+              var t = grid.table && grid.table.element;
+              if (t && t.focus) t.focus({preventScroll: true});
+            });
           }
         });
       }
 
+      // a column at the end: its page of columns is shown and its first
+      // cell on screen selected
+      function addColumnAtEnd() {
+        var cols = realColumns();
+        if (!cols.length) return;
+        var before = Object.keys(grid.colMap);
+        insertColumn(cols[cols.length - 1], true);
+        var added = Object.keys(grid.colMap).filter(function (f) {
+          return before.indexOf(f) === -1;
+        })[0];
+        if (!added) return;
+        var p = paging();
+        if (p.cols) {
+          p.colPage = Math.max(1, Math.ceil(pageColumns().length / p.cols));
+          applyColPage();
+        }
+        var shown = grid.table.rowManager.getDisplayRows();
+        if (shown.length) {
+          Promise.resolve(selectCell(shown[0].getComponent().getIndex(), added)).then(function () {
+            var t = grid.table && grid.table.element;
+            if (t && t.focus) t.focus({preventScroll: true});
+          });
+        } else {
+          grid.table.scrollToColumn(added, "right", false).catch(function () {});
+        }
+      }
+
+      // the menu of the add button in the corner
+      function openAddMenu(anchor) {
+        if (grid.popup && grid.popup.kind === "add") {
+          closePopup();
+          return;
+        }
+        var menu = fpEl("div", {class: "editr-popup editr-add-menu", role: "menu",
+                                "aria-label": "Add"});
+        var item = function (what, label, hint, run) {
+          return fpEl("button", {
+            type: "button", role: "menuitem", class: "editr-add-item", "data-add": what,
+            onclick: function () {
+              closePopup();
+              run();
+            }
+          }, [fpEl("span", {class: "editr-add-icon", html: ICONS.plus}),
+              fpEl("span", {class: "editr-add-text"}, [
+                fpEl("span", {class: "editr-add-label", text: label}),
+                fpEl("span", {class: "editr-add-hint", text: hint})
+              ])]);
+        };
+        var items = [item("row", "Add row", "at the end of the data", addRowAtEnd),
+                     item("col", "Add column", "after the last column", addColumnAtEnd)];
+        items.forEach(function (b) { menu.appendChild(b); });
+        menu.addEventListener("keydown", function (e) {
+          var at = items.indexOf(document.activeElement);
+          if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+            e.preventDefault();
+            var next = (at + (e.key === "ArrowDown" ? 1 : -1) + items.length) % items.length;
+            items[next].focus();
+          }
+        });
+        var popup = openPopup(anchor, menu);
+        popup.kind = "add";
+        anchor.setAttribute("aria-expanded", "true");
+        popup.onClose = function () { anchor.setAttribute("aria-expanded", "false"); };
+        items[0].focus();
+      }
+
+      grid.addClick = function (button) {
+        var o = grid.opts;
+        if (o.row_edit && o.col_edit) openAddMenu(button);
+        else if (o.row_edit) addRowAtEnd();
+        else if (o.col_edit) addColumnAtEnd();
+      };
       grid.openColumns = function (anchor) { openColumnsMenu(anchor); };
+      grid.addRowAtEnd = addRowAtEnd;
+      grid.addColumnAtEnd = addColumnAtEnd;
 
       /* ---------------------------------------------------------------- */
       /* commands from R                                                   */
@@ -5100,12 +5446,38 @@
         grid.conditions = [];
         grid.matchAny = false;
         grid.fp = {cards: [], seq: 0, key: null, ui: {}, picker: null};
+        // pages: sizes from data_edit(page_rows, page_cols) the first time
+        grid.paged = {};
+        if (!el.__editrPaging) {
+          var size = function (v) {
+            v = Number(v);
+            return isFinite(v) && v >= 1 ? Math.floor(v) : null;
+          };
+          el.__editrPaging = {rows: size(opts.page_rows), cols: size(opts.page_cols),
+                              rowPage: 1, colPage: 1};
+        }
         var pref = null;
         try { pref = window.localStorage.getItem("DataEditR.summary"); } catch (e) {}
         grid.summaryOn = opts.summary !== false && pref !== "off";
         el.classList.toggle("editr-summaries-off", !grid.summaryOn);
         if (opts.summary !== false && !grid.summaryOn && shinyOpen()) {
           Shiny.setInputValue(el.id + "_summary", false, {priority: "event"});
+        }
+        // the add button in the corner (redrawn with the columns) adds a row
+        // or a column without starting a range selection
+        if (!el.__editrAddBound) {
+          el.__editrAddBound = true;
+          ["mousedown", "click"].forEach(function (type) {
+            el.addEventListener(type, function (e) {
+              var b = e.target.closest && e.target.closest(".editr-add-btn");
+              if (!b || !el.contains(b)) return;
+              e.stopPropagation();
+              e.preventDefault();
+              if (type === "click" && el.__editr && el.__editr.addClick) {
+                el.__editr.addClick(b);
+              }
+            }, true);
+          });
         }
         // summaries handle their own clicks (no column selection or rename)
         if (!el.__editrSummaryBound) {
@@ -5141,6 +5513,17 @@
             resizable: false, frozen: true, headerSort: false,
             hozAlign: "center", headerHozAlign: "center", width: 50,
             cssClass: "editr-rowheader",
+            // the corner above the row numbers adds a row or a column (a
+            // menu when both can be added)
+            titleFormatter: function () {
+              if (!opts.row_edit && !opts.col_edit) return "";
+              var both = opts.row_edit && opts.col_edit;
+              var label = both ? "Add a row or a column" : opts.row_edit ? "Add row" : "Add column";
+              return '<button type="button" class="editr-addcol-btn editr-add-btn" ' +
+                'aria-label="' + label + '" title="' + label + '"' +
+                (both ? ' aria-haspopup="menu" aria-expanded="false"' : "") + '>' +
+                ICONS.plus + '</button>';
+            },
             formatter: function (cell) { return cell.getRow().getIndex(); }
           },
           rowContextMenu: rowMenu,
@@ -5159,9 +5542,14 @@
           clipboardPasteParser: parsePaste,
           clipboardPasteAction: pasteRange,
           headerFilterLiveFilterDelay: 250,
-          footerElement: opts.row_edit ?
-            '<button type="button" class="editr-addrow">' + ICONS.plus +
-              '<span>Add row</span></button>' : undefined
+          pagination: true,
+          paginationMode: "local",
+          paginationSize: el.__editrPaging.rows || true,
+          paginationInitialPage: el.__editrPaging.rowPage || 1,
+          paginationAddRow: "table",
+          paginationCounter: false,
+          // our own controls are in the status bar
+          paginationElement: document.createElement("div")
         });
         grid.table = table;
         patchKeyCodes(table);
@@ -5178,13 +5566,16 @@
           patchRowDisplayed(table);
           patchScrollToRow(table);
           patchFillHandle(table);
-          var add = holder.querySelector(".editr-addrow");
-          if (add) add.addEventListener("click", addRowAtEnd);
           bindUI();
+          if (el.__editrPaging.cols) applyColPage();
           updateStatus();
           renderChips();
           reportView();
           if (fpVisible()) fpShow();
+        });
+        table.on("pageLoaded", function (page) {
+          el.__editrPaging.rowPage = page;
+          renderPager();
         });
 
         // rows added while a filter is active stay visible until the user

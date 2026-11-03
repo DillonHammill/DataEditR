@@ -42,6 +42,8 @@ data_edit(
   col_summary = TRUE,
   row_names = TRUE,
   col_widths = NULL,
+  page_rows = NULL,
+  page_cols = NULL,
   ...
 )
 }
@@ -271,6 +273,12 @@ editor are named by their row number.}
 column, or numbers named by column, e.g. \code{c(notes = 400, id = 60)}.
 Other columns are as wide as their values, up to 320 pixels; drag the
 edge of a column header to resize it.}
+
+\item{page_rows, page_cols}{number of rows and columns to show at a time,
+or \code{NULL} (the default) to show them all. The status bar has buttons
+to move between the pages, and \code{Pages} in the status bar changes the
+page sizes while editing. Pages only change what is on screen: filters,
+find, \code{Done} and exports cover every page.}
 
 \item{...}{not in use.}
 }

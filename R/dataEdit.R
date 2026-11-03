@@ -20,7 +20,8 @@
 #'   here).
 #' @param code_name name of the data used in the code shown in the review
 #'   panel, set to \code{"data"} by default. Can also be a reactive expression
-#'   returning the name.
+#'   returning the name. Two names, e.g. \code{c("mtcars", "cars")}, give the
+#'   data the code starts from and the name the code assigns the result to.
 #' @param autosave logical indicating whether changes should be saved as a
 #'   draft while editing, so that they can be restored if the app is closed
 #'   before they are saved. When the same data is opened again by the same
@@ -81,6 +82,11 @@
 #'   column, or numbers named by column, e.g. \code{c(notes = 400, id = 60)}.
 #'   Other columns are as wide as their values, up to 320 pixels; drag the
 #'   edge of a column header to resize it.
+#' @param page_rows,page_cols number of rows and columns to show at a time,
+#'   or \code{NULL} (the default) to show them all. The status bar has buttons
+#'   to move between the pages, and \code{Pages} in the status bar changes the
+#'   page sizes while editing. Pages only change what is on screen: filters,
+#'   find, \code{Done} and exports cover every page.
 #' @param data a reactive expression containing an array (e.g. data.frame,
 #'   matrix or data.table), a database table (see \code{\link{db_table}}) or a
 #'   vector indicating the dimensions of the array (e.g. c(10,10)) or column
@@ -243,13 +249,13 @@ dataEditUI <- function(id,
       editr_tool(ns("redo"), icon = "redo", title = "Redo (Ctrl+Y)",
                  class = "action-button"),
       span(class = "editr-sep", `aria-hidden` = "true"),
-      editr_tool(ns("summary"), icon = "chart", title = "Column summaries",
-                 `aria-pressed` = "true"),
-      editr_tool(ns("columns"), label = "Columns", icon = "columns",
-                 title = "Show or hide columns", `aria-haspopup` = "dialog",
-                 `aria-expanded` = "false",
-                 span(class = "editr-muted", id = ns("columns_count")),
-                 editr_icon("chevron", 14)),
+      editr_tool(ns("summary"), label = "Summaries", icon = "chart",
+                 title = "Show or hide the column summaries",
+                 class = "editr-tool-collapse", `aria-pressed` = "true"),
+      editr_tool(ns("columns"), label = "Select", icon = "columns",
+                 title = "Select the columns to show", `aria-haspopup` = "dialog",
+                 `aria-expanded` = "false", class = "editr-tool-collapse",
+                 span(class = "editr-muted", id = ns("columns_count"))),
       editr_tool(ns("filter"), label = "Filters", icon = "filter",
                  title = "Filter rows", class = "editr-tool-collapse",
                  onclick = js_panel("filters"), `aria-pressed` = "false",
@@ -261,21 +267,12 @@ dataEditUI <- function(id,
                  span(class = "editr-muted", id = ns("load_info"))),
       div(class = "editr-chips", id = ns("chips"),
           `aria-label` = "Active filters"),
-      tags$label(
-        class = "editr-find",
-        editr_icon("search"),
-        span(class = "editr-visually-hidden", "Find in data"),
-        tags$input(type = "search", id = ns("find"),
-                   placeholder = "Find in data", autocomplete = "off"),
-        span(class = "editr-find-count", id = ns("find_count"),
-             `aria-live` = "polite"),
-        tags$kbd("Ctrl F")
-      ),
       span(class = "editr-spacer"),
-      editr_tool(ns("open_record"), icon = "form",
+      editr_tool(ns("open_record"), label = "Form", icon = "form",
                  title = "Show the selected row as a form",
+                 class = "editr-tool-collapse",
                  onclick = js_panel("record"), `aria-pressed` = "false"),
-      editr_tool(ns("open_changes"), label = "Review changes", icon = "review",
+      editr_tool(ns("open_changes"), label = "Review", icon = "review",
                  title = "Review changes", onclick = js_panel("changes"),
                  class = "editr-tool-collapse",
                  `aria-pressed` = "false",
@@ -305,7 +302,7 @@ dataEditUI <- function(id,
                       onclick = js_panel("filters", FALSE), "Filters"),
           tags$button(type = "button", class = "editr-tab", role = "tab",
                       id = ns("tab_record"), `aria-selected` = "false",
-                      onclick = js_panel("record", FALSE), "Record"),
+                      onclick = js_panel("record", FALSE), "Form"),
           tags$button(type = "button", class = "editr-tab", role = "tab",
                       id = ns("tab_changes"), `aria-selected` = "false",
                       onclick = js_panel("changes", FALSE), "Changes"),
@@ -356,7 +353,20 @@ dataEditUI <- function(id,
     div(
       class = "editr-statusbar",
       `aria-live` = "polite",
+      # FIND (CTRL+F)
+      tags$label(
+        class = "editr-find",
+        editr_icon("search"),
+        span(class = "editr-visually-hidden", "Find in data"),
+        tags$input(type = "search", id = ns("find"),
+                   placeholder = "Find in data", autocomplete = "off"),
+        span(class = "editr-find-count", id = ns("find_count"),
+             `aria-live` = "polite"),
+        tags$kbd("Ctrl F")
+      ),
       span(id = ns("rows")),
+      # PAGES (FILLED BY THE GRID)
+      span(class = "editr-pages", id = ns("pages")),
       span(class = "editr-sep", `aria-hidden` = "true"),
       span(id = ns("selection")),
       span(class = "editr-spacer"),
@@ -404,9 +414,13 @@ dataEditServer <- function(id,
                            history = NULL,
                            row_names = TRUE,
                            col_widths = NULL,
+                           page_rows = NULL,
+                           page_cols = NULL,
                            ...) {
 
   data_r <- if (is.reactive(data)) data else reactive(data)
+  page_rows <- editr_page_size(page_rows, "page_rows")
+  page_cols <- editr_page_size(page_cols, "page_cols")
   history_r <- if (is.function(history)) history else function() history
   rows_r <- if (is.null(rows) || is.reactive(rows)) rows else reactive(rows)
   columns_r <- if (is.null(columns) || is.reactive(columns)) {
@@ -572,6 +586,8 @@ dataEditServer <- function(id,
             }
           },
           track_color = cfg$track_color,
+          page_rows = page_rows,
+          page_cols = page_cols,
           ui = list(
             rows = ns("rows"),
             selection = ns("selection"),
@@ -587,7 +603,8 @@ dataEditServer <- function(id,
             columns_count = ns("columns_count"),
             find = ns("find"),
             find_count = ns("find_count"),
-            shortcuts = ns("shortcuts")
+            shortcuts = ns("shortcuts"),
+            pages = ns("pages")
           )
         )
       )
