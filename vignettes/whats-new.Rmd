@@ -49,7 +49,7 @@ screenshot("editor.png")
 * **Validation rules**: `rules = list("End is after the start" = ~ end >= start)`, or required, unique, limits and patterns from a column's menu. Cells that break a rule are marked and listed in a `Problems` tab, and `Done` asks before returning them.
 * **History and change log**: a `History` tab lists every change with when it was made and by whom, and each step can be given a note saying why. `data_edit(log = "changes.csv")` keeps this record in a file and lists the earlier sessions kept in it, and `dataEditCommit()` returns it in shiny apps.
 * **Unsaved changes are kept**: changes are saved as a draft while you edit, so if the editor is closed without pressing `Done` (or R crashes) you are offered your changes the next time you open the same data. `Cancel` asks before changes are thrown away.
-* **Filters under the column headers** (ranges for numbers, value lists and text search), shown as chips in the toolbar.
+* **Filters under the column headers** (ranges for numbers, value lists and text search), and a **`Filter` dialog** that lists every filter in one place for complex combinations, with all the logics of earlier versions. Active filters are shown as chips in the toolbar.
 * **Find** (`Ctrl+F`), a **status bar** with the sum, mean and count of the selected cells, and a sheet of **keyboard shortcuts** (`?`).
 * **Safer typing and pasting**: text in a number, date or `TRUE`/`FALSE` column, or a value outside a column's options or limits, makes the editor ask whether to store `NA`, convert the column to text or cancel, instead of silently converting the column.
 * **Types are preserved**: numbers, dates, logicals, factors (with their levels) and text that looks like a number keep their type, and matrices, tibbles and data.tables are returned with their original class.
@@ -64,7 +64,7 @@ If you used earlier versions of **DataEditR**, this is where the controls of the
 | DataEditR 1.x                         | DataEditR 2.0                                             |
 |---------------------------------------|-----------------------------------------------------------|
 | "Data to edit" box and file upload    | `Open` menu in the toolbar                                |
-| Filter button (funnel)                | filter boxes under the column headers                     |
+| Filter button (funnel)                | `Filter` button, or the boxes under the column headers    |
 | Select columns button (crosshairs)    | `Columns` menu, or `Hide column` in a column's menu       |
 | Sync button                           | not needed: edits to filtered data apply to all data      |
 | Cut button (scissors)                 | `Done` menu: return all data or only what's on screen     |
@@ -82,6 +82,7 @@ If you used earlier versions of **DataEditR**, this is where the controls of the
 * `"NA"` typed into a number, date or logical column is a missing value.
 * `Cancel` asks for confirmation when there are changes, and `data_edit()` saves drafts of unsaved changes (`autosave = TRUE`).
 * A filter that matches no rows shows an empty table rather than all rows.
+* `between` and `not between` filters include their end points (they were left out before), and `contain` looks for plain text and ignores case. Use `matches regex` for patterns.
 * Cancelling the RStudio add-in returns the highlighted data rather than `NULL`.
 
 ## Dependencies

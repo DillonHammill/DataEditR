@@ -35,7 +35,8 @@
 #'
 #' @section Layout:
 #' The toolbar opens other data (\emph{Open}), shows or hides column
-#' summaries and columns, lists active filters, searches the data (Ctrl+F),
+#' summaries and columns, filters rows (\emph{Filter}, a dialog listing every
+#' filter), lists active filters, searches the data (Ctrl+F),
 #' and opens the side panel. The panel shows the selected row as a form
 #' (\emph{Record}), lists every change with a button to revert it, the
 #' history of changes, broken rules and the code that reproduces the edits.

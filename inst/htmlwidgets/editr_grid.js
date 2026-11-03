@@ -409,6 +409,30 @@
   var BADGES = {numeric: "123", character: "abc", logical: "T/F",
                 date: "date", datetime: "dttm"};
 
+  // filters listed in the toolbar before the rest are left to the dialog
+  var MAX_CHIPS = 4;
+
+  // logics of the filter dialog, in the order they are offered. input is
+  // what a row asks for: tags (any of several values), one or two values, or
+  // none; order: only for values that have an order (not plain text);
+  // suggest: offer the values of the column
+  var FILTER_LOGICS = {
+    equal: {label: "equal", input: "tags", suggest: true},
+    not_equal: {label: "not equal", input: "tags", suggest: true},
+    gt: {label: "greater than", input: "one", order: true},
+    lt: {label: "less than", input: "one", order: true},
+    gte: {label: "greater than or equal", input: "one", order: true},
+    lte: {label: "less than or equal", input: "one", order: true},
+    between: {label: "between", input: "two", order: true},
+    not_between: {label: "not between", input: "two", order: true},
+    contain: {label: "contain", input: "tags"},
+    not_contain: {label: "not contain", input: "tags"},
+    regex: {label: "matches regex", input: "one", raw: true},
+    not_regex: {label: "not matches regex", input: "one", raw: true},
+    missing: {label: "is missing", input: "none"},
+    present: {label: "is not missing", input: "none"}
+  };
+
   function uniqueName(base, existing) {
     var i = 1, name = base + i;
     while (existing.indexOf(name) !== -1) {
@@ -1330,6 +1354,629 @@
         }
       }
 
+      /* ---------------------------------------------------------------- */
+      /* filter dialog: every filter in one place                          */
+      /* ---------------------------------------------------------------- */
+
+      // grid.conditions holds what the dialog added: {field, logic, values}.
+      // The header filters and summary picks are listed in the dialog as
+      // well (grid.draft), and stay where they were set while their rows are
+      // not changed; a row that was changed replaces them.
+
+      function filterType(c) {
+        var o = c.option || {};
+        if (c.kind === "logical" || o.type === "checkbox") return "logical";
+        if (c.kind === "date" || o.type === "date") return "date";
+        if (c.kind === "datetime" || o.type === "datetime") return "datetime";
+        if (o.type === "time") return "time";
+        if (c.kind === "numeric") return "number";
+        return "text";
+      }
+
+      function filterLogics(c) {
+        var type = filterType(c);
+        return Object.keys(FILTER_LOGICS).filter(function (k) {
+          if (type === "logical") {
+            return k === "equal" || k === "not_equal" || k === "missing" || k === "present";
+          }
+          return type !== "text" || !FILTER_LOGICS[k].order;
+        });
+      }
+
+      // a value typed into the dialog, as the column holds it
+      function filterValue(c, s) {
+        var v = normalizeValue(c, s);
+        return typeof v === "boolean" ? (v ? "TRUE" : "FALSE") : String(v);
+      }
+
+      function filterNumber(v) {
+        return v === "Inf" ? Infinity : v === "-Inf" ? -Infinity : Number(v);
+      }
+
+      function ruleKey(r) {
+        return JSON.stringify([r.field, r.logic, r.values]);
+      }
+
+      function ruleComplete(r) {
+        var input = FILTER_LOGICS[r.logic].input;
+        var has = function (x) { return x !== undefined && x !== null && x !== ""; };
+        if (input === "none") return true;
+        return has(r.values[0]) && (input !== "two" || has(r.values[1]));
+      }
+
+      // what stops a row from being applied (or null)
+      function ruleProblem(r) {
+        var c = grid.colMap[r.field];
+        var logic = FILTER_LOGICS[r.logic];
+        if (!c || logic.input === "none") return null;
+        if (logic.raw) {
+          try {
+            new RegExp(r.values[0] || "");
+          } catch (e) {
+            return "This is not a valid regular expression";
+          }
+          return null;
+        }
+        if (filterType(c) === "number" && (logic.order || logic.suggest)) {
+          var bad = r.values.filter(function (v) {
+            return v !== "" && v !== undefined && v !== "NA" && isNaN(filterNumber(v));
+          });
+          if (bad.length) return "“" + bad[0] + "” is not a number";
+        }
+        return null;
+      }
+
+      // {field, test}: does a value of the column pass a row of the dialog?
+      function conditionTest(r) {
+        var c = grid.colMap[r.field];
+        if (!c) return null;
+        var number = filterType(c) === "number";
+        var vals = r.values.map(String);
+        var blank = function (v) { return v === null || v === undefined || v === ""; };
+        var text = function (v) {
+          return typeof v === "boolean" ? (v ? "TRUE" : "FALSE") : String(v);
+        };
+        var shown = labelsOf(c) ? function (v) { return labelledText(c, text(v)); } : text;
+        // NaN when a cell of a number column does not hold a number
+        var order = function (v, x) {
+          if (!number) {
+            var s = text(v);
+            return s < x ? -1 : s > x ? 1 : 0;
+          }
+          var a = filterNumber(v), b = filterNumber(x);
+          return a < b ? -1 : a > b ? 1 : a === b ? 0 : NaN;
+        };
+        var nums = vals.map(filterNumber);
+        var low = vals.map(function (v) { return v.toLowerCase(); });
+        var hasNA = vals.indexOf("NA") !== -1;
+        var equal = function (v) {
+          if (blank(v)) return hasNA;
+          if (!number) return vals.indexOf(text(v)) !== -1;
+          var x = filterNumber(v);
+          return nums.some(function (w) {
+            return x === w || Math.abs(x - w) <= 1e-12 * Math.max(1, Math.abs(w));
+          });
+        };
+        var compare = function (ok) {
+          return function (v) { return !blank(v) && ok(order(v, vals[0])); };
+        };
+        var between = function (v) {
+          return !blank(v) && order(v, vals[0]) >= 0 && order(v, vals[1]) <= 0;
+        };
+        var contain = function (v) {
+          if (blank(v)) return false;
+          var s = shown(v).toLowerCase();
+          return low.some(function (x) { return s.indexOf(x) !== -1; });
+        };
+        var regex = function (v) {
+          if (blank(v)) return false;
+          regex.re = regex.re || new RegExp(vals[0]);
+          return regex.re.test(shown(v));
+        };
+        var missing = function (v) { return blank(v) || userMissing(c, v); };
+        var not = function (f) { return function (v) { return !f(v); }; };
+        var tests = {
+          equal: equal, not_equal: not(equal),
+          gt: compare(function (o) { return o > 0; }),
+          lt: compare(function (o) { return o < 0; }),
+          gte: compare(function (o) { return o >= 0; }),
+          lte: compare(function (o) { return o <= 0; }),
+          between: between, not_between: not(between),
+          contain: contain, not_contain: not(contain),
+          regex: regex, not_regex: not(regex),
+          missing: missing, present: not(missing)
+        };
+        return {field: r.field, test: tests[r.logic]};
+      }
+
+      function prepareConditions() {
+        grid.conditionTests = (grid.conditions || []).map(conditionTest).filter(Boolean);
+      }
+
+      // rows that match the filters added in the dialog (added rows stay)
+      function conditionFilter(data) {
+        if (pinnedRow(data)) return true;
+        var tests = grid.conditionTests || [];
+        for (var i = 0; i < tests.length; i++) {
+          if (!tests[i].test(data[tests[i].field])) return false;
+        }
+        return true;
+      }
+
+      // the column of row names has no title of its own
+      function columnName(c) {
+        return c.frozen ? "row names" : c.title;
+      }
+
+      function conditionText(r) {
+        var c = grid.colMap[r.field] || {title: r.field};
+        var vals = r.values.map(function (x) { return valueLabel(c, x) || String(x); });
+        var list = vals.length < 2 ? vals.join("") :
+          vals.slice(0, -1).join(", ") + " or " + vals[vals.length - 1];
+        var t = columnName(c);
+        switch (r.logic) {
+          case "equal": return t + " is " + list;
+          case "not_equal": return t + " is not " + list;
+          case "gt": return t + " > " + vals[0];
+          case "lt": return t + " < " + vals[0];
+          case "gte": return t + " ≥ " + vals[0];
+          case "lte": return t + " ≤ " + vals[0];
+          case "between": return t + " " + vals[0] + "–" + vals[1];
+          case "not_between": return t + " not " + vals[0] + "–" + vals[1];
+          case "contain": return t + " contains “" + list + "”";
+          case "not_contain": return t + " does not contain “" + list + "”";
+          case "regex": return t + " matches /" + vals[0] + "/";
+          case "not_regex": return t + " does not match /" + vals[0] + "/";
+          case "missing": return t + " is missing";
+          default: return t + " is not missing";
+        }
+      }
+
+      // the rows of the dialog for a header filter or summary pick
+      function filterRows(f) {
+        var out = [];
+        var add = function (logic, values) {
+          out.push({field: f.field, logic: logic, values: values.map(String)});
+        };
+        var range = function (lo, hi, below) {
+          if (below) {
+            add("gte", [lo]);
+            add("lt", [hi]);
+          } else if (lo !== "" && hi !== "") {
+            add("between", [lo, hi]);
+          } else if (lo !== "") {
+            add("gte", [lo]);
+          } else {
+            add("lte", [hi]);
+          }
+        };
+        var v = f.value, p = f.pick;
+        if (p) {
+          if (p.kind === "missing") add("missing", []);
+          else if (p.kind === "range") range(p.lo, p.hi, p.below);
+          else if (p.kind === "prefix") add("contain", [p.value]);
+          else add("equal", [p.value]);
+        } else if (Array.isArray(v)) {
+          add("equal", v.map(function (x) {
+            return typeof x === "boolean" ? (x ? "TRUE" : "FALSE") : x;
+          }));
+        } else if (typeof v === "object") {
+          range(v.min, v.max, v.below);
+        } else {
+          add("contain", [v]);
+        }
+        return out;
+      }
+
+      function blankRule() {
+        var cols = realColumns();
+        var open = cols.filter(function (col) {
+          return col.isVisible() && !grid.colMap[col.getField()].frozen;
+        });
+        var col = open[0] || cols[0];
+        return col ? {field: col.getField(), logic: "equal", values: []} : null;
+      }
+
+      // the values of a column offered as suggestions (never for passwords)
+      function columnValues(c) {
+        grid.draftValues = grid.draftValues || {};
+        if (grid.draftValues[c.field]) return grid.draftValues[c.field];
+        var seen = Object.create(null), out = [];
+        var add = function (v) {
+          if (v === null || v === undefined || v === "") return;
+          v = typeof v === "boolean" ? (v ? "TRUE" : "FALSE") : String(v);
+          if (!seen[v]) {
+            seen[v] = true;
+            out.push(v);
+          }
+        };
+        if (!c.option || c.option.type !== "password") {
+          if (filterType(c) === "logical") {
+            out = ["TRUE", "FALSE"];
+          } else {
+            grid.table.getData().forEach(function (row) { add(row[c.field]); });
+            if (c.option && c.option.type === "dropdown") toArray(c.option.values).forEach(add);
+            out.sort(filterType(c) === "number" ? function (a, b) {
+              return filterNumber(a) - filterNumber(b);
+            } : undefined);
+            out = out.slice(0, 1000);
+          }
+        }
+        grid.draftValues[c.field] = out;
+        return out;
+      }
+
+      function filterTags(r, c, changed) {
+        var wrap = document.createElement("div");
+        wrap.className = "editr-fd-tags";
+        var input = document.createElement("input");
+        input.type = "text";
+        input.autocomplete = "off";
+        input.setAttribute("aria-label", "Values of the filter");
+        var known = Object.create(null);
+        if (FILTER_LOGICS[r.logic].suggest) {
+          var values = columnValues(c);
+          if (values.length) {
+            var list = document.createElement("datalist");
+            grid.draftSeq = (grid.draftSeq || 0) + 1;
+            list.id = el.id + "_filter_values_" + grid.draftSeq;
+            values.forEach(function (v) {
+              known[v] = true;
+              var o = document.createElement("option");
+              o.value = v;
+              var lab = valueLabel(c, v);
+              if (lab) o.label = lab;
+              list.appendChild(o);
+            });
+            wrap.appendChild(list);
+            input.setAttribute("list", list.id);
+          }
+        }
+        var show = function () {
+          wrap.querySelectorAll(".editr-chip").forEach(function (t) { wrap.removeChild(t); });
+          r.values.forEach(function (v, i) {
+            var tag = document.createElement("span");
+            tag.className = "editr-chip";
+            var name = document.createElement("span");
+            name.textContent = labelledText(c, v);
+            tag.appendChild(name);
+            var x = document.createElement("button");
+            x.type = "button";
+            x.setAttribute("aria-label", "Remove " + labelledText(c, v));
+            x.innerHTML = ICONS.x;
+            x.addEventListener("click", function () {
+              r.values.splice(i, 1);
+              show();
+              changed();
+            });
+            tag.appendChild(x);
+            wrap.insertBefore(tag, input);
+          });
+          input.placeholder = r.values.length ? "" : "Type a value and press Enter";
+        };
+        var add = function () {
+          var s = input.value.trim();
+          input.value = "";
+          if (!s) return;
+          // "contain" looks for the text as it was typed
+          var v = FILTER_LOGICS[r.logic].suggest ? filterValue(c, s) : s;
+          if (r.values.indexOf(v) === -1) r.values.push(v);
+          show();
+          changed();
+        };
+        input.addEventListener("keydown", function (e) {
+          if (e.key === "Enter" && input.value.trim()) {
+            e.preventDefault();
+            e.stopPropagation();
+            add();
+          } else if (e.key === "Backspace" && !input.value && r.values.length) {
+            r.values.pop();
+            show();
+            changed();
+          }
+        });
+        // picking a suggestion is not typing
+        input.addEventListener("input", function (e) {
+          if (e.inputType && e.inputType !== "insertReplacementText") return;
+          if (known[input.value]) add();
+        });
+        input.addEventListener("blur", add);
+        wrap.addEventListener("click", function (e) {
+          if (e.target === wrap) input.focus();
+        });
+        wrap.appendChild(input);
+        show();
+        return wrap;
+      }
+
+      function filterInput(r, c, i, label, changed) {
+        var logic = FILTER_LOGICS[r.logic];
+        var type = logic.raw ? "text" : filterType(c);
+        var input = document.createElement("input");
+        input.className = "form-control form-control-sm";
+        input.type = type === "date" ? "date" : type === "datetime" ? "datetime-local" :
+          type === "time" ? "time" : "text";
+        if (type === "number") input.inputMode = "decimal";
+        if (logic.raw) input.placeholder = "Regular expression";
+        input.setAttribute("aria-label", label);
+        var v = r.values[i];
+        if (v !== undefined) {
+          input.value = type === "datetime" ? String(v).replace(" ", "T").slice(0, 16) : v;
+        }
+        input.addEventListener("input", function () {
+          var x = input.value.trim();
+          if (type === "datetime" && x) x = x.replace("T", " ") + (x.length === 16 ? ":00" : "");
+          r.values[i] = x && !logic.raw ? filterValue(c, x) : x;
+          changed();
+        });
+        return input;
+      }
+
+      function filterSelect(label, items, value) {
+        var sel = document.createElement("select");
+        sel.className = "form-select form-select-sm";
+        sel.setAttribute("aria-label", label);
+        items.forEach(function (it) {
+          var o = document.createElement("option");
+          o.value = it[0];
+          o.textContent = it[1];
+          sel.appendChild(o);
+        });
+        sel.value = value;
+        return sel;
+      }
+
+      function filterRowUI(r) {
+        var row = document.createElement("div");
+        row.className = "editr-fd-row";
+        var column = filterSelect("Column", realColumns().map(function (col) {
+          var c = grid.colMap[col.getField()];
+          return [c.field, columnName(c) + (col.isVisible() ? "" : " (hidden)")];
+        }), r.field);
+        var logic = document.createElement("div");
+        var slot = document.createElement("div");
+        slot.className = "editr-fd-value";
+        var msg = document.createElement("div");
+        msg.className = "editr-fd-msg";
+        msg.setAttribute("role", "status");
+        r.msg = msg;
+        var fillValue = function () {
+          var c = grid.colMap[r.field];
+          var input = FILTER_LOGICS[r.logic].input;
+          slot.innerHTML = "";
+          if (input === "tags") {
+            slot.appendChild(filterTags(r, c, draftChanged));
+          } else if (input === "one") {
+            slot.appendChild(filterInput(r, c, 0, "Value of the filter", draftChanged));
+          } else if (input === "two") {
+            slot.appendChild(filterInput(r, c, 0, "From", draftChanged));
+            var and = document.createElement("span");
+            and.textContent = "and";
+            slot.appendChild(and);
+            slot.appendChild(filterInput(r, c, 1, "To", draftChanged));
+          }
+        };
+        var fillLogic = function () {
+          var c = grid.colMap[r.field];
+          logic.innerHTML = "";
+          // the type of the column may have changed since the row was added
+          var keys = filterLogics(c);
+          if (keys.indexOf(r.logic) === -1) keys.unshift(r.logic);
+          var sel = filterSelect("Logic", keys.map(function (k) {
+            return [k, FILTER_LOGICS[k].label];
+          }), r.logic);
+          sel.addEventListener("change", function () {
+            var before = FILTER_LOGICS[r.logic].input;
+            r.logic = sel.value;
+            var now = FILTER_LOGICS[r.logic].input;
+            if (now !== before) {
+              r.values = now === "none" ? [] : r.values.slice(0, now === "one" ? 1 : 2);
+            }
+            fillValue();
+            draftChanged();
+          });
+          logic.appendChild(sel);
+        };
+        column.addEventListener("change", function () {
+          r.field = column.value;
+          r.values = [];
+          if (filterLogics(grid.colMap[r.field]).indexOf(r.logic) === -1) r.logic = "equal";
+          fillLogic();
+          fillValue();
+          draftChanged();
+        });
+        var remove = document.createElement("button");
+        remove.type = "button";
+        remove.className = "btn btn-sm editr-fd-remove";
+        remove.setAttribute("aria-label", "Remove this filter");
+        remove.title = "Remove this filter";
+        remove.innerHTML = ICONS.x;
+        remove.addEventListener("click", function () {
+          grid.draft.splice(grid.draft.indexOf(r), 1);
+          renderDraft();
+        });
+        fillLogic();
+        fillValue();
+        row.appendChild(column);
+        row.appendChild(logic);
+        row.appendChild(slot);
+        row.appendChild(remove);
+        row.appendChild(msg);
+        return row;
+      }
+
+      function filterModal() { return byId(grid.ui.filters); }
+
+      function renderDraft() {
+        var m = filterModal();
+        var box = m.querySelector(".editr-fd-rows");
+        box.innerHTML = "";
+        grid.draft.forEach(function (r) { box.appendChild(filterRowUI(r)); });
+        if (!grid.draft.length) {
+          var none = document.createElement("div");
+          none.className = "form-text";
+          none.textContent = "No filters: every row is shown.";
+          box.appendChild(none);
+        }
+        m.querySelector(".editr-fd-clear").disabled = !grid.draft.length;
+        updateDraft();
+      }
+
+      // the messages of the rows, what would be shown and whether it can be
+      function updateDraft() {
+        var m = filterModal();
+        if (!m || !grid.table) return;
+        var problems = 0, unfinished = 0;
+        grid.draft.forEach(function (r) {
+          var p = ruleProblem(r);
+          r.msg.textContent = p || "";
+          if (p) problems += 1;
+          else if (!ruleComplete(r)) unfinished += 1;
+        });
+        m.querySelector(".editr-fd-apply").disabled = problems > 0;
+        var tests = problems ? [] : grid.draft.filter(ruleComplete).map(conditionTest).filter(Boolean);
+        var data = grid.table.getData();
+        var shown = 0;
+        if (!problems) {
+          data.forEach(function (row) {
+            for (var i = 0; i < tests.length; i++) {
+              if (!tests[i].test(row[tests[i].field])) return;
+            }
+            shown += 1;
+          });
+        }
+        var total = data.length;
+        var text = problems ? "" : shown.toLocaleString("en-US") + " of " +
+          total.toLocaleString("en-US") + (total === 1 ? " row matches" : " rows match");
+        if (unfinished) {
+          text += (text ? " · " : "") + (unfinished === 1 ?
+            "1 filter has no value and is ignored" :
+            unfinished + " filters have no value and are ignored");
+        }
+        m.querySelector(".editr-fd-count").textContent = text;
+      }
+
+      function draftChanged() {
+        clearTimeout(grid.draftTimer);
+        grid.draftTimer = setTimeout(updateDraft, 120);
+      }
+
+      function modalShow(m) {
+        if (window.bootstrap && bootstrap.Modal) {
+          bootstrap.Modal.getOrCreateInstance(m).show();
+        } else if (window.jQuery && jQuery.fn.modal) {
+          jQuery(m).modal("show");
+        }
+      }
+
+      function modalHide(m) {
+        if (window.bootstrap && bootstrap.Modal) {
+          bootstrap.Modal.getOrCreateInstance(m).hide();
+        } else if (window.jQuery && jQuery.fn.modal) {
+          jQuery(m).modal("hide");
+        }
+      }
+
+      function openFilterDialog() {
+        var m = filterModal();
+        if (!m) return;
+        closePopup();
+        grid.draftSources = {};
+        grid.draftValues = null;
+        grid.draft = [];
+        activeFilters().forEach(function (f) {
+          if (f.cond) return;
+          var source = (f.pick ? "pick:" : "header:") + f.field;
+          filterRows(f).forEach(function (r) {
+            r.source = source;
+            r.original = ruleKey(r);
+            grid.draftSources[source] = (grid.draftSources[source] || 0) + 1;
+            grid.draft.push(r);
+          });
+        });
+        grid.conditions.forEach(function (r) {
+          if (!grid.colMap[r.field]) return;
+          grid.draft.push({field: r.field, logic: r.logic, values: r.values.slice()});
+        });
+        if (!grid.draft.length) {
+          var blank = blankRule();
+          if (blank) grid.draft.push(blank);
+        }
+        renderDraft();
+        modalShow(m);
+      }
+
+      function addDraftRow() {
+        var r = blankRule();
+        if (!r) return;
+        grid.draft.push(r);
+        renderDraft();
+        var rows = filterModal().querySelectorAll(".editr-fd-row");
+        rows[rows.length - 1].querySelector("select").focus();
+      }
+
+      function clearDraft() {
+        grid.draft = [];
+        renderDraft();
+      }
+
+      function clearFilterSource(source) {
+        var kind = source.split(":")[0];
+        var field = source.slice(kind.length + 1);
+        if (kind === "pick") delete grid.picks[field];
+        else grid.table.setHeaderFilterValue(field, "");
+      }
+
+      // rows that were not finished are ignored
+      function applyDraft() {
+        var rows = grid.draft.filter(ruleComplete);
+        if (rows.some(ruleProblem)) return;
+        var same = {};
+        rows.forEach(function (r) {
+          if (r.source && ruleKey(r) === r.original) same[r.source] = (same[r.source] || 0) + 1;
+        });
+        var stays = function (s) { return same[s] === grid.draftSources[s]; };
+        Object.keys(grid.draftSources).forEach(function (s) {
+          if (!stays(s)) clearFilterSource(s);
+        });
+        grid.conditions = rows.filter(function (r) {
+          return !(r.source && stays(r.source));
+        }).map(function (r) {
+          return {field: r.field, logic: r.logic, values: r.values.slice()};
+        });
+        grid.table.refreshFilter();
+        modalHide(filterModal());
+      }
+
+      function bindFilterDialog() {
+        var m = filterModal();
+        if (!m || m.__editrBound) return;
+        m.__editrBound = true;
+        var own = function () { return el.__editr; };
+        var on = function (cls, fn) {
+          m.querySelectorAll(cls).forEach(function (b) { b.addEventListener("click", fn); });
+        };
+        on(".editr-fd-add", function () { own().filterDialog.add(); });
+        on(".editr-fd-clear", function () { own().filterDialog.clear(); });
+        on(".editr-fd-apply", function () { own().filterDialog.apply(); });
+        on(".editr-fd-cancel", function () { own().filterDialog.cancel(); });
+        // Enter in a value applies the filters (see filterTags for values
+        // still being typed)
+        m.addEventListener("keydown", function (e) {
+          if (e.key === "Enter" && e.target.tagName === "INPUT" &&
+              !m.querySelector(".editr-fd-apply").disabled) {
+            e.preventDefault();
+            own().filterDialog.apply();
+          }
+        });
+      }
+
+      grid.filterDialog = {
+        open: openFilterDialog, add: addDraftRow, clear: clearDraft,
+        apply: applyDraft,
+        cancel: function () { modalHide(filterModal()); }
+      };
+
       function buildColumn(c) {
         var def = {
           title: c.title,
@@ -1799,6 +2446,9 @@
               var cid = col.getField();
               delete grid.colMap[cid];
               col.delete();
+              if (grid.picks[cid] || grid.conditions.some(function (r) { return r.field === cid; })) {
+                grid.table.refreshFilter();
+              }
               emit({type: "delete_col", cid: cid});
               updateStatus();
               reportView();
@@ -1917,6 +2567,7 @@
         if (c) c.title = title;
         var col = grid.table.getColumn(field);
         if (col) col.updateDefinition({title: title});
+        renderChips();
       }
 
       /* ---------------------------------------------------------------- */
@@ -2559,13 +3210,16 @@
         var picks = Object.keys(grid.picks || {}).filter(function (f) {
           return grid.colMap[f];
         }).map(function (f) { return {field: f, pick: grid.picks[f]}; });
+        var conditions = (grid.conditions || []).filter(function (r) {
+          return grid.colMap[r.field];
+        }).map(function (r) { return {field: r.field, cond: r}; });
         return picks.concat(grid.table.getHeaderFilters().filter(function (f) {
           var v = f.value;
           if (v === "" || v === null || v === undefined) return false;
           if (Array.isArray(v)) return v.length > 0;
           if (typeof v === "object") return v.min !== "" || v.max !== "";
           return true;
-        }));
+        }), conditions);
       }
 
       function updateStatus() {
@@ -2589,33 +3243,35 @@
       }
 
       function chipText(f) {
+        if (f.cond) return conditionText(f.cond);
         var c = grid.colMap[f.field] || {title: f.field};
+        var name = columnName(c);
         var v = f.value;
         if (f.pick) {
           var p = f.pick;
-          if (p.kind === "missing") return c.title + " is missing";
+          if (p.kind === "missing") return name + " is missing";
           if (p.kind === "range") {
-            return p.below ? p.lo + " \u2264 " + c.title + " < " + p.hi :
-              c.title + " " + p.lo + "\u2013" + p.hi;
+            return p.below ? p.lo + " \u2264 " + name + " < " + p.hi :
+              name + " " + p.lo + "\u2013" + p.hi;
           }
-          if (p.kind === "prefix") return c.title + " in " + p.value;
-          return c.title + " is " + (valueLabel(c, p.value) || p.value);
+          if (p.kind === "prefix") return name + " in " + p.value;
+          return name + " is " + (valueLabel(c, p.value) || p.value);
         }
         if (Array.isArray(v)) {
           var vals = v.map(function (x) { return valueLabel(c, x) || String(x); });
-          if (vals.length === 1) return c.title + " is " + vals[0];
-          return c.title + " is " + vals.slice(0, -1).join(", ") + " or " +
+          if (vals.length === 1) return name + " is " + vals[0];
+          return name + " is " + vals.slice(0, -1).join(", ") + " or " +
             vals[vals.length - 1];
         }
         if (typeof v === "object") {
           if (v.min !== "" && v.max !== "" && v.below) {
-            return v.min + " \u2264 " + c.title + " < " + v.max;
+            return v.min + " \u2264 " + name + " < " + v.max;
           }
-          if (v.min !== "" && v.max !== "") return c.title + " " + v.min + "\u2013" + v.max;
-          if (v.min !== "") return c.title + " \u2265 " + v.min;
-          return c.title + " \u2264 " + v.max;
+          if (v.min !== "" && v.max !== "") return name + " " + v.min + "\u2013" + v.max;
+          if (v.min !== "") return name + " \u2265 " + v.min;
+          return name + " \u2264 " + v.max;
         }
-        return c.title + " contains \u201c" + v + "\u201d";
+        return name + " contains \u201c" + v + "\u201d";
       }
 
       function renderChips() {
@@ -2623,7 +3279,9 @@
         if (!box) return;
         box.innerHTML = "";
         var filters = activeFilters();
-        filters.forEach(function (f) {
+        // many filters would push the grid down: the dialog lists the rest
+        var few = filters.length > MAX_CHIPS ? filters.slice(0, MAX_CHIPS - 1) : filters;
+        few.forEach(function (f) {
           var chip = document.createElement("span");
           chip.className = "editr-chip";
           var text = document.createElement("span");
@@ -2635,7 +3293,10 @@
           x.setAttribute("aria-label", "Remove filter " + chipText(f));
           x.innerHTML = ICONS.x;
           x.addEventListener("click", function () {
-            if (f.pick) {
+            if (f.cond) {
+              grid.conditions.splice(grid.conditions.indexOf(f.cond), 1);
+              grid.table.refreshFilter();
+            } else if (f.pick) {
               delete grid.picks[f.field];
               grid.table.refreshFilter();
             } else {
@@ -2645,6 +3306,15 @@
           chip.appendChild(x);
           box.appendChild(chip);
         });
+        if (few.length < filters.length) {
+          var more = document.createElement("button");
+          more.type = "button";
+          more.className = "editr-chip-clear editr-chip-more";
+          more.textContent = "+" + (filters.length - few.length) + " more";
+          more.title = "See every filter";
+          more.addEventListener("click", function () { el.__editr.filterDialog.open(); });
+          box.appendChild(more);
+        }
         if (filters.length > 1) {
           var clear = document.createElement("button");
           clear.type = "button";
@@ -2652,11 +3322,15 @@
           clear.textContent = "Clear filters";
           clear.addEventListener("click", function () {
             grid.picks = {};
+            grid.conditions = [];
             grid.table.refreshFilter();
             grid.table.clearHeaderFilter();
           });
           box.appendChild(clear);
         }
+        setText(grid.ui.filter_count, filters.length ? filters.length : "");
+        var btn = byId(grid.ui.filter_btn);
+        if (btn) btn.classList.toggle("editr-tool-on", filters.length > 0);
       }
 
       // tell R which rows/columns are on screen (for "return what's on
@@ -2854,6 +3528,14 @@
             el.__editr.openColumns(cols);
           });
         }
+        var filt = byId(grid.ui.filter_btn);
+        if (filt && !filt.__editrBound) {
+          filt.__editrBound = true;
+          filt.addEventListener("click", function () {
+            el.__editr.filterDialog.open();
+          });
+        }
+        bindFilterDialog();
       }
 
       /* ---------------------------------------------------------------- */
@@ -3283,6 +3965,7 @@
         }
         grid.summary = opts.summary_data || {};
         grid.picks = {};
+        grid.conditions = [];
         var pref = null;
         try { pref = window.localStorage.getItem("DataEditR.summary"); } catch (e) {}
         grid.summaryOn = opts.summary !== false && pref !== "off";
@@ -3354,6 +4037,7 @@
         table.on("tableBuilt", function () {
           grid.ready = true;
           table.addFilter(pickFilter);
+          table.addFilter(conditionFilter);
           var queued = pending[el.id] || [];
           delete pending[el.id];
           queued.forEach(function (m) { grid.handle(m.method, m.args || {}); });
@@ -3371,8 +4055,9 @@
         // rows added while a filter is active stay visible until the user
         // changes the filters; then every row is judged afresh
         table.on("dataFiltering", function () {
+          prepareConditions();
           var key = JSON.stringify(activeFilters().map(function (f) {
-            return [f.field, f.value];
+            return [f.field, f.value, f.pick, f.cond];
           }));
           if (key !== grid.filterKey) {
             grid.filterKey = key;

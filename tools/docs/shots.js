@@ -545,6 +545,39 @@ const scenarios = {
     await page.click("#done");
     await sleep(1000);
   },
+  // the filter dialog with a few filters of different kinds
+  async filter(page) {
+    await sleep(1000);
+    await page.click("#edit1-filter");
+    await page.waitForSelector("#edit1-filters.show .editr-fd-apply", { visible: true });
+    await sleep(300);
+    const fill = async (i, field, logic, values) => {
+      const row = (await page.$$("#edit1-filters .editr-fd-row"))[i];
+      await (await row.$$("select"))[0].select(field);
+      await (await row.$$("select"))[1].select(logic);
+      await sleep(100);
+      const tags = await row.$(".editr-fd-tags input");
+      for (const [j, v] of values.entries()) {
+        const box = tags || (await row.$$(".editr-fd-value input"))[j];
+        await box.focus();
+        await page.keyboard.type(v);
+        if (tags) await page.keyboard.press("Enter");
+      }
+    };
+    await fill(0, "c2", "between", ["15", "25"]);
+    await page.click("#edit1-filters .editr-fd-add");
+    await fill(1, "c3", "not_equal", ["8"]);
+    await page.click("#edit1-filters .editr-fd-add");
+    await fill(2, "c1", "not_contain", ["merc", "fiat"]);
+    await page.click("#edit1-filters .editr-fd-add");
+    await fill(3, "c5", "gt", ["90"]);
+    await sleep(400);
+    await page.evaluate(() => document.activeElement.blur());
+    await shot(page, "filter-dialog");
+    await page.click("#edit1-filters .editr-fd-apply");
+    await settle(page, 900);
+  },
+
   async labelled(page) {
     await sleep(1000);
     // the cell editor offers the labels
