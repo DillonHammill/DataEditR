@@ -63,7 +63,7 @@ screenshot("editor.png")
 The data editor has four parts:
 
 * the **header** with the *Cancel* button, the name and size of the data, and the *Done* button. Click the name to rename the data: the code then gives the result the new name (`cars <- mtcars %>% ...`) and exported files are named after it;
-* the **toolbar** to open other data, undo and redo changes, show or hide the column summaries (`Summaries`), select the columns to show (`Select`), filter rows (`Filters`, with the active filters next to it), see a row as a form (`Form`), review changes (`Review`), see the code that reproduces your edits (`Code`), export the data and see the keyboard shortcuts;
+* the **toolbar** to open other data, undo and redo changes, show or hide the column summaries (`Summary`), select the columns to show (`Select`), filter rows (`Filters`, with the active filters next to it), see a row as a form (`Form`), review changes (`Review`), see the code that reproduces your edits (`Code`), export the data and see the keyboard shortcuts;
 * the **grid**, which shows the row indices on the left (with a `+` above them to add a row or a column), a type badge (`abc` for text, `123` for numbers, `date` for dates, `dttm` for date-times, `time` for times, `T/F` for logicals) next to each column name, a summary of each column (see [Column summaries](#column-summaries)) and a filter box under each column name;
 * the **status bar** with *Find in data*, how many rows and columns are on screen, the *Pages* button (see [Pages](#pages)), a summary of the selected cells and a summary of your changes.
 
@@ -92,7 +92,7 @@ Hover over a bar to see what it counts. Click a bar to show only those rows, cli
 screenshot("summaries.png")
 ```
 
-The summaries are updated as you edit. Hide them with the `Summaries` button in the toolbar (the editor remembers your choice), or set `col_summary = FALSE` to leave them out.
+The summaries are updated as you edit. Hide them with the `Summary` button in the toolbar (the editor remembers your choice), or set `col_summary = FALSE` to leave them out.
 
 ### 1.2 Pages
 

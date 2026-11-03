@@ -312,7 +312,7 @@ shiny modals and with data that changes), these were fixed or added:
   exports work across every page.
 * A `+` in the corner above the row numbers adds a row or a column (a menu
   with both), instead of a bar under the grid and a `+` after the last column.
-* The toolbar buttons are labelled `Summaries`, `Select` (was `Columns`),
+* The toolbar buttons are labelled `Summary`, `Select` (was `Columns`),
   `Filters`, `Form` and `Review` (was `Review changes`), and *Find in data* is
   in the status bar. The side panel's `Record` tab is now `Form`.
 * Click the name of the data in the header to rename it: the code assigns the
