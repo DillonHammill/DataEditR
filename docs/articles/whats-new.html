@@ -176,10 +176,13 @@ time you open the same data. <code>Cancel</code> asks before changes are
 thrown away.</li>
 <li>
 <strong>Filters under the column headers</strong> (ranges for
-numbers, value lists and text search), and a <strong><code>Filter</code>
-dialog</strong> that lists every filter in one place for complex
-combinations, with all the logics of earlier versions. Active filters
-are shown as chips in the toolbar.</li>
+numbers, value lists and text search), and a
+<strong><code>Filters</code> panel</strong> beside the grid that lists
+every filter in one place for complex combinations: histograms with a
+range to drag for numbers and dates, value lists with counts, matching
+all or any of the filters, and all the logics of earlier versions. The
+grid follows the panel as you change it. Active filters are shown as
+chips in the toolbar.</li>
 <li>
 <strong>Find</strong> (<code>Ctrl+F</code>), a <strong>status
 bar</strong> with the sum, mean and count of the selected cells, and a
@@ -239,7 +242,7 @@ where the controls of the old interface have moved to:</p>
 <tr class="even">
 <td>Filter button (funnel)</td>
 <td>
-<code>Filter</code> button, or the boxes under the column
+<code>Filters</code> panel, or the boxes under the column
 headers</td>
 </tr>
 <tr class="odd">
@@ -308,9 +311,9 @@ and <code><a href="../reference/data_edit.html">data_edit()</a></code> saves dra
 rows.</li>
 <li>
 <code>between</code> and <code>not between</code> filters include
-their end points (they were left out before), and <code>contain</code>
-looks for plain text and ignores case. Use <code>matches regex</code>
-for patterns.</li>
+their end points (they were left out before), and <code>contains</code>
+looks for plain text and ignores case. Use
+<code>matches the pattern</code> for regular expressions.</li>
 <li>Cancelling the RStudio add-in returns the highlighted data rather
 than <code>NULL</code>.</li>
 </ul>

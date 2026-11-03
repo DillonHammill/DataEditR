@@ -727,7 +727,7 @@ numeric column.</p>
 </h2>
 <p><code><a href="../reference/data_edit.html">data_edit()</a></code> makes it easy to view and edit a subset of
 your data: filter rows by typing under the column headers or in the
-<code>Filter</code> dialog, and show or hide columns from the
+<code>Filters</code> panel, and show or hide columns from the
 <code>Columns</code> menu. Edits made to a subset are applied directly
 to the complete dataset.</p>
 <div class="section level3">
@@ -754,66 +754,90 @@ value is missing. Rows must match every filter to be shown. Active
 filters are listed as chips in the toolbar; click the <code>x</code> on
 a chip to remove that filter or <code>Clear filters</code> to remove
 them all. With more than four filters the toolbar shows the first three
-and a <code>+2 more</code> button that opens the <code>Filter</code>
-dialog. The status bar shows how many of the rows are on screen.</p>
+and a <code>+2 more</code> button that opens the <code>Filters</code>
+panel. The status bar shows how many of the rows are on screen.</p>
 <p><img src="images/filter-rows.gif" width="100%" style="display: block; margin: auto;"></p>
 </div>
 <div class="section level3">
-<h3 id="filter-dialog">5.2 Filter dialog<a class="anchor" aria-label="anchor" href="#filter-dialog"></a>
+<h3 id="filters-panel">5.2 Filters panel<a class="anchor" aria-label="anchor" href="#filters-panel"></a>
 </h3>
-<p>Click <code>Filter</code> in the toolbar to see and change every
+<p>Click <code>Filters</code> in the toolbar to see and change every
 filter in one place, which is the easiest way to build a complex
-combination of filters. Each row of the dialog is one filter: a column,
-a logic and a value. Click <code>Add filter</code> for another row and
-the <code>x</code> at the end of a row to remove it. Rows must match
-every filter, and a column can have more than one filter.</p>
-<p><img src="images/filter-dialog.png" width="100%" style="display: block; margin: auto;"></p>
+combination of filters. The panel opens beside the grid, and the grid
+follows it as you work: there is nothing to apply.</p>
+<p><img src="images/filter-panel.png" width="100%" style="display: block; margin: auto;"></p>
+<p>Click <code>Add filter</code> and pick a column: type to find it, and
+use the arrow keys and <code>Enter</code> or click it. Each filter is a
+card that asks for what suits its column:</p>
+<ul>
+<li>
+<strong>Numbers, dates and date-times</strong> show a histogram of
+the column with a range on it. Drag the ends of the range (or use the
+arrow keys, <code>Page Up</code>, <code>Page Down</code>,
+<code>Home</code> and <code>End</code>), or type them in the boxes below
+it. The bars of the rows that are kept are highlighted.</li>
+<li>
+<strong>Columns with a few values</strong> (text, factors,
+dropdowns) list their values with how many rows have each, missing
+values too. Tick the values to keep; long lists can be searched.</li>
+<li>
+<strong>Logical columns</strong> have <code>TRUE</code>,
+<code>FALSE</code> and <code>missing</code> buttons with their
+counts.</li>
+<li>
+<strong>Text</strong> is searched for words: type one and press
+<code>Enter</code>. Rows that contain any of the words are kept.</li>
+</ul>
+<p><img src="images/filter-values.png" width="40%" style="display: block; margin: auto;"></p>
+<p>The menu at the top of a card changes the condition, and a column can
+have more than one card:</p>
 <table class="table">
 <colgroup>
-<col width="50%">
-<col width="33%">
-<col width="15%">
+<col width="43%">
+<col width="39%">
+<col width="17%">
 </colgroup>
 <thead><tr class="header">
-<th>Logic</th>
+<th>Condition</th>
 <th>Keeps the rows where the value</th>
 <th>Columns</th>
 </tr></thead>
 <tbody>
 <tr class="odd">
 <td>
-<code>equal</code>, <code>not equal</code>
+<code>is any of</code>, <code>is none of</code>
 </td>
 <td>is (or is not) one of the values</td>
 <td>all</td>
 </tr>
 <tr class="even">
 <td>
-<code>greater than</code>, <code>less than</code>,
-<code>greater than or equal</code>, <code>less than or equal</code>
+<code>is above</code>, <code>is below</code>,
+<code>is at least</code>, <code>is at most</code>
 </td>
 <td>compares that way with the value</td>
 <td>numbers, dates, times</td>
 </tr>
 <tr class="odd">
 <td>
-<code>between</code>, <code>not between</code>
+<code>is between</code>, <code>is not between</code>
 </td>
 <td>lies (or does not lie) between two values</td>
 <td>numbers, dates, times</td>
 </tr>
 <tr class="even">
 <td>
-<code>contain</code>, <code>not contain</code>
+<code>contains</code>, <code>does not contain</code>
 </td>
-<td>includes (or does not include) any of the texts</td>
+<td>includes (or does not include) any of the words</td>
 <td>all except logicals</td>
 </tr>
 <tr class="odd">
 <td>
-<code>matches regex</code>, <code>not matches regex</code>
+<code>matches the pattern</code>,
+<code>does not match the pattern</code>
 </td>
-<td>matches (or does not match) the pattern</td>
+<td>matches (or does not match) a regular expression</td>
 <td>all except logicals</td>
 </tr>
 <tr class="even">
@@ -827,38 +851,45 @@ every filter, and a column can have more than one filter.</p>
 </table>
 <ul>
 <li>
-<code>equal</code>, <code>not equal</code>, <code>contain</code> and
-<code>not contain</code> take several values: type a value and press
-<code>Enter</code>, or pick one of the values of the column from the
-list (for a dropdown with names, its names). <code>NA</code> matches
-missing values.</li>
-<li>
-<code>between</code> includes both of its values, like
+<code>is between</code> includes both ends, like
 <code><a href="https://rdrr.io/pkg/dplyr/man/between.html" class="external-link">dplyr::between()</a></code> and the boxes under the column headers,
-and they can be given in either order. Use <code>greater than</code> and
-<code>less than</code> to leave them out.</li>
+and the ends can be given in either order. Use <code>is above</code> and
+<code>is below</code> to leave them out.</li>
 <li>
-<code>contain</code> looks for plain text and ignores case, so
+<code>contains</code> looks for plain text and ignores case, so
 <code>merc</code> finds <code>Merc 230</code>. It searches what the
 cells show: the names of dropdown choices and the text of HTML columns
-without their tags. <code>matches regex</code> takes a regular
+without their tags. <code>matches the pattern</code> takes a regular
 expression and respects case, so <code>^Merc [0-9]+$</code> finds
 <code>Merc 230</code> and not <code>Merc 450SE</code>. The patterns are
 JavaScript regular expressions, so classes such as
 <code>[[:alpha:]]</code> are written <code>[a-zA-Z]</code>.</li>
-<li>The logics starting with <code>not</code> also keep rows where the
+<li>
+<code>is none of</code>, <code>is not between</code>,
+<code>does not contain</code> and
+<code>does not match the pattern</code> also keep the rows where the
 value is missing.</li>
+<li>The values of password columns are never listed; type them
+instead.</li>
 </ul>
-<p>The dialog shows how many rows match while you work, and nothing
-changes until you press <code>Apply</code>, so <code>Cancel</code>
-leaves your filters as they were. A filter without a value is ignored,
-and <code>Clear all</code> removes every row of the dialog.</p>
+<p>Each card says how many rows it keeps on its own, and the bottom of
+the panel how many rows are shown. A card that is
+<code>not set yet</code>, or has a mistake (text where a number is
+needed, a pattern that is not a regular expression), is left out until
+it is finished. Click the name of a column to fold or open its card, the
+<code>x</code> to remove it, and <code>Clear all</code> to remove every
+filter.</p>
+<p>With two filters or more, choose whether rows must match
+<strong>all</strong> of them (the default) or <strong>any</strong> of
+them. In the toolbar, filters that match any are listed after
+<code>Any of:</code>.</p>
 <p>Filters set under the column headers or from a column’s summary are
-listed in the dialog as well (<code>!text</code> in a header box as
-<code>not contain</code>). They stay where they are if you leave them
-unchanged; if you change one it becomes a filter of the dialog and its
-box under the header is cleared. Filters of the dialog are shown as
-chips with the others.</p>
+listed in the panel too (<code>!text</code> in a header box as
+<code>does not contain</code>), with where they come from. They stay
+where they are while you leave them unchanged; if you change one, it
+becomes a filter of the panel and its box under the header is cleared.
+Choosing <code>any</code> makes them filters of the panel as well, so
+that they are part of the “or”.</p>
 </div>
 <div class="section level3">
 <h3 id="column-selection">5.3 Column selection<a class="anchor" aria-label="anchor" href="#column-selection"></a>

@@ -1362,7 +1362,15 @@ const scenarios = {
     check(ends.join() === "4.5,8", "the boxes show the ends: " + ends.join());
     const bins = await page.$$eval("#edit1-filters .editr-fp-bin", (b) => b.map((x) =>
       x.classList.contains("editr-fp-on") ? 1 : x.classList.contains("editr-fp-off") ? 0 : "?"));
-    check(bins[0] === 0 && bins[bins.length - 1] === 1 && !bins.includes("?"), "histogram shows the range: " + bins.join(""));
+    // bars of width 1 from 1 to 8: those reaching 4.5 or more are lit
+    check(bins.join("") === "0001111", "histogram shows the range: " + bins.join(""));
+    // the ends do not pass each other
+    await handles[1].focus();
+    await page.keyboard.press("Home");
+    await L.settle(page, 400);
+    check((await cardsNow(page)).join() === `${f.n} between 4.5 4.5`, "To stops at From: " + (await cardsNow(page)).join());
+    await page.keyboard.press("End");
+    await L.settle(page, 400);
     await handles[0].focus();
     await page.keyboard.press("Home");
     await L.settle(page, 500);
