@@ -461,7 +461,7 @@ The columns of a template are typed automatically when the data is returned, so 
 
 ## 5. Data Filtering
 
-`data_edit()` makes it easy to view and edit a subset of your data: filter rows by typing under the column headers or in the `Filter` dialog, and show or hide columns from the `Columns` menu. Edits made to a subset are applied directly to the complete dataset.
+`data_edit()` makes it easy to view and edit a subset of your data: filter rows by typing under the column headers or in the `Filters` panel, and show or hide columns from the `Columns` menu. Edits made to a subset are applied directly to the complete dataset.
 
 ### 5.1 Row filtering
 
@@ -471,37 +471,52 @@ Every column has a filter box under its name and the box depends on the type of 
 * **columns with a few distinct values** (e.g. `cyl` or `gear`) have a list to pick one or more values (`Any` means no filter);
 * **text** columns keep values that contain what you type; start with `!` (e.g. `!set`) to keep the values that do not contain it.
 
-Clicking a bar of a column's summary (see [Column summaries](#column-summaries)) sets its filter for you, and clicking the share of missing values shows only the rows where the value is missing. Rows must match every filter to be shown. Active filters are listed as chips in the toolbar; click the `x` on a chip to remove that filter or `Clear filters` to remove them all. With more than four filters the toolbar shows the first three and a `+2 more` button that opens the `Filter` dialog. The status bar shows how many of the rows are on screen.
+Clicking a bar of a column's summary (see [Column summaries](#column-summaries)) sets its filter for you, and clicking the share of missing values shows only the rows where the value is missing. Rows must match every filter to be shown. Active filters are listed as chips in the toolbar; click the `x` on a chip to remove that filter or `Clear filters` to remove them all. With more than four filters the toolbar shows the first three and a `+2 more` button that opens the `Filters` panel. The status bar shows how many of the rows are on screen.
 
 ```{r, echo = FALSE, fig.align = "center", out.width = "100%"}
 screenshot("filter-rows.gif")
 ```
 
-### 5.2 Filter dialog
+### 5.2 Filters panel
 
-Click `Filter` in the toolbar to see and change every filter in one place, which is the easiest way to build a complex combination of filters. Each row of the dialog is one filter: a column, a logic and a value. Click `Add filter` for another row and the `x` at the end of a row to remove it. Rows must match every filter, and a column can have more than one filter.
+Click `Filters` in the toolbar to see and change every filter in one place, which is the easiest way to build a complex combination of filters. The panel opens beside the grid, and the grid follows it as you work: there is nothing to apply.
 
 ```{r, echo = FALSE, fig.align = "center", out.width = "100%"}
-screenshot("filter-dialog.png")
+screenshot("filter-panel.png")
 ```
 
-| Logic                                                                    | Keeps the rows where the value                  | Columns               |
-|--------------------------------------------------------------------------|-------------------------------------------------|-----------------------|
-| `equal`, `not equal`                                                     | is (or is not) one of the values                | all                   |
-| `greater than`, `less than`, `greater than or equal`, `less than or equal` | compares that way with the value                | numbers, dates, times |
-| `between`, `not between`                                                 | lies (or does not lie) between two values       | numbers, dates, times |
-| `contain`, `not contain`                                                 | includes (or does not include) any of the texts | all except logicals   |
-| `matches regex`, `not matches regex`                                     | matches (or does not match) the pattern         | all except logicals   |
-| `is missing`, `is not missing`                                           | is (or is not) missing                          | all                   |
+Click `Add filter` and pick a column: type to find it, and use the arrow keys and `Enter` or click it. Each filter is a card that asks for what suits its column:
 
-* `equal`, `not equal`, `contain` and `not contain` take several values: type a value and press `Enter`, or pick one of the values of the column from the list (for a dropdown with names, its names). `NA` matches missing values.
-* `between` includes both of its values, like `dplyr::between()` and the boxes under the column headers, and they can be given in either order. Use `greater than` and `less than` to leave them out.
-* `contain` looks for plain text and ignores case, so `merc` finds `Merc 230`. It searches what the cells show: the names of dropdown choices and the text of HTML columns without their tags. `matches regex` takes a regular expression and respects case, so `^Merc [0-9]+$` finds `Merc 230` and not `Merc 450SE`. The patterns are JavaScript regular expressions, so classes such as `[[:alpha:]]` are written `[a-zA-Z]`.
-* The logics starting with `not` also keep rows where the value is missing.
+* **Numbers, dates and date-times** show a histogram of the column with a range on it. Drag the ends of the range (or use the arrow keys, `Page Up`, `Page Down`, `Home` and `End`), or type them in the boxes below it. The bars of the rows that are kept are highlighted.
+* **Columns with a few values** (text, factors, dropdowns) list their values with how many rows have each, missing values too. Tick the values to keep; long lists can be searched.
+* **Logical columns** have `TRUE`, `FALSE` and `missing` buttons with their counts.
+* **Text** is searched for words: type one and press `Enter`. Rows that contain any of the words are kept.
 
-The dialog shows how many rows match while you work, and nothing changes until you press `Apply`, so `Cancel` leaves your filters as they were. A filter without a value is ignored, and `Clear all` removes every row of the dialog.
+```{r, echo = FALSE, fig.align = "center", out.width = "40%"}
+screenshot("filter-values.png")
+```
 
-Filters set under the column headers or from a column's summary are listed in the dialog as well (`!text` in a header box as `not contain`). They stay where they are if you leave them unchanged; if you change one it becomes a filter of the dialog and its box under the header is cleared. Filters of the dialog are shown as chips with the others.
+The menu at the top of a card changes the condition, and a column can have more than one card:
+
+| Condition                                              | Keeps the rows where the value                    | Columns               |
+|--------------------------------------------------------|---------------------------------------------------|-----------------------|
+| `is any of`, `is none of`                              | is (or is not) one of the values                  | all                   |
+| `is above`, `is below`, `is at least`, `is at most`    | compares that way with the value                  | numbers, dates, times |
+| `is between`, `is not between`                         | lies (or does not lie) between two values         | numbers, dates, times |
+| `contains`, `does not contain`                         | includes (or does not include) any of the words   | all except logicals   |
+| `matches the pattern`, `does not match the pattern`    | matches (or does not match) a regular expression  | all except logicals   |
+| `is missing`, `is not missing`                         | is (or is not) missing                            | all                   |
+
+* `is between` includes both ends, like `dplyr::between()` and the boxes under the column headers, and the ends can be given in either order. Use `is above` and `is below` to leave them out.
+* `contains` looks for plain text and ignores case, so `merc` finds `Merc 230`. It searches what the cells show: the names of dropdown choices and the text of HTML columns without their tags. `matches the pattern` takes a regular expression and respects case, so `^Merc [0-9]+$` finds `Merc 230` and not `Merc 450SE`. The patterns are JavaScript regular expressions, so classes such as `[[:alpha:]]` are written `[a-zA-Z]`.
+* `is none of`, `is not between`, `does not contain` and `does not match the pattern` also keep the rows where the value is missing.
+* The values of password columns are never listed; type them instead.
+
+Each card says how many rows it keeps on its own, and the bottom of the panel how many rows are shown. A card that is `not set yet`, or has a mistake (text where a number is needed, a pattern that is not a regular expression), is left out until it is finished. Click the name of a column to fold or open its card, the `x` to remove it, and `Clear all` to remove every filter.
+
+With two filters or more, choose whether rows must match **all** of them (the default) or **any** of them. In the toolbar, filters that match any are listed after `Any of:`.
+
+Filters set under the column headers or from a column's summary are listed in the panel too (`!text` in a header box as `does not contain`), with where they come from. They stay where they are while you leave them unchanged; if you change one, it becomes a filter of the panel and its box under the header is cleared. Choosing `any` makes them filters of the panel as well, so that they are part of the "or".
 
 ### 5.3 Column selection
 

@@ -156,7 +156,7 @@ Click `Rows` to load other rows: the rows matching a filter, written like `dplyr
 screenshot("db-rows.png")
 ```
 
-Filters can use column names, values and the functions that formulas may use (see the user guide), so users of a shiny app cannot run other code or SQL. Column summaries, the filters under the column headers, the `Filter` dialog and *Find* work on the loaded rows.
+Filters can use column names, values and the functions that formulas may use (see the user guide), so users of a shiny app cannot run other code or SQL. Column summaries, the filters under the column headers, the `Filters` panel and *Find* work on the loaded rows.
 
 Files that are too big for memory can be explored the same way through DuckDB, which reads Parquet and CSV files without loading them; such queries are read-only:
 

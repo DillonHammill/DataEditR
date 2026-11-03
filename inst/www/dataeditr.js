@@ -3,7 +3,7 @@
   "use strict";
 
   var DataEditR = window.DataEditR = window.DataEditR || {};
-  var TABS = ["record", "changes", "history", "problems", "code"];
+  var TABS = ["filters", "record", "changes", "history", "problems", "code"];
 
   // open the review panel on a tab; toggle = true closes it when that tab
   // is already showing
@@ -22,13 +22,14 @@
       if (pane) pane.hidden = t !== next;
       var tabBtn = document.getElementById(prefix + "tab_" + t);
       if (tabBtn) tabBtn.setAttribute("aria-selected", t === next ? "true" : "false");
-      var tool = document.getElementById(prefix + "open_" + t);
+      // the toolbar button of each tab (Filters is "filter")
+      var tool = document.getElementById(prefix + (t === "filters" ? "filter" : "open_" + t));
       if (tool) tool.setAttribute("aria-pressed", t === next ? "true" : "false");
     });
     if (window.Shiny && Shiny.setInputValue) {
       Shiny.setInputValue(prefix + "panel", next || "");
     }
-    // the grid fills the Record tab itself
+    // the grid fills the Record and Filters tabs itself
     window.dispatchEvent(new CustomEvent("editr-panel",
                                          {detail: {prefix: prefix, tab: next}}));
   };

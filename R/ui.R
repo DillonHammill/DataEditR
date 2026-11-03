@@ -109,55 +109,6 @@ editr_theme <- function(theme = NULL) {
   )
 }
 
-#' Filter dialog: every filter on one screen
-#'
-#' The rows of the dialog are built by the grid (see the filter dialog section
-#' of editr_grid.js), which holds the data and does the filtering. There is no
-#' fade: Bootstrap ignores hide() during the animation, so a quick Apply would
-#' leave the dialog open.
-#'
-#' @noRd
-editr_filter_dialog <- function(id) {
-  tags$div(
-    class = "modal editr-filter-dialog",
-    id = id,
-    tabindex = "-1",
-    `aria-labelledby` = paste0(id, "_title"),
-    `aria-hidden` = "true",
-    tags$div(
-      class = "modal-dialog modal-lg modal-dialog-scrollable",
-      tags$div(
-        class = "modal-content",
-        tags$div(
-          class = "modal-header",
-          tags$h2(class = "modal-title fs-6 fw-semibold",
-                  id = paste0(id, "_title"), "Filter rows"),
-          tags$button(type = "button", class = "btn-close editr-fd-cancel",
-                      `data-bs-dismiss` = "modal", `aria-label` = "Close")
-        ),
-        tags$div(
-          class = "modal-body",
-          tags$p(class = "form-text mt-0",
-                 "Rows must match every filter."),
-          tags$div(class = "editr-fd-rows")
-        ),
-        tags$div(
-          class = "modal-footer",
-          tags$button(type = "button", class = "btn btn-outline-secondary btn-sm editr-fd-add",
-                      "Add filter"),
-          tags$button(type = "button", class = "btn btn-link btn-sm editr-fd-clear",
-                      "Clear all"),
-          tags$span(class = "editr-fd-count", `aria-live` = "polite"),
-          tags$button(type = "button", class = "btn btn-outline-secondary btn-sm editr-fd-cancel",
-                      `data-bs-dismiss` = "modal", "Cancel"),
-          tags$button(type = "button", class = "btn btn-primary btn-sm editr-fd-apply",
-                      "Apply")
-        )
-      )
-    )
-  )
-}
-
 #' Keyboard shortcuts dialog
 #' @noRd
 editr_shortcuts <- function(id) {

@@ -57,7 +57,7 @@ shinyApp(ui, server)
 | `dataEditChanges()` | count the changes that have not been saved yet                    |
 | `dataEditCommit()`  | save the changes (write them to a database, or start afresh from the current data) |
 
-`dataEditUI()` adds the grid together with the toolbar (undo/redo, columns, filter, find, review changes, code and keyboard shortcuts), the review panel and the status bar. The grid supports everything described in `vignette("DataEditR")`: editing, range selection, copy and paste, fill down, adding and removing rows and columns, header filters and the filter dialog, change tracking and the review panel.
+`dataEditUI()` adds the grid together with the toolbar (undo/redo, columns, filter, find, review changes, code and keyboard shortcuts), the review panel and the status bar. The grid supports everything described in `vignette("DataEditR")`: editing, range selection, copy and paste, fill down, adding and removing rows and columns, header filters and the Filters panel, change tracking and the review panel.
 
 The editor uses Bootstrap 5, so use a Bootstrap 5 page such as `bslib::page_fluid()` (or `fluidPage(theme = bslib::bs_theme(version = 5))`) for the menus and dialogs to look their best.
 

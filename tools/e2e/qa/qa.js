@@ -48,69 +48,105 @@ const onTop = (page, sel) => page.evaluate((sel) => {
   return true;
 }, sel);
 
-// the filter dialog: ids of the rows on screen, opening it and adding rows
+// the Filters panel: ids of the rows on screen, opening it and adding filters
 const shownIds = (page) => page.evaluate(() => document.querySelector(".editr_grid").__editr.table
   .getRows("active").map((r) => r.getIndex()).sort((a, b) => a - b));
 const editr = (page, fn, ...args) => page.evaluate(
   `(${fn})(document.querySelector(".editr_grid").__editr, ...${JSON.stringify(args)})`);
-const dialogOpen = (page) => page.evaluate(() => {
-  const m = document.getElementById("edit1-filters");
-  return m.classList.contains("show") && getComputedStyle(m).display !== "none";
-});
+const panelOpen = (page) => page.$eval("#edit1-panel", (p) => p.getAttribute("data-open") === "filters");
 async function openFilters(page) {
-  await page.click("#edit1-filter");
-  await page.waitForSelector("#edit1-filters.show .editr-fd-apply", { visible: true });
-  await sleep(350);
+  if (!(await panelOpen(page))) await page.click("#edit1-filter");
+  await page.waitForSelector("#edit1-filters .editr-fp-add", { visible: true });
+  await sleep(200);
 }
-const filterCount = (page) => page.$eval("#edit1-filters .editr-fd-count", (e) => e.textContent);
-const filterRowCount = (page) => page.$$eval("#edit1-filters .editr-fd-row", (r) => r.length);
-async function closeFilters(page, button) {
-  await page.click("#edit1-filters .modal-footer " + button);
-  await page.waitForFunction(() => !document.getElementById("edit1-filters").classList.contains("show") &&
-    !document.querySelector(".modal-backdrop"));
-  await L.settle(page, 500);
+async function closeFilters(page) {
+  if (await panelOpen(page)) await page.click("#edit1-filter");
+  await L.settle(page, 400);
 }
-// fill the last row of the dialog: value text is typed; ISO dates are set
-async function fillFilterRow(page, field, logic, values) {
-  const rows = await page.$$("#edit1-filters .editr-fd-row");
-  const row = rows[rows.length - 1];
-  const selects = await row.$$("select");
-  await selects[0].select(field);
-  await (await row.$$("select"))[1].select(logic);
-  await sleep(50);
-  const tags = await row.$(".editr-fd-tags input");
-  if (tags) {
+const filterCount = (page) => page.$eval("#edit1-filters .editr-fp-count", (e) => e.textContent);
+const cardCount = (page) => page.$$eval("#edit1-filters .editr-fp-card", (r) => r.length);
+// the filters of the panel as "field logic values"
+const cardsNow = (page) => editr(page, (g) => g.fp.cards.map((c) => [c.field, c.logic].concat(c.values).join(" ")));
+const openCard = (page) => page.$("#edit1-filters .editr-fp-card.editr-fp-open");
+const cardText = (page, sel) => page.$eval("#edit1-filters .editr-fp-card.editr-fp-open " + sel, (e) => e.textContent);
+async function addCard(page, field) {
+  await page.click("#edit1-filters .editr-fp-add");
+  const opt = `#edit1-filters .editr-fp-colopt[data-field="${field}"]`;
+  await page.waitForSelector(opt);
+  await page.click(opt);
+  await sleep(150);
+}
+async function setLogic(page, logic) {
+  const sel = await (await openCard(page)).$(".editr-fp-logic");
+  if (await sel.evaluate((s) => s.value) !== logic) {
+    await sel.select(logic);
+    await sleep(150);
+  }
+}
+// fill the open card as a person would: tick values, press TRUE or FALSE,
+// type words, a pattern or the ends of a range
+async function fillCard(page, logic, values) {
+  await setLogic(page, logic);
+  const card = await openCard(page);
+  const shown = (v) => (v === "NA" ? "missing" : String(v));
+  if (await card.$(".editr-fp-opts")) {
     for (const v of values) {
-      await tags.focus();
+      const ok = await card.evaluate((el, want) => {
+        const o = [...el.querySelectorAll(".editr-fp-opt")]
+          .find((x) => x.querySelector(".editr-fp-val").textContent === want);
+        if (o) o.querySelector("input").click();
+        return !!o;
+      }, shown(v));
+      if (!ok) throw new Error("no value " + v);
+    }
+  } else if (await card.$(".editr-fp-bool")) {
+    for (const v of values) {
+      const ok = await card.evaluate((el, want) => {
+        const b = [...el.querySelectorAll(".editr-fp-choice")].find((x) => x.firstElementChild.textContent === want);
+        if (b) b.click();
+        return !!b;
+      }, shown(v));
+      if (!ok) throw new Error("no choice " + v);
+    }
+  } else if (await card.$(".editr-fp-words")) {
+    const input = await card.$(".editr-fp-words input");
+    for (const v of values) {
+      await input.focus();
       await page.keyboard.type(String(v));
       await page.keyboard.press("Enter");
     }
-    return;
-  }
-  const inputs = await row.$$(".editr-fd-value input");
-  for (let i = 0; i < values.length; i++) {
-    if (/^\d{4}-\d\d-\d\d/.test(String(values[i]))) {
-      await inputs[i].evaluate((e, v) => {
-        e.value = v;
-        e.dispatchEvent(new Event("input", { bubbles: true }));
-      }, values[i]);
-    } else {
-      await inputs[i].focus();
-      await page.keyboard.type(String(values[i]));
+  } else if (await card.$(".editr-fp-pattern")) {
+    await (await card.$(".editr-fp-pattern")).focus();
+    await page.keyboard.type(String(values[0]));
+  } else {
+    const inputs = await card.$$(".editr-fp-ends input");
+    for (let i = 0; i < values.length; i++) {
+      const type = await inputs[i].evaluate((e) => e.type);
+      if (type === "date" || type === "datetime-local") {
+        await inputs[i].evaluate((e, v) => {
+          e.value = v;
+          e.dispatchEvent(new Event("input", { bubbles: true }));
+        }, String(values[i]).replace(" ", "T"));
+      } else {
+        await inputs[i].click({ clickCount: 3 });
+        await page.keyboard.type(String(values[i]));
+      }
     }
   }
 }
 async function addFilter(page, field, logic, values = []) {
-  await page.click("#edit1-filters .editr-fd-add");
-  await fillFilterRow(page, field, logic, values);
+  await addCard(page, field);
+  await fillCard(page, logic, values);
 }
-// replace every filter with these rows and apply them
+// replace every filter with these, wait for the grid to follow, close the panel
 async function setFilters(page, rules) {
   await openFilters(page);
-  await page.click("#edit1-filters .editr-fd-clear");
+  const clear = await page.$("#edit1-filters .editr-fp-clear");
+  if (clear) await clear.click();
+  await sleep(100);
   for (const r of rules) await addFilter(page, ...r);
-  await sleep(200);
-  await closeFilters(page, ".editr-fd-apply");
+  await sleep(350);
+  await closeFilters(page);
 }
 
 async function canEdit(page, id, field) {
@@ -1010,31 +1046,23 @@ const scenarios = {
     await page.click("#edit1-chips .editr-chip-clear");
     await L.settle(page, 900);
     check((await active()).length === 5, "filters cleared");
-    // the filter dialog lists a "!ab" header filter as "not contain ab"
+    // the Filters panel lists a "!ab" header filter as "does not contain ab"
     await t((fc) => document.querySelector(".editr_grid").__editr.table.setHeaderFilterValue(fc, "!ab"), f.code);
     await L.settle(page, 800);
     await openFilters(page);
-    const fdRows = await page.$$eval("#edit1-filters .editr-fd-row", (r) => r.map((x) =>
-      [...x.querySelectorAll("select")].map((s) => s.value).concat(
-        [...x.querySelectorAll(".editr-chip > span")].map((i) => i.textContent)).join(" ")));
-    check(fdRows.join("|") === f.code + " not_contain ab", "dialog lists !ab as not contain: " + fdRows.join("|"));
-    check(/^2 of 5 rows match/.test(await filterCount(page)), "same rows in the dialog: " + await filterCount(page));
-    // dropdown names are offered and shown, and stored as values
-    await page.click("#edit1-filters .editr-fd-add");
-    const fdLast = async () => { const rs = await page.$$("#edit1-filters .editr-fd-row"); return rs[rs.length - 1]; };
-    await (await (await fdLast()).$$("select"))[0].select(f.state);
-    await (await (await fdLast()).$$("select"))[1].select("equal");
-    await sleep(100);
-    const offered = await (await fdLast()).$$eval("datalist option", (o) => o.map((x) => x.value));
-    check(offered.includes("Victoria") && !offered.includes("VIC"), "dropdown names offered: " + offered.join(","));
-    await (await (await fdLast()).$(".editr-fd-tags input")).focus();
-    await page.keyboard.type("Victoria");
-    await page.keyboard.press("Enter");
-    const chip = await (await fdLast()).$$eval(".editr-chip > span", (x) => x.map((e) => e.textContent).join());
-    check(chip === "Victoria", "chip shows the name: " + chip);
-    await sleep(200);
-    await closeFilters(page, ".editr-fd-apply");
+    check((await cardsNow(page)).join("|") === f.code + " not_contain ab", "panel lists !ab as not contain: " + (await cardsNow(page)).join("|"));
+    check(/^2 of 5 rows shown/.test(await filterCount(page)), "same rows in the panel: " + await filterCount(page));
+    // dropdown names are listed and shown, and stored as values
+    await addCard(page, f.state);
+    await setLogic(page, "equal");
+    const offered = await page.$$eval("#edit1-filters .editr-fp-open .editr-fp-val", (o) => o.map((x) => x.textContent));
+    check(offered.includes("Victoria") && !offered.includes("VIC"), "dropdown names listed: " + offered.join(","));
+    await fillCard(page, "equal", ["Victoria"]);
+    await L.settle(page, 500);
+    const stored = await editr(page, (g, fs) => g.conditions.filter((c) => c.field === fs).map((c) => c.values.join()).join(), f.state);
+    check(stored === "VIC", "the value is stored: " + stored);
     check(JSON.stringify(await active()) === "[4]", "!ab and Victoria: " + JSON.stringify(await active()));
+    await closeFilters(page);
     const chipsNow = await page.$eval("#edit1-chips", (e) => e.textContent);
     check(/state is Victoria/.test(chipsNow), "toolbar chip names the choice: " + chipsNow.slice(0, 120));
     // HTML is searched as the cells show it, without the tags
@@ -1043,7 +1071,7 @@ const scenarios = {
     await setFilters(page, [[f.photo, "contain", ["href"]]]);
     check(JSON.stringify(await active()) === "[]", "html tags are not searched: " + JSON.stringify(await active()));
     await setFilters(page, []);
-    check((await active()).length === 5, "dialog filters cleared");
+    check((await active()).length === 5, "panel filters cleared");
     // #53 insert and delete cells
     await L.selectCell(page, 2, f.n);
     await L.rowMenu(page, 2, f.n, "Insert cells, shift down");
@@ -1147,31 +1175,85 @@ const scenarios = {
   async filter_dialog(page) {
     const f = {};
     for (const n of ["name", "n", "grp", "d", "ok", "pw", "when", "extra"]) f[n] = await fieldOf(page, n);
-    const rowNames = await page.evaluate(() => document.querySelector("#edit1-filter").textContent.trim());
-    check(rowNames === "Filter", "Filter button in the toolbar: " + rowNames);
+    const label = await page.evaluate(() => document.querySelector("#edit1-filter").textContent.trim());
+    check(label === "Filters", "Filters button in the toolbar: " + label);
+    const chips = () => page.$$eval(".editr-chips .editr-chip > span", (s) => s.map((e) => e.textContent));
+    const keeps = () => cardText(page, ".editr-fp-keeps");
 
-    // a blank row to start with, and nothing changes until Apply
+    // the button opens the Filters tab of the side panel, and closes it
     await openFilters(page);
-    check(await filterRowCount(page) === 1, "starts with one row");
-    check(/^8 of 8 rows match/.test(await filterCount(page)), "count: " + await filterCount(page));
-    const logics = (sel) => page.evaluate((s) => {
-      const m = document.getElementById("edit1-filters");
-      return [...m.querySelectorAll(".editr-fd-row select")[s].options].map((o) => o.textContent);
-    }, sel);
-    const row = (await page.$$("#edit1-filters .editr-fd-row"))[0];
-    await (await row.$$("select"))[0].select(f.n);
+    check(await page.$eval("#edit1-filter", (b) => b.getAttribute("aria-pressed")) === "true", "button is pressed");
+    check(await page.$eval("#edit1-tab_filters", (b) => b.getAttribute("aria-selected")) === "true", "Filters tab selected");
+    check(/No filters/.test(await page.$eval("#edit1-filters", (e) => e.textContent)), "says there are no filters");
+    check(/^8 of 8 rows shown/.test(await filterCount(page)), "count: " + await filterCount(page));
+    await closeFilters(page);
+    check(!(await panelOpen(page)), "the button closes the panel again");
+    await openFilters(page);
+
+    // the column picker: every column, with a hint of its values (none for
+    // passwords); typing narrows it and Enter adds a filter
+    await page.click("#edit1-filters .editr-fp-add");
+    await page.waitForSelector("#edit1-filters .editr-fp-picker");
+    const listed = await page.$$eval("#edit1-filters .editr-fp-colopt", (o) => o.map((x) => x.getAttribute("data-field")));
+    check(listed.length === 9 && listed.includes(f.pw), "picker lists every column and the row names: " + listed.length);
+    const pwOpt = await page.$eval(`#edit1-filters .editr-fp-colopt[data-field="${f.pw}"]`, (o) => o.textContent);
+    check(pwOpt === "abcpw", "nothing about the values of a password: " + pwOpt);
+    check(!!(await page.$(`#edit1-filters .editr-fp-colopt[data-field="${f.n}"] .editr-fp-spark`)), "numbers have a sparkline");
+    check(/3 values/.test(await page.$eval(`#edit1-filters .editr-fp-colopt[data-field="${f.grp}"]`, (o) => o.textContent)),
+          "text columns say how many values");
+    await page.keyboard.type("gr");
     await sleep(100);
-    check((await logics(1)).join() === "equal,not equal,greater than,less than,greater than or equal," +
-          "less than or equal,between,not between,contain,not contain,matches regex,not matches regex," +
-          "is missing,is not missing", "every 1.x logic is offered for numbers");
-    await (await row.$$("select"))[0].select(f.name);
-    await sleep(100);
-    check(!(await logics(1)).includes("greater than"), "no order logics for text");
-    await (await row.$$("select"))[0].select(f.ok);
-    await sleep(100);
-    check((await logics(1)).join() === "equal,not equal,is missing,is not missing", "logical columns");
-    await closeFilters(page, ".editr-fd-cancel");
-    check((await shownIds(page)).length === 8, "Cancel changes nothing");
+    const narrowed = await page.$$eval("#edit1-filters .editr-fp-colopt", (o) => o.map((x) => x.getAttribute("data-field")));
+    check(narrowed.join() === f.grp, "typing narrows the columns: " + narrowed.join());
+    await page.keyboard.press("Enter");
+    await sleep(200);
+    check((await cardsNow(page)).join("|") === `${f.grp} equal`, "Enter adds a filter: " + (await cardsNow(page)).join("|"));
+    check(!(await page.$("#edit1-filters .editr-fp-picker")), "picker closes");
+
+    // values with how many rows have each; the grid follows at once
+    const values = await page.$$eval("#edit1-filters .editr-fp-opt", (o) => o.map((x) =>
+      x.querySelector(".editr-fp-val").textContent + "=" + x.querySelector(".editr-fp-n").textContent));
+    check(values.join() === "a=3,b=2,c=2,missing=1", "values with counts: " + values.join());
+    check(await keeps() === "not set yet", "not set until a value is ticked: " + await keeps());
+    await fillCard(page, "equal", ["a"]);
+    await L.settle(page, 400);
+    check((await shownIds(page)).join() === "1,3,7", "the grid follows the panel: " + (await shownIds(page)).join());
+    check(await keeps() === "keeps 3 of 8", "keeps: " + await keeps());
+    check(/^3 of 8 rows shown/.test(await filterCount(page)), "count: " + await filterCount(page));
+    check((await chips()).join("|") === "grp is a", "chip: " + (await chips()).join("|"));
+    check(await page.$eval("#edit1-filter_count", (e) => e.textContent) === "1", "count on the button");
+
+    // the conditions offered, in plain words, for each type of column
+    const logics = () => page.$$eval("#edit1-filters .editr-fp-open .editr-fp-logic option", (o) => o.map((x) => x.textContent));
+    check((await logics()).join() === "contains,does not contain,is any of,is none of,matches the pattern," +
+          "does not match the pattern,is missing,is not missing", "text: " + (await logics()).join());
+    await addCard(page, f.n);
+    check((await logics()).join() === "is between,is not between,is at least,is at most,is above,is below," +
+          "is any of,is none of,contains,does not contain,matches the pattern,does not match the pattern," +
+          "is missing,is not missing", "numbers: " + (await logics()).join());
+    check(await page.$$eval("#edit1-filters .editr-fp-card.editr-fp-open", (c) => c.length) === 1,
+          "adding a filter folds the others");
+    const folded = await page.$eval("#edit1-filters .editr-fp-card:not(.editr-fp-open) .editr-fp-sum", (h) => h.textContent);
+    check(folded === "is a", "a folded filter says what it does: " + folded);
+    check(!!(await page.$("#edit1-filters .editr-fp-match")), "all or any, once there are two filters");
+    await addCard(page, f.ok);
+    check((await logics()).join() === "is,is not,is missing,is not missing", "logical: " + (await logics()).join());
+    const choices = await page.$$eval("#edit1-filters .editr-fp-open .editr-fp-choice", (b) => b.map((x) => x.textContent));
+    check(choices.join("|") === "TRUE4 rows|FALSE3 rows|missing1 row", "TRUE and FALSE with counts: " + choices.join("|"));
+    await addCard(page, f.d);
+    check((await logics())[0] === "is between", "dates start with a range");
+    await addCard(page, f.name);
+    check((await cardsNow(page)).slice(-1)[0] === `${f.name} equal`, "names start with a list of them");
+    check(await page.$$eval("#edit1-filters .editr-fp-open .editr-fp-opt", (o) => o.length) === 8, "every name and missing");
+
+    // passwords are typed, never listed
+    await addCard(page, f.pw);
+    await setLogic(page, "equal");
+    check(!(await page.$("#edit1-filters .editr-fp-open .editr-fp-opts")), "no list for a password");
+    check(!/secret/.test(await page.$eval("#edit1-filters", (e) => e.textContent)), "no password in the panel");
+    await page.click("#edit1-filters .editr-fp-clear");
+    await sleep(200);
+    check(!(await cardCount(page)) && (await shownIds(page)).length === 8, "Clear all");
 
     // every logic, with the rows expected by hand
     const cases = [
@@ -1203,10 +1285,11 @@ const scenarios = {
       ["d not between keeps missing", f.d, "not_between", ["2024-02-01", "2024-04-01"], [1, 5, 6, 7, 8]],
       ["d equal", f.d, "equal", ["2024-03-01"], [3]],
       ["ok equal", f.ok, "equal", ["TRUE"], [1, 4, 5, 7]],
-      ["ok equal yes", f.ok, "equal", ["yes"], [1, 4, 5, 7]],
+      ["ok equal TRUE or missing", f.ok, "equal", ["TRUE", "NA"], [1, 3, 4, 5, 7]],
       ["ok not equal keeps missing", f.ok, "not_equal", ["TRUE"], [2, 3, 6, 8]],
       ["ok missing", f.ok, "missing", [], [3]],
       ["grp equal NA", f.grp, "equal", ["NA"], [8]],
+      ["pw equal (typed)", f.pw, "equal", ["secret3"], [3]],
       ["when greater than", f.when, "gt", ["2024-03-16 10:30"], [7, 8]],
       ["when contain keeps the text as typed", f.when, "contain", ["2024-03-15"], [5]],
     ];
@@ -1216,65 +1299,93 @@ const scenarios = {
       check(got.join() === want.join(), what + ": " + got.join());
     }
 
-    // several filters, also on one column, must all match
+    // several filters, also on one column, must all match ...
     await setFilters(page, [[f.name, "contain", ["a"]], [f.name, "not_contain", ["e"]]]);
     check((await shownIds(page)).join() === "1,3", "two filters on one column");
     await setFilters(page, [[f.n, "gte", [4]], [f.grp, "equal", ["c"]], [f.ok, "equal", ["TRUE"]]]);
     check((await shownIds(page)).join() === "5", "three columns");
-
-    // chips, the count on the button and removing filters
-    const chips = () => page.$$eval(".editr-chips .editr-chip > span", (s) => s.map((e) => e.textContent));
     check((await chips()).join("|") === "n ≥ 4|grp is c|ok is TRUE", "chips: " + (await chips()).join("|"));
     check(await page.$eval("#edit1-filter_count", (e) => e.textContent) === "3", "count on the button");
     await page.click(".editr-chips .editr-chip:nth-child(2) button");
     await L.settle(page, 500);
     check((await shownIds(page)).join() === "4,5,7", "chip removes its filter: " + (await shownIds(page)).join());
     await openFilters(page);
-    check(await filterRowCount(page) === 2, "dialog lists the filters that are left");
-    await closeFilters(page, ".editr-fd-cancel");
-    await page.evaluate(() => [...document.querySelectorAll(".editr-chip-clear")][0].click());
-    await L.settle(page, 500);
-    check((await shownIds(page)).length === 8 && !(await chips()).length, "Clear filters clears them");
-    check(await page.$eval("#edit1-filter_count", (e) => e.textContent) === "", "count on the button is gone");
+    check(await cardCount(page) === 2, "the panel lists the filters that are left");
 
-    // a row without a value is ignored, a bad value stops Apply
+    // ... or any of them
+    await setFilters(page, [[f.n, "gte", [7]], [f.grp, "equal", ["c"]]]);
+    check((await shownIds(page)).join() === "", "n ≥ 7 and grp c: none");
     await openFilters(page);
-    await page.click("#edit1-filters .editr-fd-clear");
-    await addFilter(page, f.n, "gt", []);
-    await sleep(250);
-    check(/1 filter has no value and is ignored/.test(await filterCount(page)), await filterCount(page));
-    await fillFilterRow(page, f.n, "gt", ["abc"]);
-    await sleep(250);
-    const blocked = () => page.$eval("#edit1-filters .editr-fd-apply", (b) => b.disabled);
-    const message = () => page.$eval("#edit1-filters .editr-fd-msg", (m) => m.textContent);
-    check(await blocked() && /is not a number/.test(await message()), "not a number: " + await message());
-    await page.click("#edit1-filters .editr-fd-clear");
-    await addFilter(page, f.name, "regex", ["("]);
-    await sleep(250);
-    check(await blocked() && /regular expression/.test(await message()), "bad regex: " + await message());
-    await page.click("#edit1-filters .editr-fd-clear");
-    await addFilter(page, f.n, "between", [4]);
-    await sleep(250);
-    check(!(await blocked()) && /no value/.test(await filterCount(page)), "between needs both values");
-    await closeFilters(page, ".editr-fd-apply");
-    check((await shownIds(page)).length === 8, "unfinished rows are ignored");
+    await page.click('#edit1-filters .editr-fp-seg[aria-checked="false"]');
+    await L.settle(page, 400);
+    check((await shownIds(page)).join() === "5,6,7,8", "n ≥ 7 or grp c: " + (await shownIds(page)).join());
+    check(await page.$eval("#edit1-filters .editr-fp-join", (e) => e.textContent) === "or", "cards are joined by or");
+    check(/^Any of:/.test(await page.$eval("#edit1-chips", (e) => e.textContent)), "the chips say any of");
+    await page.click('#edit1-filters .editr-fp-seg[aria-checked="false"]');
+    await L.settle(page, 400);
+    check((await shownIds(page)).join() === "", "back to all");
 
-    // suggestions come from the column, but never from passwords
+    // folding a filter; counts follow edits
+    await setFilters(page, [[f.n, "gte", [7]]]);
     await openFilters(page);
-    const row0 = (await page.$$("#edit1-filters .editr-fd-row"))[0];
-    await (await row0.$$("select"))[0].select(f.grp);
-    await sleep(100);
-    const options = () => page.$$eval("#edit1-filters datalist option", (o) => o.map((x) => x.value));
-    check((await options()).join() === "a,b,c", "suggestions: " + (await options()).join());
-    await (await row0.$$("select"))[0].select(f.pw);
-    await sleep(100);
-    check((await options()).length === 0, "no suggestions for passwords");
-    await page.keyboard.press("Escape");
-    await page.waitForFunction(() => !document.querySelector(".modal-backdrop"));
+    await page.click("#edit1-filters .editr-fp-name");
+    await sleep(150);
+    check(await page.$eval("#edit1-filters .editr-fp-sum", (e) => e.textContent) === "is at least 7", "folded");
+    await page.click("#edit1-filters .editr-fp-name");
+    await sleep(150);
+    check(!!(await openCard(page)), "opened again");
+    await L.editCell(page, 7, f.n, "3");
     await sleep(300);
-    check(!(await dialogOpen(page)), "Escape closes the dialog");
+    check(await keeps() === "keeps 1 of 8", "counts follow an edit: " + await keeps());
+    await page.click("#edit1-undo");
+    await L.settle(page, 600);
+
+    // the range: a histogram to drag the ends on, or the keyboard
+    await setFilters(page, []);
+    await openFilters(page);
+    await addCard(page, f.n);
+    const handles = await page.$$("#edit1-filters .editr-fp-handle");
+    const track = await (await page.$("#edit1-filters .editr-fp-track")).boundingBox();
+    const h0 = await handles[0].boundingBox();
+    await page.mouse.move(h0.x + h0.width / 2, h0.y + h0.height / 2);
+    await page.mouse.down();
+    for (let i = 1; i <= 5; i++) {
+      await page.mouse.move(h0.x + h0.width / 2 + (track.x + track.width * 0.5 - h0.x - h0.width / 2) * i / 5,
+                            h0.y + h0.height / 2);
+      await sleep(30);
+    }
+    await page.mouse.up();
+    await L.settle(page, 500);
+    check((await cardsNow(page)).join() === `${f.n} between 4.5 8`, "dragged: " + (await cardsNow(page)).join());
+    check((await shownIds(page)).join() === "5,6,7,8", "rows of the dragged range: " + (await shownIds(page)).join());
+    const ends = await page.$$eval("#edit1-filters .editr-fp-ends input", (i) => i.map((x) => x.value));
+    check(ends.join() === "4.5,8", "the boxes show the ends: " + ends.join());
+    const bins = await page.$$eval("#edit1-filters .editr-fp-bin", (b) => b.map((x) =>
+      x.classList.contains("editr-fp-on") ? 1 : x.classList.contains("editr-fp-off") ? 0 : "?"));
+    check(bins[0] === 0 && bins[bins.length - 1] === 1 && !bins.includes("?"), "histogram shows the range: " + bins.join(""));
+    await handles[0].focus();
+    await page.keyboard.press("Home");
+    await L.settle(page, 500);
+    check((await cardsNow(page)).join() === `${f.n} between 1 8`, "Home: " + (await cardsNow(page)).join());
+    check(await handles[0].evaluate((h) => h.getAttribute("aria-valuenow")) === "1", "slider value for screen readers");
+
+    // unfinished or wrong filters are left out, and say why
+    await setFilters(page, [[f.n, "gt", []]]);
+    await openFilters(page);
+    check(await keeps() === "not set yet" && (await shownIds(page)).length === 8, "no value yet");
+    await fillCard(page, "gt", ["abc"]);
+    await sleep(350);
+    check(/is not a number/.test(await cardText(page, ".editr-fp-msg")), "not a number: " + await cardText(page, ".editr-fp-msg"));
+    check((await shownIds(page)).length === 8, "a bad number filters nothing");
+    await setFilters(page, [[f.name, "regex", ["("]]]);
+    await openFilters(page);
+    check(/regular expression/.test(await cardText(page, ".editr-fp-msg")), "bad regex: " + await cardText(page, ".editr-fp-msg"));
+    await setFilters(page, [[f.n, "between", [4]]]);
+    await openFilters(page);
+    check(await keeps() === "not set yet" && (await shownIds(page)).length === 8, "between needs both ends");
 
     // header filters and summary picks are listed; unchanged ones stay put
+    await setFilters(page, []);
     await page.evaluate((a, b) => {
       const g = document.querySelector(".editr_grid").__editr;
       g.table.setHeaderFilterValue(a, { min: "2.5", max: "" });
@@ -1283,16 +1394,11 @@ const scenarios = {
     await L.settle(page, 800);
     check((await shownIds(page)).join() === "2,4,7", "header filters: " + (await shownIds(page)).join());
     await openFilters(page);
-    const listed = () => page.$$eval("#edit1-filters .editr-fd-row", (r) => r.map((x) =>
-      [...x.querySelectorAll("select")].map((s) => s.value).concat(
-        [...x.querySelectorAll(".editr-fd-value input")].map((i) => i.value).filter(Boolean),
-        [...x.querySelectorAll(".editr-chip > span")].map((i) => i.textContent)).join(" ")));
-    const rowsNow = await listed();
-    check(rowsNow.join("|") === `${f.n} gte 2.5|${f.grp} equal a b`, "listed: " + rowsNow.join("|"));
-    check(/^3 of 8 rows match/.test(await filterCount(page)), "same count: " + await filterCount(page));
+    check((await cardsNow(page)).join("|") === `${f.n} gte 2.5|${f.grp} equal a b`, "listed: " + (await cardsNow(page)).join("|"));
+    check(/From the box under the column name/.test(await page.$eval("#edit1-filters", (e) => e.textContent)), "says where they come from");
+    check(/^3 of 8 rows shown/.test(await filterCount(page)), "same count: " + await filterCount(page));
     await addFilter(page, f.name, "not_contain", ["zeta"]);
-    await sleep(200);
-    await closeFilters(page, ".editr-fd-apply");
+    await L.settle(page, 500);
     check((await shownIds(page)).join() === "2,4", "added to them: " + (await shownIds(page)).join());
     const state = () => editr(page, (g) => ({
       header: g.table.getHeaderFilters().length, conditions: g.conditions.length }));
@@ -1302,17 +1408,26 @@ const scenarios = {
       .getColumn(a).getElement().querySelector(".editr-range input").value, f.n);
     check(await minBox() === "2.5", "box still shows it");
 
-    // changing a listed filter moves it to the dialog; removing one clears it
-    await openFilters(page);
-    const rows2 = await page.$$("#edit1-filters .editr-fd-row");
-    await (await rows2[0].$$("select"))[1].select("gt");
-    await rows2[1].$(".editr-fd-remove").then((b) => b.click());
-    await sleep(250);
-    await closeFilters(page, ".editr-fd-apply");
+    // changing a listed filter moves it to the panel; removing one clears it
+    await page.click(`#edit1-filters .editr-fp-card[data-field="${f.n}"] .editr-fp-name`);
+    await sleep(150);
+    await setLogic(page, "gt");
+    await page.click(`#edit1-filters .editr-fp-card[data-field="${f.grp}"] .editr-fp-remove`);
+    await L.settle(page, 500);
     st = await state();
-    check(st.header === 0 && st.conditions === 2, "changed filters move to the dialog: " + JSON.stringify(st));
+    check(st.header === 0 && st.conditions === 2, "changed filters move to the panel: " + JSON.stringify(st));
     check(await minBox() === "", "box is cleared");
     check((await shownIds(page)).join() === "4,5,6,8", "n > 2.5 and not zeta: " + (await shownIds(page)).join());
+    // with any, the header boxes join the "or"
+    await setFilters(page, [[f.n, "gte", [7]]]);
+    await page.evaluate((b) => document.querySelector(".editr_grid").__editr.table.setHeaderFilterValue(b, ["c"]), f.grp);
+    await L.settle(page, 600);
+    await openFilters(page);
+    await page.click('#edit1-filters .editr-fp-seg[aria-checked="false"]');
+    await L.settle(page, 500);
+    st = await state();
+    check(st.header === 0 && st.conditions === 2, "any takes in the header box: " + JSON.stringify(st));
+    check((await shownIds(page)).join() === "5,6,7,8", "n ≥ 7 or grp c: " + (await shownIds(page)).join());
 
     // a summary pick
     await setFilters(page, []);
@@ -1322,12 +1437,12 @@ const scenarios = {
     }, f.n);
     await L.settle(page, 500);
     await openFilters(page);
-    check((await listed()).join() === `${f.n} missing`, "summary pick listed: " + (await listed()).join());
-    await closeFilters(page, ".editr-fd-apply");
+    check((await cardsNow(page)).join() === `${f.n} missing`, "summary pick listed: " + (await cardsNow(page)).join());
+    check(/From the column summary/.test(await page.$eval("#edit1-filters", (e) => e.textContent)), "says it is a pick");
     st = await editr(page, (g, field) => ({ pick: !!g.picks[field], conditions: g.conditions.length }), f.n);
     check(st.pick && st.conditions === 0, "summary pick stays: " + JSON.stringify(st));
     await setFilters(page, []);
-    check((await shownIds(page)).length === 8, "cleared through the dialog");
+    check((await shownIds(page)).length === 8, "cleared through the panel");
 
     // the row names column has a name; chips stop at a few
     const names = await editr(page, (g) => Object.keys(g.colMap).find((k) => g.colMap[k].frozen));
@@ -1338,16 +1453,19 @@ const scenarios = {
     check((await chips()).length === 3, "three chips, then the rest: " + (await chips()).join("|"));
     check(await page.$eval("#edit1-filter_count", (e) => e.textContent) === "5", "the button counts them all");
     await page.click(".editr-chip-more");
-    await page.waitForSelector("#edit1-filters.show .editr-fd-apply", { visible: true });
+    await page.waitForSelector("#edit1-filters .editr-fp-add", { visible: true });
     await sleep(200);
-    check(await filterRowCount(page) === 5, "more opens the dialog with all of them");
-    await closeFilters(page, ".editr-fd-cancel");
+    check(await cardCount(page) === 5, "more opens the panel with all of them");
+    await closeFilters(page);
 
     // chips follow renames; a deleted column takes its filter, undo restores it
     await setFilters(page, [[f.extra, "gt", [5]]]);
     check((await shownIds(page)).join() === "5,6,7,8", "filter on a column to change");
     await L.renameColumn(page, f.extra, "more");
     check((await chips()).join() === "more > 5", "chip follows a rename: " + (await chips()).join());
+    await openFilters(page);
+    check(/more/.test(await page.$eval("#edit1-filters .editr-fp-col", (e) => e.textContent)), "and so does the panel");
+    await closeFilters(page);
     await L.headerMenu(page, f.extra, "Delete column");
     check((await shownIds(page)).length === 8 && !(await chips()).length, "deleted column takes its filter");
     await page.click("#edit1-undo");

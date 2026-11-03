@@ -286,19 +286,26 @@ shiny modals and with data that changes), these were fixed or added:
   settings name columns the new data does not have (they are ignored, see
   #37 above). Open also keeps the current data, and says why, if the new data
   has columns without a name or columns that hold tables.
-* The **Filter** button opens a dialog that lists every filter in one place,
-  for combinations that would be awkward to set column by column. Each row is
-  a column, a logic and a value, a column can have several rows, and the
-  dialog shows how many rows match before they are applied. It has the logics
-  of the 1.x dialog (equal, not equal, greater than, less than, between, not
-  between, contain, not contain and so on) plus matches regex, is missing and
-  is not missing, for numbers, text, dates and times. Filters set under the
-  column headers or from column summaries are listed too, and stay where they
-  are unless they are changed (a `!text` header filter is listed as
-  `not contain`). Dropdowns with names offer and show the names, and HTML
-  columns are searched as their text. `between` now includes its end points and
-  `contain` looks for plain text, ignoring case (1.x used regular
-  expressions; use `matches regex`). The `dataFilter` module is still exported.
+* The **Filters** button opens a panel beside the grid that lists every filter
+  in one place, for combinations that would be awkward to set column by
+  column. The grid follows the panel as it changes, with no Apply step. Each
+  filter is a card that suits its column: a histogram with a range to drag (or
+  type) for numbers, dates and date-times; the values with how many rows have
+  each, to tick, for columns with few values; `TRUE`/`FALSE`/missing buttons
+  for logicals; and words to look for in text. Rows can match all or any of
+  the filters, each card says how many rows it keeps and cards fold to a
+  sentence such as "is between 15 and 25". `Add filter` lists the columns with
+  a sparkline or the number of values, and can be searched. It has the logics
+  of the 1.x dialog in plain words (is any of, is none of, is above, is below,
+  is between, contains, ...) plus matches the pattern (regular expressions),
+  is missing and is not missing, for numbers, text, dates and times. Filters
+  set under the column headers or from column summaries are listed too, and
+  stay where they are unless they are changed (a `!text` header filter is
+  listed as `does not contain`). Dropdowns with names list and show the names,
+  HTML columns are searched as their text, and password values are never
+  listed. `between` now includes its end points and `contains` looks for plain
+  text, ignoring case (1.x used regular expressions; use `matches the
+  pattern`). The `dataFilter` module is still exported.
 * Show or hide columns from the Columns menu (or a column's right-click menu),
   replacing the column selection dialog inside `data_edit()` (the
   `dataSelect` module is still exported).

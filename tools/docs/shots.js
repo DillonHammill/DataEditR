@@ -545,37 +545,57 @@ const scenarios = {
     await page.click("#done");
     await sleep(1000);
   },
-  // the filter dialog with a few filters of different kinds
+  // the Filters panel with a few filters of different kinds
   async filter(page) {
     await sleep(1000);
     await page.click("#edit1-filter");
-    await page.waitForSelector("#edit1-filters.show .editr-fd-apply", { visible: true });
+    await page.waitForSelector("#edit1-filters .editr-fp-add", { visible: true });
     await sleep(300);
-    const fill = async (i, field, logic, values) => {
-      const row = (await page.$$("#edit1-filters .editr-fd-row"))[i];
-      await (await row.$$("select"))[0].select(field);
-      await (await row.$$("select"))[1].select(logic);
-      await sleep(100);
-      const tags = await row.$(".editr-fd-tags input");
-      for (const [j, v] of values.entries()) {
-        const box = tags || (await row.$$(".editr-fd-value input"))[j];
-        await box.focus();
-        await page.keyboard.type(v);
-        if (tags) await page.keyboard.press("Enter");
-      }
+    const add = async (field, logic) => {
+      await page.click("#edit1-filters .editr-fp-add");
+      await page.waitForSelector(`#edit1-filters .editr-fp-colopt[data-field="${field}"]`);
+      await page.$eval(`#edit1-filters .editr-fp-colopt[data-field="${field}"]`, (o) => o.click());
+      await sleep(200);
+      await page.select("#edit1-filters .editr-fp-open .editr-fp-logic", logic);
+      await sleep(200);
     };
-    await fill(0, "c2", "between", ["15", "25"]);
-    await page.click("#edit1-filters .editr-fd-add");
-    await fill(1, "c3", "not_equal", ["8"]);
-    await page.click("#edit1-filters .editr-fd-add");
-    await fill(2, "c1", "not_contain", ["merc", "fiat"]);
-    await page.click("#edit1-filters .editr-fd-add");
-    await fill(3, "c5", "gt", ["90"]);
+    // mpg between 15 and 25, typed in the boxes under the histogram
+    await add("c2", "between");
+    const ends = await page.$$("#edit1-filters .editr-fp-open .editr-fp-ends input");
+    await ends[0].type("15");
+    await ends[1].type("25");
     await sleep(400);
+    // cyl: tick 4 and 6
+    await add("c3", "equal");
+    await page.evaluate(() => [...document.querySelectorAll("#edit1-filters .editr-fp-open .editr-fp-opt")]
+      .filter((o) => ["4", "6"].includes(o.querySelector(".editr-fp-val").textContent))
+      .forEach((o) => o.querySelector("input").click()));
+    await sleep(300);
+    // the cars without "merc" in their name
+    await add("c1", "not_contain");
+    await page.type("#edit1-filters .editr-fp-open .editr-fp-words input", "merc");
+    await page.keyboard.press("Enter");
+    await sleep(300);
+    // show the range and the values, fold the words
+    for (const f of ["c1", "c2"]) {
+      await page.click(`#edit1-filters .editr-fp-card[data-field="${f}"] .editr-fp-name`);
+      await sleep(200);
+    }
     await page.evaluate(() => document.activeElement.blur());
-    await shot(page, "filter-dialog");
-    await page.click("#edit1-filters .editr-fd-apply");
-    await settle(page, 900);
+    await page.mouse.move(5, H - 5);
+    await page.evaluate(() => document.querySelector("#edit1-panel").scrollTo(0, 0));
+    await settle(page, 600);
+    await shot(page, "filter-panel");
+    // the values of cyl with their counts
+    for (const f of ["c2", "c3"]) {
+      await page.click(`#edit1-filters .editr-fp-card[data-field="${f}"] .editr-fp-name`);
+      await sleep(200);
+    }
+    await page.evaluate(() => document.activeElement.blur());
+    await page.mouse.move(5, H - 5);
+    await settle(page, 600);
+    const box =await (await page.$("#edit1-panel")).boundingBox();
+    await shot(page, "filter-values", { x: box.x, y: box.y, width: box.width, height: box.height });
   },
 
   async labelled(page) {
