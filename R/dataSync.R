@@ -20,8 +20,7 @@
 #'   sync button is not required. Set to \code{FALSE} by default for backward
 #'   compatibility.
 #'
-#' @importFrom shinyjs hidden show
-#' @importFrom shinyBS addTooltip
+#' @importFrom shinyjs hidden show useShinyjs
 #' @importFrom shiny actionButton icon moduleServer eventReactive is.reactive
 #'   reactive observe
 #'
@@ -30,7 +29,6 @@
 #' @examples
 #' if(interactive()){
 #'  library(shiny)
-#'  library(rhandsontable)
 #'  library(shinyjs)
 #'
 #'  ui <- fluidPage(
@@ -76,13 +74,14 @@ NULL
 #' @export
 dataSyncUI <- function(id) {
 
-  hidden(
-    actionButton(
-      NS(id, "sync"), 
-      label = NULL, 
-      icon = icon(
-        "glyphicon glyphicon-refresh",
-        lib = "glyphicon"
+  # shinyjs is included so apps do not need useShinyjs()
+  tagList(
+    useShinyjs(),
+    hidden(
+      actionButton(
+        NS(id, "sync"), 
+        label = NULL, 
+        icon = icon("rotate")
       )
     )
   )
@@ -109,11 +108,7 @@ dataSyncServer <- function(id,
     if (!hide && !auto) {
       show("sync")
       if(!is.null(hover_text)) {
-        addTooltip(
-          session = session,
-          id = ns("sync"),
-          title = hover_text
-        )
+        editr_tooltip("sync", hover_text)
       }
     }
     

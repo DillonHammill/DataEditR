@@ -1,0 +1,1394 @@
+/* DataEditR editor layout (toolbar, status bar, review panel, header) */
+
+.editr-app {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #FFFFFF;
+  color: #1F2933;
+  font-size: 13px;
+}
+
+.editr-app > .editr-editor {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.editr-editor {
+  display: flex;
+  flex-direction: column;
+  border-top: 0;
+  color: #1F2933;
+}
+
+/* header (data_edit) --------------------------------------------------- */
+
+.editr-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 16px;
+  background: #F6F7F9;
+  border-bottom: 1px solid #E3E6EA;
+}
+
+.editr-header-title {
+  flex: 1 1 200px;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.editr-header-title .editr-name {
+  font-size: 15px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.editr-pill {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #E9ECF0;
+  color: #52606D;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.editr-header .btn {
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 14px;
+  font-size: 13px;
+  line-height: 1;
+}
+
+/* Done: a compact split button with a visible divider before the menu */
+.editr-header #done {
+  padding: 0 16px;
+}
+
+.editr-header #done_toggle {
+  width: 28px;
+  padding: 0;
+  border-left: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+.editr-header #done_toggle::after {
+  margin: 0;
+}
+
+.editr-done-menu {
+  width: 340px;
+  padding: 6px;
+}
+
+.editr-done-menu .shiny-input-container,
+.editr-done-menu .form-group {
+  width: 100%;
+  margin-bottom: 0;
+}
+
+.editr-done-menu .shiny-options-group .form-check,
+.editr-done-menu .radio {
+  margin: 0;
+  padding: 0;
+  border-radius: 6px;
+}
+
+/* radio on the left of a two-line label (title + dimensions) */
+.editr-done-menu .radio label,
+.editr-done-menu .shiny-options-group .form-check label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  margin: 0;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.editr-done-menu .radio input[type="radio"],
+.editr-done-menu .shiny-options-group .form-check input[type="radio"] {
+  flex: none;
+  position: static;
+  float: none;
+  margin: 3px 0 0;
+}
+
+.editr-done-menu .shiny-options-group .form-check:has(input:checked),
+.editr-done-menu .radio:has(input:checked) {
+  background: #EFF5FF;
+}
+
+.editr-menu-label {
+  padding: 6px 10px 4px;
+  color: #52606D;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.editr-option-title {
+  display: block;
+  font-weight: 600;
+}
+
+.editr-option-sub {
+  display: block;
+  margin-top: 2px;
+  color: #52606D;
+}
+
+.editr-done-menu .checkbox,
+.editr-done-menu .form-check:not(.shiny-options-group .form-check) {
+  margin: 0;
+  padding: 8px 10px;
+}
+
+.editr-done-menu .checkbox label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  cursor: pointer;
+}
+
+.editr-done-menu .checkbox input[type="checkbox"] {
+  position: static;
+  margin: 0;
+}
+
+/* toolbar --------------------------------------------------------------- */
+
+.editr-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 8px 16px;
+  border-bottom: 1px solid #E3E6EA;
+  background: #FFFFFF;
+}
+
+.editr-tool,
+.editr-toolbar .btn.editr-tool {
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  border: 1px solid #D5D9DF;
+  border-radius: 6px;
+  background: #FFFFFF;
+  color: #1F2933;
+  font-size: 13px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.editr-tool:hover,
+.editr-toolbar .btn.editr-tool:hover {
+  background: #F6F7F9;
+  border-color: #C4CAD2;
+  color: #1F2933;
+}
+
+.editr-tool:focus-visible {
+  outline: 2px solid #1D4ED8;
+  outline-offset: 1px;
+}
+
+.editr-tool-icon,
+.editr-toolbar .btn.editr-tool.editr-tool-icon {
+  width: 36px;
+  padding: 0;
+  justify-content: center;
+}
+
+.editr-tool svg,
+.editr-panel svg,
+.editr-header svg {
+  flex: none;
+}
+
+.editr-tool[aria-pressed="true"],
+.editr-tool[aria-expanded="true"],
+.editr-toolbar .btn.editr-tool[aria-pressed="true"],
+.editr-toolbar .btn.editr-tool[aria-expanded="true"] {
+  border-color: #2563EB;
+  background: #DBEAFE;
+  color: #1E3A8A;
+}
+
+.editr-tool .editr-muted {
+  color: #52606D;
+}
+
+.editr-sep {
+  width: 1px;
+  height: 24px;
+  background: #E3E6EA;
+}
+
+.editr-spacer {
+  flex: 1 1 0;
+}
+
+.editr-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+/* long filters are cut short (the full text is shown on hover) */
+.editr-chips .editr-chip > span {
+  max-width: 15em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.editr-chips:empty {
+  display: none;
+}
+
+.editr-find {
+  flex: 1 1 160px;
+  min-width: 140px;
+  max-width: 300px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  border: 1px solid #D5D9DF;
+  border-radius: 6px;
+  background: #FFFFFF;
+  color: #52606D;
+  margin: 0;
+}
+
+.editr-find:focus-within {
+  border-color: #1D4ED8;
+  box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.15);
+}
+
+.editr-find input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  font: inherit;
+  color: #1F2933;
+  background: transparent;
+}
+
+.editr-find-count {
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.editr-find-count:empty + kbd {
+  display: inline-block;
+}
+
+.editr-find-count:not(:empty) + kbd {
+  display: none;
+}
+
+/* narrower editors: a smaller find box without the shortcut hint keeps the
+   toolbar on one line for longer */
+.editr-toolbar {
+  container-type: inline-size;
+  /* a container can be a stacking context (Chromium 123 is, 153 is not), and
+     so is the grid, which comes later: keep the toolbar's menus over the grid */
+  position: relative;
+  z-index: 5;
+}
+
+@container (max-width: 1060px) {
+  .editr-find {
+    flex-basis: 120px;
+    min-width: 110px;
+  }
+  .editr-find kbd,
+  .editr-find-count:empty + kbd {
+    display: none;
+  }
+  /* "Review changes" and "Code" keep their icons (and the count) */
+  .editr-tool-collapse .editr-tool-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .editr-toolbar .btn.editr-tool.editr-tool-collapse {
+    padding: 0 10px;
+  }
+}
+
+/* filter chips and the Rows button of database tables need the room in
+   wider editors too */
+@container (max-width: 1300px) {
+  .editr-toolbar:has(.editr-chips:not(:empty)) .editr-tool-collapse .editr-tool-label,
+  .editr-toolbar:has(.editr-rows-btn:not([hidden])) .editr-tool-collapse .editr-tool-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .editr-toolbar:has(.editr-chips:not(:empty)) .btn.editr-tool.editr-tool-collapse,
+  .editr-toolbar:has(.editr-rows-btn:not([hidden])) .btn.editr-tool.editr-tool-collapse {
+    padding: 0 10px;
+  }
+}
+
+.editr-kbd,
+.editr-find kbd {
+  padding: 1px 6px;
+  border: 1px solid #D5D9DF;
+  border-radius: 4px;
+  background: #FFFFFF;
+  color: #52606D;
+  font-family: inherit;
+  font-size: 11px;
+  box-shadow: none;
+}
+
+.editr-count {
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #1D4ED8;
+  color: #FFFFFF;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.editr-count:empty {
+  display: none;
+}
+
+.editr-toolbar .dropdown-menu {
+  font-size: 13px;
+}
+
+.editr-open-menu {
+  width: 380px;
+  padding: 14px;
+}
+
+.editr-open-menu .form-group,
+.editr-open-menu .shiny-input-container {
+  width: 100%;
+  margin-bottom: 0;
+}
+
+.editr-open-menu hr {
+  margin: 12px 0;
+}
+
+.editr-open-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.editr-open-row .shiny-input-container {
+  flex: 1;
+}
+
+/* buttons as tall as the inputs next to them, with their text centred
+   (themes with large button padding pushed the text down) */
+.editr-open-row .btn {
+  height: calc(1.5em + 0.75rem + 2px);
+  margin-bottom: 0;
+  padding: 0 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.2;
+}
+
+.editr-open-menu .input-group > .input-group-btn {
+  display: flex;
+  margin-bottom: 0;
+}
+
+.editr-open-menu .btn-file {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 16px;
+  line-height: 1.2;
+}
+
+.editr-open-dims .shiny-input-container {
+  flex: 0 0 72px;
+}
+
+/* filter dialog ------------------------------------------------------------- */
+
+.editr-fd-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.5fr) 31px;
+  gap: 8px;
+  align-items: start;
+  padding: 4px 0;
+}
+
+.editr-fd-value {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.editr-fd-value > input {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.editr-fd-value > span {
+  color: #52606D;
+  font-size: 12px;
+}
+
+.editr-fd-tags {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 31px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border: 1px solid #D5D9DF;
+  border-radius: 4px;
+  background: #FFFFFF;
+  cursor: text;
+}
+
+.editr-fd-tags:focus-within {
+  border-color: #1D4ED8;
+  box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.15);
+}
+
+.editr-fd-tags input {
+  flex: 1 1 70px;
+  min-width: 70px;
+  height: 24px;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: #1F2933;
+  font-size: 12px;
+}
+
+.editr-fd-tags .editr-chip {
+  height: 24px;
+  max-width: 100%;
+  padding-left: 8px;
+  font-size: 12px;
+}
+
+.editr-fd-tags .editr-chip > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.editr-fd-remove {
+  width: 31px;
+  height: 31px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  color: #52606D;
+}
+
+.editr-fd-remove:hover {
+  background: #F6F7F9;
+  color: #1F2933;
+}
+
+.editr-fd-msg {
+  grid-column: 3 / -1;
+  color: #B42318;
+  font-size: 12px;
+}
+
+.editr-fd-msg:empty {
+  display: none;
+}
+
+.editr-filter-dialog .modal-body {
+  padding-top: 8px;
+}
+
+.editr-filter-dialog .modal-footer {
+  justify-content: flex-start;
+}
+
+.editr-fd-count {
+  flex: 1 1 200px;
+  min-width: 0;
+  color: #52606D;
+  font-size: 12px;
+  text-align: right;
+}
+
+@media (max-width: 640px) {
+  .editr-fd-row {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 31px;
+  }
+  .editr-fd-value {
+    grid-column: 1 / 3;
+    grid-row: 2;
+  }
+  .editr-fd-msg {
+    grid-column: 1 / -1;
+  }
+  .editr-fd-count {
+    flex-basis: 100%;
+    order: -1;
+    text-align: left;
+  }
+}
+
+/* body: grid + review panel ------------------------------------------------ */
+
+.editr-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+}
+
+.editr-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.editr-main > .html-widget {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.editr-panel {
+  display: none;
+  flex: 0 0 380px;
+  max-width: 45%;
+  min-height: 0;
+  overflow-y: auto;
+  border-left: 1px solid #E3E6EA;
+  background: #FBFBFC;
+}
+
+.editr-panel[data-open] {
+  display: flex;
+  flex-direction: column;
+}
+
+.editr-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 12px 8px;
+  border-bottom: 1px solid #E3E6EA;
+}
+
+.editr-tab {
+  height: 32px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #52606D;
+  font: inherit;
+  font-weight: 500;
+}
+
+.editr-tab[aria-selected="true"] {
+  background: #E9ECF0;
+  color: #1F2933;
+}
+
+.editr-pane {
+  padding: 12px;
+}
+
+.editr-pane-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.editr-pane-head h2 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.editr-link {
+  border: 0;
+  background: transparent;
+  color: #1D4ED8;
+  font: inherit;
+  font-weight: 500;
+  padding: 4px 6px;
+  border-radius: 6px;
+}
+
+.editr-link:hover {
+  background: #EFF5FF;
+}
+
+.editr-changes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.editr-change {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid #E3E6EA;
+  border-radius: 8px;
+  background: #FFFFFF;
+}
+
+.editr-tag {
+  flex: none;
+  width: 64px;
+  padding: 3px 0;
+  border-radius: 4px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.editr-tag-edited { background: #DBEAFE; color: #1E3A8A; }
+.editr-tag-added { background: #DCFCE7; color: #14532D; }
+.editr-tag-removed { background: #FFEDD5; color: #7C2D12; }
+.editr-tag-renamed { background: #EDE9FE; color: #4C1D95; }
+
+.editr-change-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.editr-change-title {
+  display: block;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #1F2933;
+  font: inherit;
+  font-weight: 500;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+button.editr-change-title:hover {
+  color: #1D4ED8;
+  text-decoration: underline;
+}
+
+.editr-change-detail {
+  margin-top: 2px;
+  color: #52606D;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.editr-change .btn {
+  height: 30px;
+  font-size: 12px;
+}
+
+.editr-history {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.editr-step {
+  padding: 10px 12px;
+  border: 1px solid #E3E6EA;
+  border-radius: 8px;
+  background: #FFFFFF;
+}
+
+.editr-step-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.editr-step-title {
+  flex: 1;
+  min-width: 0;
+  color: #1F2933;
+  font-weight: 500;
+}
+
+.editr-step-time {
+  flex: none;
+  color: #52606D;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.editr-step .editr-change-detail {
+  margin: 4px 0 0 74px;
+  font-size: 12px;
+}
+
+.editr-step-note {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 4px 0 0 74px;
+  min-height: 26px;
+}
+
+.editr-note-text {
+  flex: 1;
+  min-width: 0;
+  color: #1F2933;
+  font-style: italic;
+  overflow-wrap: anywhere;
+}
+
+.editr-note-btn {
+  flex: none;
+  margin-left: -6px;
+  font-size: 12px;
+}
+
+.editr-note-text + .editr-note-btn {
+  margin-left: 0;
+}
+
+.editr-note-input {
+  flex: 1;
+  height: 28px;
+  font-size: 13px;
+}
+
+.editr-empty {
+  padding: 24px 8px;
+  color: #52606D;
+  text-align: center;
+}
+
+/* HISTORY - EARLIER SESSIONS (data_edit(log = ) or dataEditServer(history = )) */
+.editr-empty.editr-session-none {
+  padding: 4px 0 8px;
+  text-align: left;
+}
+
+.editr-sessions-head {
+  margin-top: 18px;
+}
+
+.editr-sessions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.editr-session > summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  padding: 7px 10px 7px 28px;
+  position: relative;
+  border-radius: 8px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.editr-session > summary::-webkit-details-marker {
+  display: none;
+}
+
+.editr-session > summary::before {
+  content: "";
+  position: absolute;
+  left: 11px;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  margin-top: -4px;
+  border-right: 1.5px solid #52606D;
+  border-bottom: 1.5px solid #52606D;
+  transform: rotate(-45deg);
+  transition: transform 0.15s;
+}
+
+.editr-session[open] > summary::before {
+  transform: rotate(45deg);
+}
+
+.editr-session > summary:hover {
+  background: #F1F3F5;
+}
+
+.editr-session > summary:focus-visible {
+  outline: 2px solid #2563EB;
+  outline-offset: -2px;
+}
+
+.editr-session-when {
+  color: #1F2933;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.editr-session-who {
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: #E9ECF0;
+  color: #3E4C59;
+  font-size: 12px;
+}
+
+.editr-session > summary .editr-muted {
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.editr-session > .editr-history {
+  margin: 4px 0 10px;
+}
+
+.editr-code {
+  margin: 0;
+  padding: 14px;
+  overflow-x: auto;
+  border-radius: 8px;
+  background: #0F172A;
+  color: #E2E8F0;
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  /* long verbs wrap (with a hanging indent) rather than scroll */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* status bar ---------------------------------------------------------------- */
+
+.editr-statusbar {
+  display: flex;
+  align-items: center;
+  gap: 6px 20px;
+  flex-wrap: wrap;
+  min-height: 32px;
+  padding: 6px 16px;
+  background: #F6F7F9;
+  border-top: 1px solid #E3E6EA;
+  color: #52606D;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.editr-statusbar .editr-sep {
+  height: 14px;
+  background: #D5D9DF;
+}
+
+.editr-statusbar > span:empty:not(.editr-spacer),
+.editr-statusbar > span:empty + .editr-sep {
+  display: none;
+}
+
+.editr-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: #EAF1FD;
+  box-shadow: inset 0 0 0 1px #2563EB;
+}
+
+.editr-changes-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.editr-changes-status:has(> .editr-status-text:empty) {
+  display: none;
+}
+
+/* shortcuts --------------------------------------------------------------- */
+
+.editr-keys {
+  margin: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 9px 16px;
+  align-items: center;
+}
+
+.editr-keys dd {
+  margin: 0;
+  display: flex;
+  gap: 4px;
+  justify-content: flex-end;
+}
+
+.editr-keys kbd {
+  min-width: 22px;
+  padding: 2px 7px;
+  border: 1px solid #D5D9DF;
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  background: #F6F7F9;
+  color: #1F2933;
+  font-family: inherit;
+  font-size: 12px;
+  text-align: center;
+  box-shadow: none;
+}
+
+.editr-visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* column actions ----------------------------------------------------------- */
+
+.editr-step-code {
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  font-weight: 500;
+  color: #1F2933;
+  overflow-wrap: anywhere;
+}
+
+.editr-action .editr-action-row {
+  display: flex;
+  gap: 12px;
+}
+
+.editr-action .editr-action-row > .form-group {
+  flex: 1;
+}
+
+.editr-action textarea {
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+}
+
+.editr-recode {
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.editr-recode td {
+  vertical-align: middle;
+}
+
+.editr-recode-from {
+  max-width: 220px;
+  overflow-wrap: anywhere;
+}
+
+.editr-recode-n {
+  width: 56px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.editr-preview {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid #E3E6EA;
+  border-radius: 8px;
+  background: #FBFBFC;
+  font-size: 13px;
+}
+
+.editr-preview-error {
+  border-color: #FECACA;
+  background: #FEF2F2;
+  color: #991B1B;
+}
+
+.editr-preview-summary {
+  font-weight: 500;
+}
+
+.editr-preview-warn {
+  color: #9A3412;
+  font-weight: 400;
+}
+
+.editr-preview-table {
+  margin: 8px 0 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.editr-preview-table td {
+  padding: 2px 8px 2px 0;
+  border: 0;
+  background: transparent;
+}
+
+.editr-preview-code code {
+  display: block;
+  margin-top: 6px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: #0F172A;
+  color: #E2E8F0;
+  font-size: 12px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* validation rules ---------------------------------------------------------- */
+
+.editr-problems-link {
+  color: #B91C1C;
+  font-weight: 600;
+}
+
+.editr-problems-link:empty {
+  display: none;
+}
+
+.editr-pill-bad {
+  background: #FEE2E2;
+  color: #991B1B;
+}
+
+.editr-rules {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.editr-rule {
+  padding: 10px 12px;
+  border: 1px solid #E3E6EA;
+  border-radius: 8px;
+  background: #FFFFFF;
+}
+
+.editr-rule-bad {
+  border-color: #FECACA;
+}
+
+.editr-rule-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.editr-rule-icon {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.editr-rule-ok .editr-rule-icon { background: #DCFCE7; color: #14532D; }
+.editr-rule-bad .editr-rule-icon { background: #FEE2E2; color: #991B1B; }
+.editr-rule-error .editr-rule-icon { background: #FFEDD5; color: #7C2D12; }
+
+.editr-rule-text {
+  flex: 1;
+  min-width: 0;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.editr-rule-count {
+  flex: none;
+  color: #52606D;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.editr-rule-remove {
+  flex: none;
+  font-size: 12px;
+}
+
+.editr-rule-rows {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 6px 0 0 28px;
+  font-size: 12px;
+}
+
+.editr-rule-row {
+  padding: 1px 8px;
+  border: 1px solid #FECACA;
+  border-radius: 999px;
+  background: #FEF2F2;
+  color: #991B1B;
+  font: inherit;
+}
+
+.editr-rule-row:hover {
+  background: #FEE2E2;
+}
+
+.editr-rules-code ul {
+  margin: 4px 0 10px;
+  padding-left: 18px;
+}
+
+/* record form -------------------------------------------------------------- */
+
+.editr-form-head {
+  flex-wrap: wrap;
+}
+
+.editr-form-head .btn {
+  height: 28px;
+  min-width: 30px;
+  padding: 0 8px;
+  font-size: 13px;
+}
+
+.editr-form-title {
+  max-width: 55%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.editr-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.editr-form-field label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 2px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #52606D;
+}
+
+.editr-form-field .editr-badge {
+  font-size: 10px;
+}
+
+/* colour fields: the text box with the colour picker next to it */
+.editr-form-field:has(> .editr-form-colour) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.editr-form-field:has(> .editr-form-colour) > label,
+.editr-form-field:has(> .editr-form-colour) > .editr-form-msg,
+.editr-form-field:has(> .editr-form-colour) > .editr-form-comment {
+  grid-column: 1 / -1;
+}
+
+.editr-form-field.editr-form-changed .editr-form-input {
+  background-color: #EFF5FF;
+}
+
+.editr-form-field.editr-form-bad .editr-form-input {
+  border-color: #DC2626;
+}
+
+.editr-form-msg {
+  color: #B91C1C;
+  font-size: 12px;
+  white-space: pre-line;
+}
+
+.editr-form-msg:empty {
+  display: none;
+}
+
+.editr-panel-head {
+  gap: 0;
+  padding-left: 8px;
+  padding-right: 6px;
+}
+
+.editr-tab {
+  padding: 0 8px;
+  font-size: 13px;
+}
+
+/* record form: the variable label next to the column name */
+.editr-form-varlabel {
+  margin-left: 6px;
+  color: #7B8794;
+  font-weight: 400;
+}
+
+/* database tables: the Rows button (filtered rows are highlighted) and the
+   Load rows dialog */
+.editr-toolbar .btn.editr-tool.editr-tool-on {
+  border-color: #2563EB;
+  color: #1E3A8A;
+}
+
+.editr-load-row {
+  align-items: end;
+}
+
+.editr-load-row .form-group {
+  margin-bottom: 0;
+}
+
+/* record form: the comment of a field */
+.editr-form-comment {
+  margin-top: 2px;
+  color: #92400E;
+  font-size: 12px;
+  white-space: pre-wrap;
+}
+
+/* hidden parts of the editor stay hidden in apps on Bootstrap 3 (shiny's
+   default), where button and flex styles would show them */
+.editr-editor [hidden] {
+  display: none !important;
+}
+
+/* conditional formatting dialog (R/formats.R) ------------------------------ */
+
+.editr-fmt-swatch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  height: 22px;
+  padding: 0 6px;
+  margin-right: 8px;
+  border: 1px solid var(--editr-border, #E3E6EA);
+  border-radius: 4px;
+  background: #FFFFFF;
+  font-size: 12px;
+  vertical-align: middle;
+}
+
+.editr-fmt-gradient {
+  min-width: 64px;
+}
+
+.editr-formats .shiny-options-group .radio label,
+.editr-formats .shiny-options-group .form-check-label {
+  display: inline-flex;
+  align-items: center;
+}
+
+.editr-formats .shiny-options-group input[type="radio"] {
+  flex: none;
+}
+
+/* styles and scales in two columns */
+.editr-formats .editr-fmt-choices .shiny-options-group {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 12px;
+}
+
+.editr-formats .editr-fmt-choices .shiny-options-group > .radio,
+.editr-formats .editr-fmt-choices .shiny-options-group > .form-check {
+  margin-top: 0;
+  margin-bottom: 4px;
+}
+
+.editr-formats .modal-body hr,
+.editr-formats hr {
+  margin: 12px 0;
+}
+
+.editr-fmt-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.editr-fmt-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--editr-border, #E3E6EA);
+}
+
+.editr-fmt-item:last-child {
+  border-bottom: 0;
+}
+
+.editr-fmt-label {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.editr-fmt-code {
+  display: block;
+  margin-top: 2px;
+  font-size: 11.5px;
+  color: var(--editr-muted, #52606D);
+}
+
+.editr-fmt-error {
+  color: #B91C1C;
+}
+
+.editr-fmt-remove {
+  padding: 0 4px;
+  flex: none;
+}

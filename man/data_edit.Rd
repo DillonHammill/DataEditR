@@ -24,7 +24,7 @@ data_edit(
   viewer = "dialog",
   viewer_height = 800,
   viewer_width = 1200,
-  theme = "yeti",
+  theme = NULL,
   read_fun = "read.csv",
   read_args = NULL,
   write_fun = "write.csv",
@@ -33,16 +33,24 @@ data_edit(
   hide = FALSE,
   code = FALSE,
   cancel,
-  track = NULL,
+  track = TRUE,
+  log = NULL,
+  autosave = TRUE,
+  col_actions = TRUE,
+  rules = NULL,
+  formats = NULL,
+  col_summary = TRUE,
+  row_names = TRUE,
+  col_widths = NULL,
   ...
 )
 }
 \arguments{
 \item{x}{a matrix, data.frame, data.table or the name of a csv file to edit.
-Tibbles are also supported but will be coerced to data.frames. An empty
-table can be created by specifying the dimensions in a vector of the form
-\code{c(nrow, ncol)} or the names of the columns to include in the
-template.}
+Tibbles are also supported. An empty table can be created by specifying
+the dimensions in a vector of the form \code{c(nrow, ncol)} or the names
+of the columns to include in the template. Database tables can be edited
+by supplying a \code{dbplyr} lazy table or a \code{\link{db_table}()}.}
 
 \item{col_bind}{additional columns to add to the data prior to loading into
 editor, can be either an array containing the new data, a vector containing
@@ -52,23 +60,59 @@ for each new column.}
 \item{col_edit}{logical indicating whether columns can be added or removed,
 set to TRUE by default.}
 
-\item{col_options}{named list containing the options for columns that use
-dropdown menus, dates, checkboxes or passwords.}
+\item{col_options}{a list named by column with the input to use for each
+column:
+\itemize{
+\item \code{c(TRUE, FALSE)} or \code{"checkbox"}: checkboxes;
+\item a vector of values, e.g. \code{c("A", "B", "C")}: a dropdown menu.
+Give the values names to show the names instead, as for
+\code{shiny::selectInput()}:
+\code{list("New South Wales" = "NSW", "Victoria" = "VIC")};
+\item \code{"dropdown"}: a dropdown menu of the values in the column
+(or the levels of a factor);
+\item \code{"date"} or \code{"datetime"}: a date or date-time picker
+(the column is returned as \code{Date} or \code{POSIXct});
+\item \code{"time"}: a time picker (\code{"HH:MM"} text);
+\item \code{"textarea"}: text over several lines;
+\item \code{"password"}: hidden text;
+\item \code{"url"}: web addresses with a button to open them;
+\item \code{"html"}: cells shown as HTML (links, line breaks, bold,
+images, ...) without scripts or styles; double-click to edit the HTML;
+\item \code{"colour"} (or \code{"color"}): colours (R colour names such
+as \code{"grey50"} or hex codes such as \code{"#1D4ED8"}) shown with a
+swatch and edited with a colour picker. Set the colours the picker
+offers with \code{list(type = "colour", palette = c("red", "#1D4ED8"))};
+any colour can still be typed or picked;
+\item \code{c(min = 0, max = 10, step = 1)} (any of the three): numbers
+within limits, in steps of \code{step} counted from \code{min};
+\item \code{"integer"}: whole numbers, returned as integers (with limits:
+\code{list(type = "integer", min = 0, max = 10)});
+\item \code{"slider"}: a slider and bar for numbers from 0 to 100;
+\item \code{"rating"}: a rating from 0 to 5 stars.
+}
+Set the limits of a slider with
+\code{c(type = "slider", min = 0, max = 1, step = 0.05)} and the number
+of stars of a rating with \code{c(type = "rating", stars = 10)} (a
+\code{list()} works too). Values outside the limits or off the steps are
+marked in the editor and cannot be entered. Columns that are not in the
+data are ignored (with a message), here and in \code{col_readonly},
+\code{col_hide} and \code{col_widths}, so the same settings can be used
+for different data.}
 
 \item{col_stretch}{logical indicating whether columns should be stretched to
 fill the full width of the display, set to FALSE by default.}
 
 \item{col_factor}{logical indicating whether character columns should be
 converted to factors prior to returning the edited data, set to FALSE by
-default.}
+default. Factor columns in the data are always returned as factors with
+their levels; new values become new levels after the existing ones.}
 
 \item{col_names}{logical indicating whether column names can be edited or a
 vector of column names that cannot be edited, set to TRUE by default to
 allow editing of column names.}
 
-\item{col_readonly}{names of columns that cannot be edited. Users will be
-able to edit values but these will be reverted to the original values.
-Column names for these column cannot be edited either.}
+\item{col_readonly}{names of columns that cannot be edited. Values and
+names of these columns are locked in the grid.}
 
 \item{col_hide}{names of columns to hide from the editor. Hidden columns will
 not be visible or editable but will be retained in the returned data.}
@@ -83,10 +127,11 @@ to TRUE by default.}
 
 \item{save_as}{name of a csv file to which the edited data should be saved.}
 
-\item{title}{optional title to include above the data editor.}
+\item{title}{optional title to show in the header, set to the name of the
+data by default.}
 
-\item{logo}{optional package logo to include in title above the data editor,
-must be supplied as path to logo png.}
+\item{logo}{optional logo to include next to the title, supplied as the path
+or URL of an image. No logo is shown by default.}
 
 \item{logo_size}{width of the logo in pixels, set to 30 pixels by default.}
 
@@ -97,7 +142,10 @@ default.}
 \item{viewer}{can be either \code{"dialog"}, \code{"browser"} or
 \code{"pane"} to open the application in a dialog box, browser or RStudio
 viewer pane. First letter abbreviations are allowed, set to \code{"dialog"}
-by default.}
+by default. A function accepting the application URL can also be supplied.
+Outside RStudio the dialog opens in the browser. If code that runs after
+\code{data_edit()} inside a function of yours stops when the RStudio
+dialog closes, use \code{viewer = "pane"} or \code{"browser"} there.}
 
 \item{viewer_height}{numeric to control the height of the viewer in pixels
 when \code{viewer} is set to \code{"dialog"}, set 800 by default.}
@@ -105,10 +153,17 @@ when \code{viewer} is set to \code{"dialog"}, set 800 by default.}
 \item{viewer_width}{numeric to control the width of the viewer in pixels when
 \code{viewer} is set to \code{"dialog"}, set to 1200 by default.}
 
-\item{theme}{valid shinytheme name, set to "yeti" by default.}
+\item{theme}{a Bootstrap 5 Bootswatch theme name (e.g. \code{"yeti"}) or a
+\code{bslib::bs_theme()} object. Set to \code{NULL} by default to use the
+DataEditR theme.}
 
 \item{read_fun}{name of the function to use to read in the data when \code{x}
-is the name of a file, set to \code{read.csv} by default.}
+is the name of a file, set to \code{read.csv} by default. SPSS
+(\code{.sav}, \code{.por}), Stata (\code{.dta}) and SAS
+(\code{.sas7bdat}, \code{.xpt}) files are read with the haven package
+unless another function is given (see the \emph{Labelled data}
+section). Functions of other packages can be named with
+\code{"pkg::fun"}, e.g. \code{read_fun = "readxl::read_excel"}.}
 
 \item{read_args}{a named list of additional arguments to pass to
 \code{read_fun}.}
@@ -116,7 +171,13 @@ is the name of a file, set to \code{read.csv} by default.}
 \item{write_fun}{name of the function to use to write the edited version of
 \code{x} to a file, set to \code{write.csv} by default. Only requirement is
 that the first argument accepts the edited data and the second argument
-accepts the file name supplied to \code{save_as}.}
+accepts the file name supplied to \code{save_as}. When \code{save_as}
+ends in \code{.sav}, \code{.dta} or \code{.xpt} the data is written with
+haven, keeping variable and value labels. Data without row names (only
+row numbers) is written by \code{write.csv()} without them, unless
+\code{write_args} sets \code{row.names}. \code{"pkg::fun"} names a
+function of another package, e.g. \code{"googlesheets4::write_sheet"},
+whose \code{save_as} need not be a file name.}
 
 \item{write_args}{a named list of additional arguments to pass to
 \code{write_fun}.}
@@ -124,38 +185,206 @@ accepts the file name supplied to \code{save_as}.}
 \item{quiet}{logical indicating whether messages should be suppressed, set to
 FALSE by default.}
 
-\item{hide}{logical indicating whether the \code{dataInput} and
-\code{dataOutput} modules should be visible to the user within the
-application. If \code{hide = FALSE} and \code{save_as} is specified, the
-edited data will be written to file after the application is closed.}
+\item{hide}{logical indicating whether the \emph{Open} and \emph{Export}
+menus and the \emph{Done} options should be hidden. When \code{save_as}
+is specified the edited data is written to file when \emph{Done} is
+pressed.}
 
 \item{code}{logical indicating whether tidyverse code required to replicate
 the data edits should be printed to the console, set to \code{FALSE} by
 default. Alternatively, users can supply the name of an R script to write
-the code to. The generated code uses \code{dplyr} verbs such as
-\code{rename()}, \code{select()}, \code{mutate()}, \code{slice()}, and
-\code{tibble::add_row()} to replicate column renames, column
-additions/removals, cell value changes, and row additions/removals.}
+the code to. For data frames the generated code uses \code{dplyr} verbs
+such as \code{rename()}, \code{select()}, \code{mutate()}, \code{slice()},
+and \code{tibble::add_row()}; for database tables it uses
+\code{rows_update()}, \code{rows_append()} and \code{rows_delete()}.}
 
 \item{cancel}{optional value to return when the user hits the \code{cancel}
 button, set to the supplied data by default.}
 
-\item{track}{can be set to \code{TRUE} to highlight cells that have been
-edited or added to the original data with a default blue border, or a valid
-CSS color (e.g. \code{"#FF0000"} or \code{"red"}) to use a custom border
-color. Set to \code{NULL} by default to disable highlighting.}
+\item{track}{\code{TRUE} (the default) highlights cells that have been
+edited or added with a blue tint and border. Give a CSS colour (e.g.
+\code{"#DC2626"} or \code{"red"}) to use another colour, or \code{FALSE}
+to turn the highlighting off.}
+
+\item{log}{name of a csv file to which the change log (who changed what
+and when, see \code{\link{dataEditLog}()}) is added when \emph{Done} is
+pressed, with a first column \code{data} naming the data that was
+edited. The file is created if it does not exist, so the same file can
+keep the history of many editing sessions, and the \emph{History} tab
+lists the earlier sessions of the same data kept in it. A function can be
+supplied instead; it is called with the log as a data frame (for example
+to write it to a database). Set to \code{NULL} by default to not keep the
+log.}
+
+\item{autosave}{logical indicating whether changes should be saved as a
+draft while editing, set to \code{TRUE} by default. If the editor is
+closed without pressing \emph{Done} or \emph{Cancel} (the window was
+closed, R crashed, ...), opening the same data again offers to restore
+the changes. See the \emph{Drafts} section.}
+
+\item{col_actions}{logical indicating whether the column menu offers
+actions that change a whole column: formulas (e.g. a new column
+\code{kpl = mpg * 0.425}), find and replace, recoding values, changing
+the type and sorting the rows. Each action is shown in the generated code
+as one \code{dplyr} verb. Set to \code{TRUE} by default.}
+
+\item{rules}{a list of rules the data should follow, each a one-sided
+formula that is \code{TRUE} for valid rows and named with the message
+to show, e.g. \code{list("Age is between 0 and 120" = ~ age >= 0 & age <=
+  120, "End is after the start" = ~ end >= start)}. Cells that break a
+rule are marked in the grid and listed in the \emph{Problems} tab, and
+\emph{Done} asks before returning data with problems. Rules can also be
+added from a column's menu (\emph{Rules...}). See the \emph{Validation}
+section.}
+
+\item{formats}{conditional formats: how to colour cells, without
+changing the data. A list of formats, each a one-sided formula or a list:
+\itemize{
+\item \code{list(~ mpg > 25, fill = "#DCFCE7", color = "#166534",
+  bold = TRUE)}: cells where the formula is \code{TRUE} get the fill, text
+colour and/or bold text (a formula alone gets a yellow fill). The cells
+of the columns the formula uses are coloured; give \code{columns} to
+colour other columns, or \code{columns = "all"} for whole rows;
+\item \code{list(scale = c("white", "#EF4444"), columns = "hp")}: a
+colour scale shading numbers from the lowest to the highest value (two
+colours, or three for low, middle and high). \code{limits = c(0, 300)}
+fixes the values of the end colours and \code{mid} the middle one.
+}
+Names of the list are labels. When several formats colour a cell, the
+later one wins. Formats can also be added to a column from its menu
+(\emph{Conditional formatting...}).}
+
+\item{col_summary}{logical indicating whether a summary of each column is
+shown under its header: a histogram of numbers and dates or the most
+common values, the share of missing values and the number of distinct
+values. Click a bar to show only those rows, the missing share to show
+the rows where the value is missing, or the number of values for the
+details (smallest, largest, mean, ...). Set to \code{TRUE} by default;
+the toolbar button hides the summaries.}
+
+\item{row_names}{logical indicating whether the row names of the data are
+shown in the editor, set to \code{TRUE} by default. When \code{FALSE} the
+row names are kept out of sight but still returned; rows added in the
+editor are named by their row number.}
+
+\item{col_widths}{widths of the columns in pixels: one number for every
+column, or numbers named by column, e.g. \code{c(notes = 400, id = 60)}.
+Other columns are as wide as their values, up to 320 pixels; drag the
+edge of a column header to resize it.}
 
 \item{...}{not in use.}
 }
 \value{
-the edited data as a matrix or data.frame.
+the edited data as a matrix or data.frame. For database tables the
+edited rows are returned as a data.frame after the changes have been
+committed.
 }
 \description{
-\code{data_edit} is a shiny application built on \code{rhandsontable} that is
-designed to make it easy to interactively view, enter or edit data without
-any coding. \code{data_edit} is also a wrapper for any reading or writing
-function to make it easy to interactively update data saved to file.
+\code{data_edit} is a shiny application built on the MIT-licensed
+'Tabulator' JavaScript library that is designed to make it easy to
+interactively view, enter or edit data without any coding. \code{data_edit}
+is also a wrapper for any reading or writing function to make it easy to
+interactively update data saved to file, and can edit tables stored in a
+database.
 }
+\section{Editing}{
+
+Double-click a cell to edit it. Click and drag to select a range of cells,
+then copy (Ctrl+C), paste (Ctrl+V), clear (Delete) or fill down (Ctrl+D).
+Right click a row to insert or delete rows, and right click a column header
+to insert, rename, hide or delete columns. Double-click a column's name to
+rename it. Ctrl+Z and Ctrl+Y undo and redo changes; press ? for the full
+list of shortcuts.
+}
+
+\section{Layout}{
+
+The toolbar opens other data (\emph{Open}), shows or hides column
+summaries and columns, filters rows (\emph{Filter}, a dialog listing every
+filter), lists active filters, searches the data (Ctrl+F),
+and opens the side panel. The panel shows the selected row as a form
+(\emph{Record}), lists every change with a button to revert it, the
+history of changes, broken rules and the code that reproduces the edits.
+Under each column name is a summary of the column: click its bars to filter
+the rows, or type in the boxes under it. The status bar shows how many rows
+and columns are on screen and summarises the selected cells. The menu next
+to \emph{Done} chooses whether all data or only what is on screen is
+returned.
+}
+
+\section{Labelled data}{
+
+Data read from SPSS, Stata or SAS files with haven keeps its variable
+labels (shown when hovering over a column name), value labels and SPSS
+user-defined missing values. Cells show each value with its label
+(\code{1 Male}), the cell editor offers the labels, and a label typed or
+pasted into a cell is stored as its value. \emph{Labels...} in the column
+menu changes the variable label and value labels, and \emph{Change type}
+turns labelled values into factors or text with their labels. The
+returned data and the generated code keep the labels.
+}
+
+\section{Databases}{
+
+Supply a \code{dbplyr} lazy table (e.g. \code{dplyr::tbl(con, "artists")})
+or a \code{\link{db_table}()} to edit a database table. Rows are matched by
+primary key, changes are staged until you press \emph{Done}, and you are
+asked to confirm before anything is written. Writes happen in a single
+transaction and are rolled back if any row was changed by someone else in
+the meantime. Adding, removing and renaming columns is disabled for
+database tables.
+}
+
+\section{Change log and notes}{
+
+Every change is recorded with the time and the user name. The
+\emph{History} tab of the review panel lists the changes step by step and
+each step can be given a note, for example to say why a value was
+corrected. Supply \code{log} to keep this record in a file.
+}
+
+\section{Drafts}{
+
+With \code{autosave = TRUE} the changes are saved as a draft a moment after
+each edit. Drafts are kept in \code{tools::R_user_dir("DataEditR",
+"data")}; set \code{options(DataEditR.drafts = )} to use another folder.
+A draft is removed when \emph{Done} or \emph{Cancel} is pressed, when it
+is restored or discarded, and after 30 days. Pressing \emph{Cancel} asks
+for confirmation before changes are discarded.
+}
+
+\section{Validation}{
+
+Rules are checked after every change. Missing values pass a rule unless
+the rule says otherwise, so \code{~ end >= start} only checks rows where
+both are filled in; add \code{"Start is required" = ~ !is.na(start)} to
+require a value. In the editor, a column's menu (\emph{Rules...}) makes it
+required or unique, sets limits or a pattern, or adds a formula.
+}
+
+\section{Column actions}{
+
+A column's menu (or right-clicking its header) has actions that change the
+whole column: \emph{Formula...} (a new column or new values from an R
+expression, e.g. \code{round(mpg * 0.425, 1)}), \emph{Find and
+replace...}, \emph{Recode values...}, \emph{Change type} and sorting. Each
+shows a preview and is recorded as one \code{dplyr} verb, so the generated
+code reads \code{mutate(kpl = round(mpg * 0.425, 1), .after = mpg)}
+rather than listing every value. Formulas can use column names and common
+functions (arithmetic, \code{round()}, \code{ifelse()}, \code{paste()},
+\code{case_when()}, \code{as.Date()}, ...), but not other code.
+}
+
+\section{RStudio add-in}{
+
+\code{data_edit()} is also available from the RStudio \emph{Addins} menu
+as \emph{Interactive Data Editor}. Highlight the name of a data frame,
+matrix or database table in the source editor or console and run the add-in
+to open it in the editor; with nothing highlighted an empty table is opened.
+The add-in can be bound to a keyboard shortcut through \emph{Tools > Modify
+Keyboard Shortcuts}.
+}
+
 \examples{
 if(interactive()) {
 
