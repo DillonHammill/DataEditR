@@ -49,11 +49,14 @@ Suggests:
     haven (>= 2.4.0),
     jsonlite,
     knitr,
+    readxl,
     rlang,
     rmarkdown,
     RSQLite,
+    sf,
     testthat (>= 3.0.0),
     tibble,
-    withr
+    withr,
+    writexl
 Config/testthat/edition: 3
 VignetteBuilder: knitr
