@@ -91,14 +91,23 @@ editr_prepare <- function(x,
   if (any(duplicated(colnames(x)))) {
     warning("Column names must be unique!")
   }
-  if (!is.null(col_readonly) && !all(col_readonly %in% colnames(x))) {
-    stop("'col_readonly' must contain valid column names.")
+  # SETTINGS FOR OTHER COLUMNS ARE IGNORED: THE SAME SETTINGS APPLY TO DATA
+  # OPENED LATER, WHICH MAY NOT HAVE THESE COLUMNS (AN ERROR WOULD STOP THE APP)
+  known <- function(nms, arg) {
+    bad <- setdiff(nms, colnames(x))
+    if (length(bad) > 0 && !quiet) {
+      message("Ignoring '", arg, "' for columns that are not in the data: ",
+              paste(bad, collapse = ", "), ".")
+    }
+    nms[nms %in% colnames(x)]
   }
-  if (!is.null(col_hide) && !all(col_hide %in% colnames(x))) {
-    stop("'col_hide' must contain valid column names.")
-  }
-  if (!is.null(col_options) && !all(names(col_options) %in% colnames(x))) {
-    stop("'col_options' must be named with valid column names.")
+  if (!is.null(col_readonly)) col_readonly <- known(col_readonly, "col_readonly")
+  if (!is.null(col_hide)) col_hide <- known(col_hide, "col_hide")
+  if (length(col_options) > 0) {
+    if (is.null(names(col_options)) || any(!nzchar(names(col_options)))) {
+      stop("'col_options' must be named by column.", call. = FALSE)
+    }
+    col_options <- col_options[known(names(col_options), "col_options")]
   }
 
   # FACTORS -> CHARACTER FOR EDITING (RETURNED AS FACTORS WITH THEIR LEVELS)

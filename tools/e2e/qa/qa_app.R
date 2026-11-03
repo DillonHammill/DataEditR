@@ -216,6 +216,12 @@ if (scenario == "df") {
   assign("iris", iris, envir = globalenv())
   keep(mtcars, quietly(mtcars, code = code_file))
 
+} else if (scenario == "open_settings") {
+  # these settings do not fit the data opened later
+  x <- mtcars[1:5, 1:6]
+  keep(x, quietly(x, col_readonly = "mpg", col_hide = "hp",
+                  col_options = list(cyl = c(4, 6, 8))))
+
 } else if (scenario == "review") {
   x <- mtcars[1:5, 1:4]
   keep(x, quietly(x, track = TRUE, code = code_file))

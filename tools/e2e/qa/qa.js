@@ -903,6 +903,8 @@ const scenarios = {
       ["n greater than or equal", f.n, "gte", [5], [5, 6, 7, 8]],
       ["n less than or equal", f.n, "lte", [2.5], [1, 2]],
       ["n between includes the ends", f.n, "between", [2.5, 5], [2, 4, 5]],
+      ["n between in either order", f.n, "between", [5, 2.5], [2, 4, 5]],
+      ["n not between in either order", f.n, "not_between", [5, 2.5], [1, 3, 6, 7, 8]],
       ["n not between keeps missing", f.n, "not_between", [2.5, 5], [1, 3, 6, 7, 8]],
       ["n contain", f.n, "contain", [".5"], [2]],
       ["n missing", f.n, "missing", [], [3]],
@@ -1268,6 +1270,43 @@ const scenarios = {
     check((await L.gridData(page)).length === 150, "iris loaded");
     check((await shownIds(page)).length === 150, "filters do not follow to new data");
     check(await page.$eval("#edit1-filter_count", (e) => e.textContent) === "", "and the button is reset");
+    const sl = await fieldOf(page, "Sepal.Length");
+    await L.editCell(page, 1, sl, "9.9");
+    await done(page);
+  },
+
+  // none of these may stop the editor, whatever the settings of the session
+  async open_settings(page) {
+    const alive = () => page.evaluate(() => Shiny.shinyapp.isConnected());
+    const load = async (text) => {
+      if (!(await page.$(".editr-open-menu.show"))) {
+        await page.click("#open_toggle");
+        await sleep(400);
+      }
+      await page.click("#open_object", { clickCount: 3 });
+      await page.keyboard.type(text);
+      await page.click("#open_load");
+      await L.settle(page, 1200);
+    };
+    const title = () => page.$eval("#dataset_name", (e) => e.textContent);
+    const notes = () => page.$$eval(".shiny-notification-content-text", (n) => n.map((e) => e.textContent).join(" "));
+    const started = await title();
+    for (const [bad, why] of [["setNames(data.frame(1, 2), c('a', NA))", "without a name"],
+                              ["local({d <- data.frame(a = 1:2); d$m <- data.frame(z = 1:2); d})", "hold tables"],
+                              ["letters", "not a data frame"]]) {
+      await load(bad);
+      check(await alive(), "still running after " + bad);
+      check((await notes()).includes(why), "says why: " + (await notes()).slice(-70));
+      check(await title() === started, "keeps the current data");
+    }
+    await page.evaluate(() => document.querySelectorAll(".shiny-notification-close").forEach((b) => b.click()));
+    await page.click("#open_rows", { clickCount: 3 });
+    await page.keyboard.type("2");
+    await page.click("#open_new");
+    await L.settle(page, 1500);
+    check(await alive() && (await L.gridData(page)).length === 2, "a new table opens");
+    await load("iris");
+    check(await alive() && (await L.gridData(page)).length === 150, "other data opens");
     const sl = await fieldOf(page, "Sepal.Length");
     await L.editCell(page, 1, sl, "9.9");
     await done(page);

@@ -198,6 +198,11 @@
 * Filter rows by typing in the boxes under each column header: min/max for
   numbers, a multi-select list for columns with few distinct values and
   "contains" for text. Active filters appear as chips in the toolbar.
+* Columns named in `col_readonly`, `col_hide` or `col_options` that are not in
+  the data are ignored with a message instead of an error, so the same settings
+  can be used for different data. They stopped the editor when other data was
+  opened from the Open menu. Open also keeps the current data, and says why, if
+  the new data has columns without a name or columns that hold tables.
 * The **Filter** button opens a dialog that lists every filter in one place,
   for combinations that would be awkward to set column by column. Each row is
   a column, a logic and a value, a column can have several rows, and the

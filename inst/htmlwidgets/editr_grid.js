@@ -1460,8 +1460,11 @@
         var compare = function (ok) {
           return function (v) { return !blank(v) && ok(order(v, vals[0])); };
         };
+        // the two values can be given in either order
         var between = function (v) {
-          return !blank(v) && order(v, vals[0]) >= 0 && order(v, vals[1]) <= 0;
+          if (blank(v)) return false;
+          var a = order(v, vals[0]), b = order(v, vals[1]);
+          return (a >= 0 && b <= 0) || (a <= 0 && b >= 0);
         };
         var contain = function (v) {
           if (blank(v)) return false;

@@ -473,7 +473,7 @@ screenshot("filter-dialog.png")
 | `is missing`, `is not missing`                                           | is (or is not) missing                          | all                   |
 
 * `equal`, `not equal`, `contain` and `not contain` take several values: type a value and press `Enter`, or pick one of the values of the column from the list. `NA` matches missing values.
-* `between` includes both of its values, like `dplyr::between()` and the boxes under the column headers. Use `greater than` and `less than` to leave them out.
+* `between` includes both of its values, like `dplyr::between()` and the boxes under the column headers, and they can be given in either order. Use `greater than` and `less than` to leave them out.
 * `contain` looks for plain text and ignores case, so `merc` finds `Merc 230`. `matches regex` takes a regular expression and respects case, so `^Merc [0-9]+$` finds `Merc 230` and not `Merc 450SE`. The patterns are JavaScript regular expressions, so classes such as `[[:alpha:]]` are written `[a-zA-Z]`.
 * The logics starting with `not` also keep rows where the value is missing.
 

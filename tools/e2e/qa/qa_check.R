@@ -303,6 +303,11 @@ if (scenario == "df") {
   same(result$grp, c("x", "z", NA), "dropdown value pasted")
   same(result$ok, c(TRUE, FALSE, TRUE), "checkbox pasted as yes")
 
+} else if (scenario == "open_settings") {
+  e <- iris
+  e$Sepal.Length[1] <- 9.9
+  same(result, e, "other data opened with settings for columns it does not have")
+
 } else if (scenario == "open") {
   e <- iris
   e[1, "Sepal.Length"] <- 9.9

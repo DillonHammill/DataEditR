@@ -629,6 +629,12 @@ data_edit <- function(x = NULL,
         )
         return()
       }
+      # KEEP THE CURRENT DATA RATHER THAN STOP THE EDITOR
+      why <- if (!is_db_input(obj)) open_problem(obj)
+      if (!is.null(why)) {
+        showNotification(paste0("'", name, "' ", why), type = "error")
+        return()
+      }
       data_source(obj)
       set_text("dataset_name", name)
       session_info$label <- name
@@ -991,4 +997,19 @@ editr_addin_selection <- function(envir = parent.frame()) {
     return(NULL)
   }
   list(name = text, data = obj)
+}
+
+#' Why tabular data cannot be opened in a running editor (or NULL)
+#'
+#' @param x data with dimensions.
+#'
+#' @noRd
+open_problem <- function(x) {
+  if (anyNA(colnames(x))) {
+    return("has columns without a name.")
+  }
+  if (is.data.frame(x) && any(vapply(x, is.data.frame, logical(1)))) {
+    return("has columns that hold tables.")
+  }
+  NULL
 }
