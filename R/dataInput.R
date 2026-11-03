@@ -149,7 +149,7 @@ dataInputServer <- function(id,
       } else if(all(file.exists(data))) {
         # READ IN DATA
         upload <- do.call(
-          read_fun,
+          editr_fun(read_fun),
           c(
             list(data[1]), 
             read_args

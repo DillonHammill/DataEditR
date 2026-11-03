@@ -185,14 +185,18 @@ if (scenario == "df") {
              NA, NA, NA),
     species = c("setosa", "versicolor", "setosa", "virginica", "setosa"),
     code = c("ab1", "ab2", "cd3", "ef4", "ab5"),
+    size = c(1, 2, 2.5, 3, NA),
+    grade = c("b", "a", "b", NA, "c"),
     row.names = paste0("r", 1:5),
     stringsAsFactors = FALSE
   )
   keep(x, quietly(x, code = code_file, row_names = FALSE, col_widths = c(n = 80),
+                  col_readonly = "not_here",
                   col_options = list(state = list(`New South Wales` = "NSW",
                                                   Victoria = "VIC",
                                                   Queensland = "QLD"),
-                                     photo = "html")))
+                                     photo = "html", size = "integer",
+                                     grade = "dropdown")))
 
 } else if (scenario == "cancel") {
   x <- mtcars[1:3, 1:3]
@@ -234,6 +238,7 @@ if (scenario == "df") {
 } else if (scenario == "hide") {
   x <- data.frame(name = c("a", "b"), attending = c(NA, NA))
   keep(x, quietly(x, hide = TRUE, col_options = list(attending = c(TRUE, FALSE)),
+                  row_edit = FALSE, col_edit = FALSE,
                   save_as = file.path(out, "rsvp.csv")))
 
 } else if (scenario == "db_rows") {

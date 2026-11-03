@@ -195,7 +195,7 @@ test_that("col_options convert columns and map to grid options", {
                                    grp = c("a", "b"), d = "date"))
   data <- p$store$state$data
   expect_type(data$ok, "logical")
-  expect_identical(data$grp, c("", ""))
+  expect_identical(data$grp, c(NA_character_, NA_character_))
   expect_s3_class(data$d, "Date")
   cols <- DataEditR:::grid_columns(p$store, p$cfg)
   expect_identical(cols[[1]]$option$type, "checkbox")
@@ -240,9 +240,11 @@ test_that("empty and invalid inputs are handled when preparing", {
   expect_identical(nrow(result(p)), 0L)
   expect_warning(prep(data.frame(a = 1, a = 2, check.names = FALSE)),
                  "must be unique")
-  expect_error(prep(mtcars, col_readonly = "nope"), "col_readonly")
-  expect_error(prep(mtcars, col_hide = "nope"), "col_hide")
-  expect_error(prep(mtcars, col_options = list(nope = "date")), "col_options")
+  # columns that are not in the data are ignored (with a message)
+  prep_loud <- function(...) DataEditR:::editr_prepare(mtcars, ...)
+  expect_message(prep_loud(col_readonly = "nope"), "'col_readonly'.*: nope")
+  expect_message(prep_loud(col_hide = "nope"), "'col_hide'.*: nope")
+  expect_message(prep_loud(col_options = list(nope = "date")), "'col_options'.*: nope")
   p <- prep(data.frame(a = c("x", "y")), col_options = list(a = c(TRUE, FALSE)))
   expect_identical(result(p)$a, c(NA, NA))
 })

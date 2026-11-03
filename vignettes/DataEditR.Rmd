@@ -552,8 +552,9 @@ screenshot("export-menu.png")
 
 | `col_options` entry | Input | Returned as |
 |---------------------|-------|-------------|
-| `c(TRUE, FALSE)` | checkbox | logical |
-| `c("A", "B", "C")` | dropdown menu of the values | character |
+| `c(TRUE, FALSE)` or `"checkbox"` | checkbox | logical |
+| `c("A", "B", "C")` | dropdown menu of the values | character (numeric for numbers in a numeric column) |
+| `"dropdown"` | dropdown menu of the values in the column (the levels of a factor) | as the column |
 | `"date"` | date picker | `Date` |
 | `"datetime"` | date and time picker | `POSIXct` |
 | `"time"` | time picker | character (`"HH:MM"`) |
@@ -561,11 +562,14 @@ screenshot("export-menu.png")
 | `"password"` | hidden text | character |
 | `"url"` | web address with a button to open it | character |
 | `"colour"` (or `"color"`) | colour with a swatch | character |
-| `c(min = 0, max = 10, step = 0.5)` | number within limits (any of the three) | numeric |
+| `c(min = 0, max = 10, step = 0.5)` | number within limits (any of the three), in steps of `step` from `min` | numeric |
+| `"integer"` or `list(type = "integer", min = 0, max = 10)` | whole number (within limits) | integer |
 | `"slider"` or `c(type = "slider", min = 0, max = 1, step = 0.05)` | slider and bar for numbers within limits (0 to 100 by default) | numeric |
 | `"rating"` or `c(type = "rating", stars = 10)` | star rating (5 stars by default) | numeric |
 
 Columns are converted to the type their input needs when the data editor opens, and values that do not fit a column's input, whether typed or pasted, are caught before they are stored. Values already in the data that do not fit (for example a value above the maximum of a slider, or a value that is not one of the options of a dropdown menu) are kept but marked with a red line, and hovering over them says why.
+
+Columns named in `col_options`, `col_readonly`, `col_hide` or `col_widths` that are not in the data are ignored, with a message, so the same settings can be used for different data (for example in a shiny app where the data changes).
 
 The limits of sliders and numbers and the number of stars of ratings can be customised by giving the type together with its settings:
 
@@ -647,6 +651,12 @@ data_edit(sites,
           col_options = list(state = list(`New South Wales` = "NSW",
                                           Victoria = "VIC",
                                           Queensland = "QLD")))
+```
+
+To offer the values that are already in a column, give `"dropdown"` on its own. Factors offer their levels, other columns their distinct values:
+
+```{r, eval = FALSE}
+data_edit(iris, col_options = list(Species = "dropdown"))
 ```
 
 ### 7.3 Dates

@@ -236,6 +236,8 @@ if (scenario == "df") {
   names(e)[names(e) == "code"] <- "extra"
   e$kind[1] <- "A"
   e$extra[1] <- "B"
+  e$size[1] <- 4
+  e$grade[4] <- "c"
   same(result, e, "dropdown values, shifted cells, columns named by a paste")
   reproduces(code_text(), input, result)
 
@@ -351,9 +353,9 @@ if (scenario == "df") {
   reproduces(paste(log[start:end], collapse = "\n"), input, result)
 
 } else if (scenario == "hide") {
-  e <- data.frame(name = c("a", "b"), attending = c(TRUE, NA))
-  same(result, e, "checkbox ticked in the simplified editor")
-  saved <- read.csv(file.path(out, "rsvp.csv"), row.names = 1)
+  e <- data.frame(name = c("a", "z"), attending = c(TRUE, FALSE))
+  same(result, e, "checkbox ticked and a trimmed paste in the simplified editor")
+  saved <- read.csv(file.path(out, "rsvp.csv"))  # no row number column (#71)
   same(saved, e, "save_as written by Done")
 
 } else if (scenario == "db_rows") {

@@ -59,6 +59,14 @@ editr_prepare <- function(x,
     col_names <- FALSE
   }
 
+  # A GEOMETRY COLUMN ON ITS OWN (sfc) OPENS AS AN sf OBJECT
+  if (inherits(x, "sfc")) {
+    if (!requireNamespace("sf", quietly = TRUE)) {
+      stop("Package 'sf' is required to edit geometries.", call. = FALSE)
+    }
+    x <- sf::st_sf(geometry = x)
+  }
+
   # MATRICES WITHOUT ROW NAMES ARE RETURNED WITHOUT ROW NAMES
   matrix_rownames <- !is.matrix(x) || !is.null(rownames(x))
 
@@ -97,14 +105,26 @@ editr_prepare <- function(x,
   if (any(duplicated(colnames(x)))) {
     warning("Column names must be unique!")
   }
-  if (!is.null(col_readonly) && !all(col_readonly %in% colnames(x))) {
-    stop("'col_readonly' must contain valid column names.")
+  # COLUMNS THAT ARE NOT IN THE DATA ARE IGNORED, SO THE SAME SETTINGS CAN BE
+  # USED FOR DIFFERENT DATA (E.G. IN A SHINY APP)
+  known <- function(nms, arg) {
+    bad <- setdiff(nms, colnames(x))
+    if (length(bad) > 0 && !quiet) {
+      message("Ignoring '", arg, "' for columns that are not in the data: ",
+              paste(bad, collapse = ", "), ".")
+    }
+    nms[nms %in% colnames(x)]
   }
-  if (!is.null(col_hide) && !all(col_hide %in% colnames(x))) {
-    stop("'col_hide' must contain valid column names.")
+  if (!is.null(col_readonly)) col_readonly <- known(col_readonly, "col_readonly")
+  if (!is.null(col_hide)) col_hide <- known(col_hide, "col_hide")
+  if (length(col_options) > 0) {
+    if (is.null(names(col_options)) || any(!nzchar(names(col_options)))) {
+      stop("'col_options' must be named by column.", call. = FALSE)
+    }
+    col_options <- col_options[known(names(col_options), "col_options")]
   }
-  if (!is.null(col_options) && !all(names(col_options) %in% colnames(x))) {
-    stop("'col_options' must be named with valid column names.")
+  if (!is.null(names(col_widths))) {
+    col_widths <- col_widths[known(names(col_widths), "col_widths")]
   }
 
   # FACTORS -> CHARACTER FOR EDITING (RETURNED AS FACTORS WITH THEIR LEVELS)
@@ -120,6 +140,16 @@ editr_prepare <- function(x,
   # COLUMN OPTIONS - CONVERT COLUMNS TO THE TYPE THEIR INPUT NEEDS
   if (!is.null(col_options)) {
     for (z in names(col_options)) {
+      # "dropdown" WITHOUT VALUES: THE FACTOR LEVELS OR VALUES OF THE COLUMN
+      col_options[[z]] <- col_option_values(col_options[[z]], x[[z]],
+                                            factors[[z]]$levels)
+      if (is.null(col_options[[z]])) {
+        if (!quiet) {
+          message("Column '", z, "' has no values for its dropdown, so it ",
+                  "is not one.")
+        }
+        next
+      }
       spec <- col_option_spec(col_options[[z]])
       x[[z]] <- col_option_convert(x[[z]], spec, z)
       n_out <- col_option_outside(x[[z]], spec)
@@ -132,15 +162,29 @@ editr_prepare <- function(x,
           "). They are kept and marked in the editor."
         )
       }
+      n_step <- col_option_off_step(x[[z]], spec)
+      if (n_step > 0 && !quiet) {
+        message(
+          "Column '", z, "' has ", n_step, " value", if (n_step > 1) "s",
+          " that ", if (n_step > 1) "are" else "is", " not ",
+          step_phrase(spec, plural = n_step > 1),
+          ". They are kept and marked in the editor."
+        )
+      }
     }
+    col_options <- Filter(Negate(is.null), col_options)
   }
 
-  # AUTO-TYPED COLUMNS - EMPTY TEMPLATE / BOUND COLUMNS
+  # AUTO-TYPED COLUMNS - EMPTY TEMPLATE ("") / ALL-NA LOGICAL / BOUND COLUMNS.
+  # ALL-NA TEXT COLUMNS (NA_character_) KEEP THEIR TYPE
   auto <- vapply(x, function(col) {
-    (is.character(col) && all(is.na(col) | !nzchar(col))) ||
+    (is.character(col) && any(!is.na(col)) && all(is.na(col) | !nzchar(col))) ||
       (is.logical(col) && all(is.na(col)))
   }, logical(1))
   auto[bound_cols] <- TRUE
+  # COLUMNS WITH AN INPUT HAVE THE TYPE OF THEIR INPUT (A DROPDOWN OF CODES
+  # SUCH AS "01" IS TEXT)
+  auto[names(x) %in% names(col_options)] <- FALSE
 
   # ROW NAMES
   rn <- rownames(x)
@@ -199,11 +243,6 @@ editr_prepare <- function(x,
       }
       widths <- stats::setNames(as.list(rep(col_widths, length(cids))), cids)
     } else {
-      bad <- setdiff(names(col_widths), names(x))
-      if (length(bad) > 0) {
-        stop("'col_widths' names columns that are not in the data: ",
-             paste(bad, collapse = ", "), call. = FALSE)
-      }
       widths <- stats::setNames(as.list(unname(col_widths)),
                                 name_to_cid(names(col_widths)))
     }

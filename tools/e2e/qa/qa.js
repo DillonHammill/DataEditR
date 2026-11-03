@@ -788,6 +788,31 @@ const scenarios = {
     check(widths[f.n] === 80 && widths[f.note] <= 320, "col_widths and long text at most 320 px: " +
           widths[f.n] + ", " + widths[f.note]);
     await page.screenshot({ path: path.join(out, "issues.png") });
+    // #37 whole numbers: 2.5 is marked, 1.5 is refused, 4 is stored
+    const marked = await t((fd) => document.querySelector(".editr_grid").__editr.table.getRow(3)
+      .getCell(fd).getElement().classList.contains("editr-invalid"), f.size);
+    check(marked, "2.5 marked in an integer column");
+    await L.editCell(page, 1, f.size, "1.5");
+    await page.waitForSelector(".editr-guard", { timeout: 3000 });
+    const guard = await page.$eval(".editr-guard", (e) => e.textContent);
+    check(/not a whole number/.test(guard) && /whole numbers/.test(guard), "1.5 refused: " + guard.slice(0, 160));
+    await page.click('.editr-guard [data-act="cancel"]');
+    await L.settle(page, 600);
+    await L.editCell(page, 1, f.size, "4");
+    check((await col(f.size))[0] === 4, "4 stored: " + (await col(f.size))[0]);
+    // #14 "dropdown" offers the values of the column
+    const p0 = await L.cellCentre(page, 4, f.grade);
+    await page.mouse.click(p0.x, p0.y, { clickCount: 2 });
+    await page.waitForSelector(".tabulator-edit-list-item");
+    await sleep(300);
+    const items = await t(() => [...document.querySelectorAll(".tabulator-edit-list-item")]
+      .map((x) => x.textContent.trim()).filter((x) => x));
+    check(JSON.stringify(items) === JSON.stringify(["a", "b", "c"]), "dropdown of the column's values: " + JSON.stringify(items));
+    const ic = await t(() => { const e = [...document.querySelectorAll(".tabulator-edit-list-item")]
+      .find((x) => x.textContent.trim() === "c"); const b = e.getBoundingClientRect();
+      return { x: b.x + 10, y: b.y + b.height / 2 }; });
+    await page.mouse.click(ic.x, ic.y);
+    await L.settle(page, 800);
     // #76 pick a name; paste a name
     let p = await L.cellCentre(page, 4, f.state);
     await page.mouse.click(p.x, p.y, { clickCount: 2 });
@@ -870,8 +895,18 @@ const scenarios = {
       }
     }
     await L.editCell(page, 1, "c3", "8");
+    // a row name edited in the modal (#24)
+    await L.editCell(page, 1, "c1", "First car");
     const tab = await page.$eval("#tab", (e) => e.textContent.replace(/\s+/g, " "));
-    check(/MPG/.test(tab) && /8\.00/.test(tab), "rename and edit in the modal reach R (#24)");
+    check(/MPG/.test(tab) && /8\.00/.test(tab) && /First car/.test(tab),
+          "rename, row name and edit in the modal reach R (#24): " + tab.slice(0, 120));
+    // clicking a column name in the modal selects the column (#24)
+    const hc = await L.headerCentre(page, "c4");
+    await page.mouse.click(hc.x, hc.y);
+    await sleep(400);
+    const sel = await t(() => { const r = document.getElementById("edit-grid").__editr.table.getRanges();
+      return r.length ? r[0].getColumns().map((c) => c.getField()) : []; });
+    check(JSON.stringify(sel) === JSON.stringify(["c4"]), "header click selects the column: " + JSON.stringify(sel));
     await page.screenshot({ path: path.join(out, "modal.png") });
     await close();
     await t(() => Shiny.setInputValue("ds", "iris"));
@@ -1145,6 +1180,13 @@ const scenarios = {
     await sleep(500);
     await page.keyboard.press("Space");
     await L.settle(page);
+    // #35 a paste bigger than the table is trimmed when rows and columns are fixed
+    await L.selectCell(page, 2, "c1");
+    await L.paste(page, "z\tFALSE\textra\nw\tTRUE\tmore\n");
+    await L.settle(page, 800);
+    const d = await L.gridData(page);
+    check(d.length === 2 && Object.keys(d[0]).filter((k) => /^c\d+$/.test(k)).length === 2,
+          "paste trimmed to the table: " + JSON.stringify(d));
     await done(page);
   },
 

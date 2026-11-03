@@ -53,7 +53,7 @@ test_that("columns are converted to the type their input needs", {
   expect_identical(conv(c(NA, NA), list(type = "rating"), "x"), c(NA_real_, NA_real_))
   expect_identical(conv(4L, list(type = "slider"), "x"), 4L)
   expect_error(conv(c("1", "a"), list(type = "number"), "x"), "must contain numbers")
-  expect_identical(conv(c(NA, NA), list(type = "textarea"), "x"), c("", ""))
+  expect_identical(conv(c(NA, NA), list(type = "textarea"), "x"), c(NA_character_, NA_character_))
   expect_identical(conv(1:2, list(type = "url"), "x"), c("1", "2"))
   expect_identical(conv(c("red", "blue"), list(type = "colour"), "x"),
                    c("red", "blue"))
@@ -100,7 +100,7 @@ test_that("data_edit() prepares columns for every input type", {
   data <- p$store$state$data
   expect_type(data$ok, "logical")
   expect_s3_class(data$when, "POSIXct")
-  expect_identical(data$notes, c("", ""))
+  expect_identical(data$notes, c(NA_character_, NA_character_))
   expect_identical(data$score, c(3, 4))
   cols <- DataEditR:::grid_columns(p$store, p$cfg)
   types <- vapply(cols, function(x) x$option$type, character(1))

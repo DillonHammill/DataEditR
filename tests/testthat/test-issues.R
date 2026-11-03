@@ -130,7 +130,7 @@ test_that("#74 columns can be given widths", {
   expect_null(cols[[3]]$width)
   p <- prep(iris[1:2, 1:2], col_widths = 90)
   expect_identical(p$cfg$col_widths, list(c1 = 90, c2 = 90))
-  expect_error(prep(iris, col_widths = c(nope = 1)), "not in the data: nope")
+  expect_identical(prep(iris, col_widths = c(nope = 1))$cfg$col_widths, structure(list(), names = character(0)))
   expect_error(prep(iris, col_widths = c(1, 2)), "one width or widths named")
   expect_error(prep(iris, col_widths = "wide"), "widths in pixels")
   expect_error(prep(iris, col_widths = -1), "widths in pixels")
@@ -164,4 +164,163 @@ test_that("#64 nothing relies on partial argument matching", {
   ops(p, list(type = "insert_rows", ids = list(33L), anchor = NULL))
   expect_identical(nrow(result(p)), 33L)
   expect_match(DataEditR:::editr_code(p$store, p$cfg, "mtcars"), "add_row")
+})
+
+test_that("#51 dataOutputServer returns the data it saves", {
+  data <- shiny::reactiveVal(NULL)
+  shiny::testServer(dataOutputServer, args = list(data = data), {
+    out <- session$getReturned()
+    expect_null(out())
+    data(iris[1:2, 1:2])
+    session$flushReact()
+    expect_identical(out(), iris[1:2, 1:2])
+    # saved like data_edit() saves: no row number column
+    expect_identical(readLines(output$save, 1), '"Sepal.Length","Sepal.Width"')
+  })
+})
+
+test_that("#52 a geometry column on its own opens as sf", {
+  skip_if_not_installed("sf")
+  nc <- sf::st_read(system.file("shape/nc.shp", package = "sf"), quiet = TRUE)
+  p <- prep(sf::st_geometry(nc)[1:2])
+  r <- result(p)
+  expect_s3_class(r, "sf")
+  expect_identical(names(r), "geometry")
+  expect_identical(sf::st_geometry(r), sf::st_geometry(nc)[1:2])
+})
+
+test_that("#70 files given as data are read with pkg::fun", {
+  file <- withr::local_tempfile(fileext = ".csv")
+  write.csv(iris[1:2, 1:2], file, row.names = FALSE)
+  expect_identical(DataEditR:::data_template(file, read_fun = "utils::read.csv"),
+                   iris[1:2, 1:2])
+})
+
+test_that("#14 \"dropdown\" lists the values or levels of the column", {
+  d <- data.frame(f = factor(c("b", "a"), levels = c("b", "a", "c")),
+                  s = c("y", "x"), n = c(2, NA), e = NA_character_)
+  p <- prep(d, col_options = list(f = "dropdown", s = "dropdown",
+                                  n = list(type = "dropdown"), e = "dropdown"))
+  o <- p$cfg$col_options
+  expect_identical(as.vector(o$c1$values), c("b", "a", "c"))
+  expect_identical(as.vector(o$c2$values), c("x", "y"))
+  expect_identical(as.vector(o$c3$values), "2")
+  # a column without values is not a dropdown
+  expect_null(o$c4)
+  expect_message(DataEditR:::editr_prepare(d, col_options = list(e = "dropdown")),
+                 "Column 'e' has no values for its dropdown")
+  expect_identical(result(p)[1:3], d[1:3])
+  # numbers stay numbers (as in 1.x)
+  ops(p, op_update("c3", 2, "2"))
+  expect_identical(result(p)$n, c(2, 2))
+  p <- prep(mtcars[1:2, 1:2], col_options = list(cyl = c(4, 6, 8)))
+  ops(p, op_update("c3", 1, "8"))
+  expect_identical(result(p)$cyl, c(8, 6))
+  p <- prep(data.frame(x = c(NA, NA)), col_options = list(x = 1:3))
+  ops(p, op_update("c1", 1, "3"))
+  expect_identical(result(p)$x, c(3, NA))
+  # codes such as "01" are text
+  p <- prep(data.frame(x = c(NA, NA)), col_options = list(x = c("01", "02")))
+  ops(p, op_update("c1", 1, "01"))
+  expect_identical(result(p)$x, c("01", NA))
+  # given values are used as they are
+  p <- prep(d, col_options = list(s = list(type = "dropdown", values = c("x", "z"))))
+  expect_identical(as.vector(p$cfg$col_options$c2$values), c("x", "z"))
+  # and "checkbox" is a checkbox
+  expect_identical(DataEditR:::col_option_spec("checkbox")$type, "checkbox")
+})
+
+test_that("#37 whole numbers and steps", {
+  spec <- DataEditR:::col_option_spec
+  s <- spec(list(type = "integer", min = 0, max = 10))
+  expect_identical(s[c("type", "min", "max", "step")],
+                   list(type = "number", min = 0, max = 10, step = 1))
+  expect_true(s$integer)
+  expect_identical(spec("integer")$step, 1)
+  # whole numbers are integers, and stay so when edited
+  p <- prep(data.frame(n = c(1, 2)), col_options = list(n = "integer"))
+  expect_type(result(p)$n, "integer")
+  ops(p, op_update("c1", 2, "7"))
+  expect_identical(result(p)$n, c(1L, 7L))
+  expect_type(result(prep(data.frame(n = NA), col_options = list(n = "integer")))$n,
+              "integer")
+  # values off the steps are kept, with a message
+  d <- data.frame(n = c(1, 2.5, 3.5))
+  expect_message(DataEditR:::editr_prepare(d, col_options = list(n = "integer")),
+                 "has 2 values that are not whole numbers")
+  expect_message(DataEditR:::editr_prepare(d, col_options = list(n = c(min = 1, step = 2))),
+                 "has 2 values that are not in steps of 2 from 1")
+  expect_message(DataEditR:::editr_prepare(d, col_options = list(n = c(step = 0.5))), NA)
+  expect_identical(result(prep(d, col_options = list(n = "integer")))$n, d$n)
+  off <- DataEditR:::col_option_off_step
+  expect_identical(off(c(0.1, 0.2, 0.3, 0.35), spec(c(step = 0.1))), 1L)
+  expect_identical(off(c(1, 2), spec("slider")), 0L)
+})
+
+test_that("#37 columns that are not in the data are ignored", {
+  msgs <- testthat::capture_messages(
+    p <- DataEditR:::editr_prepare(iris[1:2, ], col_readonly = c("Species", "nope"),
+                                   col_hide = "gone", col_options = list(x = "date"),
+                                   col_widths = c(y = 50, Species = 60))
+  )
+  expect_identical(trimws(msgs), paste0(
+    "Ignoring '", c("col_readonly", "col_hide", "col_options", "col_widths"),
+    "' for columns that are not in the data: ", c("nope", "gone", "x", "y"), "."
+  ))
+  expect_identical(p$cfg$readonly, "c5")
+  expect_length(p$store$hidden, 0)
+  expect_length(p$cfg$col_options, 0)
+  expect_identical(p$cfg$col_widths, list(c5 = 60))
+  expect_message(prep(iris, col_hide = "gone"), NA)
+  expect_error(prep(iris, col_options = list("date")), "must be named by column")
+})
+
+test_that("#34 date columns of xlsx files (UTC date-times) are edited and coded", {
+  skip_if_not_installed("readxl")
+  skip_if_not_installed("writexl")
+  skip_if_not_installed("dplyr")
+  withr::local_timezone("Australia/Sydney")
+  file <- withr::local_tempfile(fileext = ".xlsx")
+  writexl::write_xlsx(data.frame(id = 1:2, when = as.Date(c("2021-10-01", NA))), file)
+  x <- DataEditR:::data_template(file, read_fun = "readxl::read_excel")
+  expect_s3_class(x$when, "POSIXct")
+  p <- prep(x)
+  expect_identical(result(p), x)
+  ops(p, op_update("c2", 2, "2021-11-05 00:00:00"))
+  r <- result(p)
+  expect_identical(format(r$when), c("2021-10-01", "2021-11-05"))
+  expect_identical(attr(r$when, "tzone"), "UTC")
+  code <- DataEditR:::editr_code(p$store, p$cfg, "x")
+  expect_match(code, 'as.POSIXct("2021-11-05", tz = "UTC")', fixed = TRUE)
+  env <- new.env()
+  env$x <- x
+  suppressPackageStartupMessages(eval(parse(text = code), env))
+  expect_identical(env$x, r)
+})
+
+test_that("#5 the server can load the template again after each record", {
+  sent <- mock_grid_send()
+  template <- data.frame(name = NA_character_, age = NA_integer_)
+  reset <- shiny::reactiveVal(0)
+  saved <- list()
+  shiny::testServer(dataEditServer, args = list(
+    data = shiny::reactive({
+      reset()
+      template
+    }),
+    col_options = list(age = "integer")
+  ), {
+    session$flushReact()
+    out <- session$getReturned()
+    session$setInputs(grid_ops = grid_batch(op_update("c1", 1, "Ann"),
+                                            op_update("c2", 1, "31")))
+    saved[[1]] <<- out()
+    reset(reset() + 1)
+    session$flushReact()
+    expect_identical(out(), template)
+    session$setInputs(grid_ops = grid_batch(op_update("c1", 1, "Bo")))
+    saved[[2]] <<- out()
+  })
+  expect_identical(saved[[1]], data.frame(name = "Ann", age = 31L))
+  expect_identical(saved[[2]], data.frame(name = "Bo", age = NA_integer_))
 })

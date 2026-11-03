@@ -48,10 +48,12 @@
   editing.
 * A change counter is shown above the grid, and `track` now highlights cells
   with a tinted fill that is distinct from the range selection.
-* Column types are preserved: only empty template/new columns are passed
-  through `type.convert()` on return, so character columns such as `"001"` are
-  no longer converted to numbers. Dates stay dates, and matrices, tibbles and
-  data.tables are returned with their original class.
+* Column types are preserved: only empty template/new columns (empty text or
+  all-`NA` logical columns, not `NA_character_` or columns with an input in
+  `col_options`) are passed through `type.convert()` on return, so character
+  columns such as `"001"` are no longer converted to numbers. Dates stay
+  dates, and matrices, tibbles and data.tables are returned with their
+  original class.
 
 ## Issues reported for DataEditR 1.x
 
@@ -64,6 +66,15 @@ shiny modals and with data that changes), these were fixed or added:
 
 * A named list of choices in `col_options` (as for `shiny::selectInput()`)
   makes a dropdown that shows the names and stores the values (#76).
+* `col_options = list(x = "dropdown")` makes a dropdown of the values in the
+  column, or of its levels for a factor (#14). Dropdowns of numbers on numeric
+  columns return numbers, as in 1.x.
+* `col_options` type `"integer"` takes whole numbers and returns integers;
+  `list(type = "integer", min = 0, max = 10)` adds limits. The `step` of a
+  number input is now checked as well as its limits (#37).
+* Columns named in `col_readonly`, `col_hide`, `col_options` or `col_widths`
+  that are not in the data are ignored with a message instead of an error,
+  so the same settings can be used for different data in an app (#37).
 * `col_widths` sets the starting width of columns in pixels, and columns
   with long text start at most 320 pixels wide (#74).
 * `col_options` type `"html"` shows cells as HTML (links, line breaks,
@@ -78,12 +89,19 @@ shiny modals and with data that changes), these were fixed or added:
   as the old `not contain` filter did (#67).
 * `sf` objects are returned as `sf` objects: their geometry, and any other
   list column, is shown as text and kept read-only while the other columns
-  are edited (#52). Rows can be added to data with list columns.
+  are edited (#52). Rows can be added to data with list columns. A geometry
+  column on its own (`sfc`) opens as an `sf` object.
 * `read_fun` and `write_fun` accept `"pkg::fun"`, e.g.
   `"readxl::read_excel"` (#70). `save_as` that is not a file (e.g. a Google
   Sheet written by `write_fun`) no longer breaks the `Done` and `Export`
   menus (#26). Data without row names is written without a column of row
   numbers (#71), and `data_edit()` says where it saved the data (#62).
+* Date columns read from xlsx files (`POSIXct` in UTC) keep their time zone,
+  and the generated code gives their new values in it, so the code
+  reproduces the edits in any time zone (#34).
+* `dataOutputServer()` returns the data it saves, so
+  `edited <- dataOutputServer(...)` followed by `renderTable(edited())`
+  works (#51). Its download is written as `data_edit()` writes files.
 * Data without rows opens with one row to type in, which is only returned
   once something has been entered in it (#34).
 * The RStudio add-in opens the highlighted data frame (#72).

@@ -19,6 +19,9 @@
 #' @param hover_text text to display on download button when user hovers cursor
 #'   over button, set to NULL by default to turn off hover text.
 #'
+#' @return \code{dataOutputServer} returns the data to be saved, wrapped in
+#'   \code{reactive}.
+#'
 #' @importFrom shiny downloadButton downloadHandler reactive moduleServer
 #'   is.reactive
 #' @importFrom shinyjs disable enable hidden show useShinyjs
@@ -134,9 +137,13 @@ dataOutputServer <- function(id,
         }
       },
       content = function(file) {
-        write_args <- c(list(values$data, file), write_args)
-        do.call(editr_fun(write_fun), write_args)
+        # AS data_edit() SAVES: NO ROW NUMBER COLUMN, .sav/.dta/... BY haven
+        editr_write(values$data, file, write_fun, write_args,
+                    name = if (is.character(save_as)) save_as else "data.csv")
       }
     )
+
+    # THE DATA THAT IS SAVED
+    reactive(values$data)
   })
 }

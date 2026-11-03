@@ -302,6 +302,7 @@
       if (o.max !== undefined && o.max !== null && x > o.max) {
         return "is more than " + o.max;
       }
+      if (offStep(o, x)) return "is not " + stepPhrase(o);
       return null;
     }
     if (typeof s !== "string") return null;
@@ -321,6 +322,21 @@
     return null;
   }
 
+  // number inputs with a step take values on it (counted from the minimum)
+  function hasStep(o) {
+    return o.type === "number" && typeof o.step === "number" && o.step > 0;
+  }
+  function offStep(o, x) {
+    if (!hasStep(o) || !isFinite(x)) return false;
+    var k = (x - (typeof o.min === "number" ? o.min : 0)) / o.step;
+    return Math.abs(k - Math.round(k)) > 1e-9 * Math.max(1, Math.abs(k));
+  }
+  function stepPhrase(o) {
+    var from = typeof o.min === "number" ? o.min : 0;
+    if (o.step === 1 && from % 1 === 0) return "a whole number";
+    return "in steps of " + o.step + (from !== 0 ? " from " + from : "");
+  }
+
   function kindPhrase(c) {
     var o = c.option || {};
     var has = function (x) { return x !== undefined && x !== null; };
@@ -332,12 +348,14 @@
         "a text column with value labels";
     }
     if (c.kind === "numeric") {
-      if (has(o.min) && has(o.max)) {
-        return "a numeric column (" + o.min + " to " + o.max + ")";
+      var parts = [];
+      if (hasStep(o)) {
+        parts.push(stepPhrase(o) === "a whole number" ? "whole numbers" : stepPhrase(o));
       }
-      if (has(o.min)) return "a numeric column (at least " + o.min + ")";
-      if (has(o.max)) return "a numeric column (at most " + o.max + ")";
-      return "a numeric column";
+      if (has(o.min) && has(o.max)) parts.push(o.min + " to " + o.max);
+      else if (has(o.min)) parts.push("at least " + o.min);
+      else if (has(o.max)) parts.push("at most " + o.max);
+      return "a numeric column" + (parts.length ? " (" + parts.join(", ") + ")" : "");
     }
     if (c.kind === "date") return "a date column";
     if (c.kind === "datetime") return "a date-time column";
