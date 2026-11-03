@@ -480,13 +480,21 @@ values, but no wider than 320 pixels, so long text does not push the
 other columns off screen. Set the starting widths in pixels with
 <code>col_widths</code>, either one width for every column or widths by
 column name:</p>
-<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" tabindex="-1"></a><span class="fu">data_edit</span>(samples,</span>
-<span id="cb13-2"><a href="#cb13-2" tabindex="-1"></a>          <span class="at">col_widths =</span> <span class="fu">c</span>(<span class="at">notes =</span> <span class="dv">400</span>, <span class="at">id =</span> <span class="dv">60</span>))</span>
-<span id="cb13-3"><a href="#cb13-3" tabindex="-1"></a><span class="st">```</span><span class="at"> To make the columns fill the width of the editor instead, see [Stretch columns to fill page](#stretch-columns-to-fill-page).</span></span>
-<span id="cb13-4"><a href="#cb13-4" tabindex="-1"></a></span>
-<span id="cb13-5"><a href="#cb13-5" tabindex="-1"></a><span class="at">### 3.8 Find values</span></span>
-<span id="cb13-6"><a href="#cb13-6" tabindex="-1"></a></span>
-<span id="cb13-7"><a href="#cb13-7" tabindex="-1"></a><span class="at">Press </span><span class="st">`</span>Ctrl<span class="sc">+</span>F<span class="st">`</span><span class="at"> or click </span><span class="st">`</span>Find <span class="cf">in</span> data<span class="st">`</span><span class="at"> to search the rows and columns on screen. The first matching cell is selected and the number of matches is shown (e.g. </span><span class="st">`</span><span class="dv">1</span> of <span class="dv">7</span><span class="st">`</span><span class="at">); press </span><span class="st">`</span>Enter<span class="st">`</span><span class="at"> to jump to the next match, </span><span class="st">`</span>Shift<span class="sc">+</span>Enter<span class="st">`</span><span class="at"> to go back and </span><span class="st">`</span>Esc<span class="st">`</span><span class="at"> to clear the search.</span></span></code></pre></div>
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="va">samples</span>,</span>
+<span>          col_widths <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>notes <span class="op">=</span> <span class="fl">400</span>, id <span class="op">=</span> <span class="fl">60</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p>To make the columns fill the width of the editor instead, see <a href="#stretch-columns-to-fill-page">Stretch columns to fill
+page</a>.</p>
+</div>
+<div class="section level3">
+<h3 id="find-values">3.8 Find values<a class="anchor" aria-label="anchor" href="#find-values"></a>
+</h3>
+<p>Press <code>Ctrl+F</code> or click <code>Find in data</code> to
+search the rows and columns on screen. The first matching cell is
+selected and the number of matches is shown (e.g. <code>1 of 7</code>);
+press <code>Enter</code> to jump to the next match,
+<code>Shift+Enter</code> to go back and <code>Esc</code> to clear the
+search.</p>
 <p><img src="images/find.gif" width="100%" style="display: block; margin: auto;"></p>
 </div>
 <div class="section level3">

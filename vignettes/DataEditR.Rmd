@@ -278,7 +278,9 @@ To resize columns, go to the right-hand border of the header of that column and 
 ```{r, eval = FALSE}
 data_edit(samples,
           col_widths = c(notes = 400, id = 60))
-``` To make the columns fill the width of the editor instead, see [Stretch columns to fill page](#stretch-columns-to-fill-page).
+```
+
+To make the columns fill the width of the editor instead, see [Stretch columns to fill page](#stretch-columns-to-fill-page).
 
 ### 3.8 Find values
 
