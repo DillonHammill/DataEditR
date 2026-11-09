@@ -34,11 +34,26 @@ jobs:
 
       - name: Test coverage
         run: |
-          covr::codecov(
+          cov <- covr::package_coverage(
             quiet = FALSE,
             clean = FALSE,
             install_path = file.path(normalizePath(Sys.getenv("RUNNER_TEMP"), winslash = "/"), "package")
           )
+          print(cov)
+          # Tokenless uploads share a rate limit at Codecov, so wait and retry
+          # when it is reached rather than losing the report.
+          for (i in 1:4) {
+            res <- covr::codecov(coverage = cov, quiet = FALSE)
+            msg <- paste(unlist(res), collapse = " ")
+            if (!grepl("rate limit", msg, ignore.case = TRUE)) break
+            if (i < 4) {
+              message("Codecov rate limit reached, retrying in 3 minutes")
+              Sys.sleep(180)
+            } else {
+              cat("::warning::Codecov rate limit reached, coverage was not uploaded\n")
+            }
+          }
+          print(res)
         shell: Rscript {0}
 
       - name: Show testthat output
