@@ -2,7 +2,7 @@
 ^\.Rproj\.user$
 ^README\.Rmd$
 ^CODE_OF_CONDUCT\.md$
-^\.travis\.yml$
+^codecov\.yml$
 ^codemeta\.json$
 
 ^_pkgdown\.yml$
