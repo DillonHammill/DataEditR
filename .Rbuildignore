@@ -2,7 +2,7 @@
 ^\.Rproj\.user$
 ^README\.Rmd$
 ^CODE_OF_CONDUCT\.md$
-^\.travis\.yml$
+^codecov\.yml$
 ^codemeta\.json$
 
 ^_pkgdown\.yml$
@@ -11,6 +11,8 @@
 ^doc$
 ^Meta$
 vignettes/DataEditR/
+^vignettes/images$
 man/figures/DataEditR/
 ^\.github$
 ^_pkgdown\.yml$
+^tools$

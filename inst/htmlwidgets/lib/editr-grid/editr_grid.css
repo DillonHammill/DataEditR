@@ -1,0 +1,865 @@
+/* DataEditR grid styling on top of the Tabulator bootstrap5 theme */
+
+.editr_grid {
+  --editr-text: #1F2933;
+  --editr-muted: #52606D;
+  --editr-border: #E3E6EA;
+  --editr-border-strong: #D5D9DF;
+  --editr-chrome: #F6F7F9;
+  --editr-accent: #1D4ED8;
+  --editr-accent-soft: #DBEAFE;
+  --editr-track-color: #2563EB;
+}
+
+.editr_grid .tabulator {
+  font-size: 13px;
+  border: 0;
+  background: #FFFFFF;
+  color: var(--editr-text);
+}
+
+.editr_grid .tabulator .tabulator-header {
+  background: var(--editr-chrome);
+  border-bottom: 1px solid var(--editr-border);
+  color: var(--editr-text);
+}
+
+.editr_grid .tabulator .tabulator-header .tabulator-col {
+  background: var(--editr-chrome);
+  border-right: 1px solid #EEF0F3;
+}
+
+/* headers of the selected range (the rule above would otherwise leave
+   Tabulator's white text of a selected column on the light header) */
+.editr_grid .tabulator .tabulator-header .tabulator-col.tabulator-range-highlight {
+  background: #EEF3FD;
+  color: var(--editr-text);
+}
+
+.editr_grid .tabulator .tabulator-header .tabulator-col.tabulator-range-selected {
+  background: var(--editr-accent-soft);
+  color: #1E3A8A;
+}
+
+/* fill handle: a small square at the corner of the selection, as in
+   spreadsheets; the preview of the cells it fills is dashed */
+.editr_grid .tabulator .tabulator-range-overlay .tabulator-range-fill-handle {
+  width: 9px;
+  height: 9px;
+  right: -5px;
+  bottom: -5px;
+  border: 1.5px solid #FFFFFF;
+  border-radius: 2px;
+  background: #2975DD;
+  box-sizing: border-box;
+}
+
+.editr_grid .tabulator .tabulator-range-overlay .tabulator-range.tabulator-range-fill-preview {
+  border: 1.5px dashed #2975DD;
+}
+
+.editr_grid .tabulator .tabulator-row {
+  min-height: 32px;
+}
+
+.editr_grid .tabulator .tabulator-row .tabulator-cell {
+  border-right: 1px solid #EEF0F3;
+  font-variant-numeric: tabular-nums;
+}
+
+/* column titles: type badge, name, lock */
+.editr-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+}
+
+.editr-badge {
+  flex: none;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: #E9ECF0;
+  color: var(--editr-muted);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1.4;
+}
+
+.editr-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 600;
+}
+
+.editr-lock {
+  display: inline-flex;
+  color: var(--editr-muted);
+}
+
+/* compact rows, no striping */
+.editr_grid .tabulator .tabulator-row,
+.editr_grid .tabulator .tabulator-row.tabulator-row-even {
+  background-color: #FFFFFF;
+}
+
+.editr_grid .tabulator .tabulator-row .tabulator-cell {
+  padding: 6px 10px;
+}
+
+.editr_grid .tabulator .tabulator-row.tabulator-selectable:hover {
+  background-color: #FBFBFC;
+}
+
+.editr_grid .tabulator .tabulator-header .tabulator-col .tabulator-col-content {
+  padding: 6px 8px;
+}
+
+/* header filters */
+.editr_grid .tabulator .tabulator-header .tabulator-col .tabulator-header-filter {
+  margin-top: 4px;
+}
+
+.editr_grid .tabulator .tabulator-header .tabulator-col .tabulator-header-filter input,
+.editr-range input {
+  height: 26px !important;
+  font-size: 12px !important;
+  line-height: 1.2;
+  box-sizing: border-box;
+  padding: 0 6px !important;
+  border: 1px solid var(--editr-border-strong) !important;
+  border-radius: 4px;
+  background: #FFFFFF;
+  font-family: inherit;
+  font-weight: 400;
+}
+
+.editr-range {
+  display: flex;
+  gap: 4px;
+}
+
+.editr-range input {
+  width: 50%;
+  min-width: 0;
+}
+
+/* cells */
+.tabulator .tabulator-cell.editr-changed {
+  background-color: #EAF1FD;
+  background-color: color-mix(in srgb, var(--editr-track-color, #2563EB) 10%, white);
+  box-shadow: inset 0 0 0 1px var(--editr-track-color, #2563EB);
+}
+
+.tabulator .tabulator-cell.editr-readonly {
+  background-color: var(--editr-chrome, #F6F7F9);
+  color: var(--editr-muted, #52606D);
+}
+
+.tabulator .tabulator-row .tabulator-cell.editr-rowheader,
+.tabulator .tabulator-cell.editr-rowheader {
+  background: var(--editr-chrome, #F6F7F9);
+  color: var(--editr-muted, #52606D);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.tabulator .tabulator-cell.editr-flash {
+  animation: editr-flash 0.9s ease-out;
+}
+
+@keyframes editr-flash {
+  0% { background-color: #FEF3C7; }
+  100% { background-color: transparent; }
+}
+
+/* the add button in the corner above the row numbers */
+.editr-addcol-btn {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed #B8BFC8;
+  border-radius: 6px;
+  background: #FFFFFF;
+  color: var(--editr-muted, #52606D);
+  cursor: pointer;
+}
+
+.editr-addcol-btn:hover,
+.editr-addcol-btn:focus-visible {
+  border-color: var(--editr-accent, #1D4ED8);
+  color: var(--editr-accent, #1D4ED8);
+}
+
+.editr-addcol-btn[aria-expanded="true"] {
+  border-style: solid;
+  border-color: var(--editr-accent, #1D4ED8);
+  color: var(--editr-accent, #1D4ED8);
+}
+
+/* its menu: add a row or a column */
+.editr-add-menu {
+  min-width: 230px;
+  padding: 4px;
+}
+
+.editr-add-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #1F2933;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.editr-add-item:hover,
+.editr-add-item:focus-visible {
+  outline: none;
+  background: #EFF4FF;
+}
+
+.editr-add-icon {
+  width: 24px;
+  height: 24px;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed #B8BFC8;
+  border-radius: 6px;
+  color: var(--editr-accent, #1D4ED8);
+}
+
+.editr-add-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+
+.editr-add-label {
+  font-weight: 500;
+}
+
+.editr-add-hint {
+  color: #616E7C;
+  font-size: 12px;
+}
+
+/* the corner above the row numbers holds the add row button */
+.tabulator .tabulator-col.editr-rowheader .tabulator-col-content {
+  height: 100%;
+  padding: 4px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.tabulator .tabulator-col.editr-rowheader .tabulator-col-title-holder,
+.tabulator .tabulator-col.editr-rowheader .tabulator-col-title {
+  display: flex;
+  justify-content: center;
+  overflow: visible;
+}
+
+/* popups: columns menu, type guard */
+.editr-popup {
+  z-index: 1080;
+  box-sizing: border-box;
+  border: 1px solid #E3E6EA;
+  border-radius: 10px;
+  background: #FFFFFF;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.16);
+  color: #1F2933;
+  font-size: 13px;
+}
+
+.editr-columns-menu {
+  width: 240px;
+  padding: 6px;
+}
+
+.editr-columns-head {
+  display: flex;
+  gap: 4px;
+  padding: 2px 2px 6px;
+  border-bottom: 1px solid #EEF0F3;
+  margin-bottom: 4px;
+}
+
+.editr-columns-head button {
+  border: 0;
+  background: transparent;
+  color: #1D4ED8;
+  font: inherit;
+  font-weight: 500;
+  padding: 4px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.editr-columns-list {
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.editr-columns-list label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.editr-columns-list label:hover {
+  background: #F6F7F9;
+}
+
+.editr-guard {
+  width: 300px;
+  padding: 14px;
+  border-color: #F3C98B;
+}
+
+.editr-guard-msg {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.editr-guard-icon {
+  flex: none;
+  color: #B45309;
+  margin-top: 1px;
+}
+
+.editr-guard-title {
+  font-weight: 600;
+}
+
+.editr-guard-sub {
+  margin-top: 2px;
+  color: #52606D;
+}
+
+.editr-guard-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+/* filter chips (rendered into the toolbar) */
+.editr-chip {
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 4px 0 10px;
+  border-radius: 999px;
+  background: #DBEAFE;
+  color: #1E3A8A;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.editr-chip button {
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.editr-chip button:hover {
+  background: rgba(30, 58, 138, 0.12);
+}
+
+.editr-chip-clear {
+  border: 0;
+  background: transparent;
+  color: #1D4ED8;
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+input.editr-rename {
+  position: absolute;
+  z-index: 10000;
+  box-sizing: border-box;
+  text-align: center;
+  font-weight: 600;
+  border: 2px solid #1D4ED8;
+  border-radius: 4px;
+  outline: none;
+}
+
+/* dropdown (col_options) list editor - match the grid font */
+.tabulator-edit-list {
+  font-size: 13px;
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+}
+
+.tabulator-edit-list .tabulator-edit-list-item {
+  padding: 6px 10px;
+}
+
+.tabulator-edit-list .tabulator-edit-list-item.active,
+.tabulator-edit-list .tabulator-edit-list-item.focused {
+  background: #EFF5FF;
+  color: #1D4ED8;
+  outline: none;
+}
+
+/* column types ------------------------------------------------------------ */
+
+.editr-url {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+}
+
+.editr-url-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.editr-url-open {
+  flex: none;
+  display: inline-flex;
+  color: var(--editr-accent);
+}
+
+.editr-colour {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.editr_grid .editr-swatch {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  background: transparent;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15);
+}
+
+/* a value that is not a colour */
+.editr_grid .editr-swatch.editr-swatch-none {
+  background: transparent;
+  box-shadow: none;
+  border: 1px dashed #9AA5B1;
+  box-sizing: border-box;
+}
+
+/* colour editor: swatch and text box in the cell, swatches below it */
+.editr_grid .tabulator .tabulator-cell .editr-colour-edit {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 100%;
+  padding-left: 8px;
+}
+
+.editr_grid .tabulator .tabulator-cell .editr-colour-edit .editr-input {
+  flex: 1;
+  min-width: 0;
+  padding-left: 0;
+}
+
+.editr-colour-box {
+  display: grid;
+  grid-template-columns: repeat(8, 22px);
+  gap: 6px;
+  padding: 10px;
+}
+
+.editr-colour-pick {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.18);
+  cursor: pointer;
+}
+
+.editr-colour-pick:hover,
+.editr-colour-pick:focus-visible {
+  outline: 2px solid #2975DD;
+  outline-offset: 1px;
+}
+
+.editr-colour-pick[aria-selected="true"] {
+  outline: 2px solid #1F2933;
+  outline-offset: 1px;
+}
+
+.editr-colour-custom {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 2px 0 0;
+  color: #1D4ED8;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.editr-colour-custom input[type="color"],
+.editr-form-colour {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid #CBD2D9;
+  border-radius: 4px;
+  background: #FFFFFF;
+  cursor: pointer;
+}
+
+.editr-form-colour {
+  width: 32px;
+  height: 31px;
+  margin-left: 6px;
+}
+
+.editr_grid .tabulator .tabulator-cell .editr-input {
+  width: 100%;
+  height: 100%;
+  padding: 2px 6px;
+  border: 0;
+  box-sizing: border-box;
+  font: inherit;
+}
+
+.editr_grid .tabulator .tabulator-cell textarea {
+  font: inherit;
+  line-height: 1.4;
+}
+
+.editr-slider {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 100%;
+  padding: 0 6px;
+}
+
+.editr-slider input {
+  flex: 1;
+  min-width: 0;
+}
+
+.editr-slider-value {
+  min-width: 2.5em;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* values that do not fit the column's input: a red line under the cell */
+.editr_grid .tabulator .tabulator-cell.editr-invalid {
+  background-image: linear-gradient(#DC2626, #DC2626);
+  background-size: 100% 2px;
+  background-position: bottom;
+  background-repeat: no-repeat;
+}
+
+/* conditional formatting (see R/formats.R): over the change highlight and
+   read-only tint, under rule problems and the range selection */
+.editr_grid .tabulator .tabulator-cell.editr-fmt-fill {
+  background-color: var(--editr-fmt-fill);
+}
+
+.editr_grid .tabulator .tabulator-cell.editr-fmt-color {
+  color: var(--editr-fmt-color);
+}
+
+.editr_grid .tabulator .tabulator-cell.editr-fmt-bold {
+  font-weight: 600;
+}
+
+/* cells that break a validation rule: red corner and a light tint */
+.editr_grid .tabulator .tabulator-cell.editr-problem {
+  background-color: #FEF2F2;
+  background-image: linear-gradient(225deg, #DC2626 7px, transparent 7px);
+}
+
+.editr_grid .tabulator .tabulator-row.tabulator-row-even .tabulator-cell.editr-problem {
+  background-color: #FDECEC;
+}
+
+/* column menu button in the header */
+.editr_grid .tabulator .tabulator-col .tabulator-header-popup-button {
+  padding: 0 4px 0 0;
+  color: #7B8794;
+  opacity: 0.7;
+}
+
+.editr_grid .tabulator .tabulator-col:hover .tabulator-header-popup-button {
+  color: #1F2933;
+  opacity: 1;
+}
+
+/* column summaries under the header title ------------------------------------ */
+.editr_grid .editr-summary {
+  display: block;
+  /* takes the width of the column without making it wider */
+  width: 0;
+  min-width: 100%;
+  overflow: hidden;
+  height: 38px;
+  margin: 6px 0 0;
+  font-weight: 400;
+  white-space: nowrap;
+  container-type: inline-size;
+}
+
+/* narrow columns drop the words and keep the numbers */
+@container (max-width: 130px) {
+  .editr_grid .editr-sum-word { display: none; }
+}
+
+@container (max-width: 72px) {
+  .editr_grid .editr-sum-na { display: none; }
+}
+
+.editr_grid.editr-summaries-off .editr-summary {
+  display: none;
+}
+
+.editr_grid .editr-sum-chart {
+  display: block;
+  width: 100%;
+  height: 20px;
+}
+
+.editr_grid .editr-sum-hit {
+  fill: transparent;
+  cursor: pointer;
+}
+
+.editr_grid .editr-sum-bar-v {
+  fill: #93B4F5;
+  pointer-events: none;
+}
+
+.editr_grid g[data-act="bin"]:hover .editr-sum-bar-v {
+  fill: #1D4ED8;
+}
+
+.editr_grid .editr-sum-values {
+  display: flex;
+  gap: 1px;
+  height: 12px;
+  margin: 4px 0;
+  overflow: hidden;
+  border-radius: 3px;
+}
+
+.editr_grid .editr-sum-seg {
+  min-width: 3px;
+  cursor: pointer;
+}
+
+.editr_grid .editr-sum-seg-0 { background: #1D4ED8; }
+.editr_grid .editr-sum-seg-1 { background: #5B84E8; }
+.editr_grid .editr-sum-seg-2 { background: #93B4F5; }
+.editr_grid .editr-sum-seg-3 { background: #BFD2FA; }
+.editr_grid .editr-sum-seg-4 { background: #DCE7FC; }
+.editr_grid .editr-sum-seg-other { background: #E3E6EA; cursor: default; }
+
+.editr_grid .editr-sum-seg:hover {
+  outline: 2px solid #1F2933;
+  outline-offset: -2px;
+}
+
+.editr_grid .editr-sum-empty {
+  color: #7B8794;
+  font-size: 11px;
+  line-height: 20px;
+}
+
+.editr_grid .editr-sum-foot {
+  display: flex;
+  gap: 6px;
+  justify-content: space-between;
+  height: 16px;
+  font-size: 11px;
+  line-height: 16px;
+  color: #52606D;
+}
+
+.editr_grid .editr-sum-foot button {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.editr_grid .editr-sum-foot button:hover {
+  text-decoration: underline;
+}
+
+.editr_grid .editr-sum-missing {
+  color: #B91C1C !important;
+  font-weight: 600 !important;
+}
+
+.editr_grid .editr-sum-muted {
+  color: #9AA5B1;
+}
+
+.editr-sum-details {
+  min-width: 220px;
+  max-width: 320px;
+  padding: 10px 12px;
+  font-size: 13px;
+}
+
+.editr-sum-details .editr-sum-title {
+  margin: 0 0 4px;
+  font-weight: 600;
+}
+
+.editr-sum-details table {
+  width: 100%;
+  margin-bottom: 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+.editr-sum-details th {
+  padding: 1px 12px 1px 0;
+  font-weight: 400;
+  color: #52606D;
+  overflow-wrap: anywhere;
+}
+
+.editr-sum-details td {
+  padding: 1px 0;
+  text-align: right;
+}
+
+/* labelled data: the value with its label; SPSS user-defined missing values */
+.editr_grid .editr-lbl {
+  display: inline-flex;
+  align-items: baseline;
+  /* (the space between the value and its label is for copying and screen
+     readers; flex items do not show it) */
+  gap: 5px;
+  max-width: 100%;
+}
+
+.editr_grid .editr-lbl-code {
+  flex: none;
+  color: #7B8794;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.editr_grid .editr-lbl-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.editr_grid .tabulator-cell.editr-user-na {
+  color: #7B8794;
+  font-style: italic;
+}
+
+.editr-sum-details .editr-sum-label {
+  margin: -4px 0 6px;
+  color: #52606D;
+  font-size: 12px;
+}
+
+/* comments on cells: an amber corner (top left; problems use the top right) */
+.editr_grid .tabulator .tabulator-cell.editr-commented {
+  background-image: linear-gradient(135deg, #D97706 7px, transparent 7px);
+}
+
+.editr_grid .tabulator .tabulator-cell.editr-commented.editr-problem {
+  background-image: linear-gradient(135deg, #D97706 7px, transparent 7px),
+    linear-gradient(225deg, #DC2626 7px, transparent 7px);
+}
+
+.editr-comment-box {
+  width: 280px;
+  padding: 10px;
+}
+
+.editr-comment-title {
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.editr-comment-meta {
+  color: #7B8794;
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.editr-comment-box textarea {
+  margin: 6px 0 8px;
+  resize: vertical;
+}
+
+.editr-comment-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.editr-comment-actions .editr-comment-delete {
+  color: #B91C1C;
+  padding-left: 0;
+}
+
+/* "html" columns */
+.editr_grid .editr-html {
+  display: block;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+}
+
+.editr_grid .editr-html p,
+.editr_grid .editr-html ul,
+.editr_grid .editr-html ol,
+.editr_grid .editr-html pre,
+.editr_grid .editr-html blockquote {
+  margin: 0;
+}
+
+.editr_grid .editr-html img {
+  max-height: 64px;
+  max-width: 100%;
+  vertical-align: middle;
+}
+
+.editr_grid .editr-html a {
+  color: #1D4ED8;
+}

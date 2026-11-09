@@ -1,3 +1,410 @@
+# DataEditR 2.0.0
+
+## Tabulator grid replaces rhandsontable
+
+* The data grid is now a thin htmlwidget around the MIT-licensed 'Tabulator'
+  JavaScript library (6.7.1, bundled). `rhandsontable` is no longer a
+  dependency, so the forked `rhandsontable` is no longer required and the
+  CRAN version works as intended.
+* Edits are sent to R as cell-level changes (deltas) instead of whole tables.
+  On a 100,000 row table an edit round trip takes ~50 ms and only the visible
+  rows are rendered in the browser.
+* Rows and columns carry stable identifiers. Filtered rows and selected
+  columns are views onto the full data, so edits apply directly to the master
+  copy (no synchronisation step), and renaming a column no longer touches the
+  data.
+* Undo and redo (Ctrl+Z / Ctrl+Y, or the toolbar buttons). A paste, fill or
+  range clear is a single undo step.
+* Spreadsheet-style range selection, copy/paste, Delete to clear a range and
+  Ctrl+D to fill down. Double-click a header to rename a column; right-click
+  rows or headers to insert/delete rows and columns.
+* Pasting from Excel, Google Sheets and LibreOffice handles Windows line
+  endings, the trailing line break and quoted cells with line breaks, adds
+  rows when the block is longer than the table, converts formatted numbers
+  (`1,234.5`, `$12`, `45%`), `d/m/y` and `m/d/y` dates and yes/no, and asks
+  once about values that do not fit their columns. Copying quotes cells with
+  line breaks and copies an HTML table for spreadsheets.
+* New column types in `col_options`: `"datetime"`, `"time"`, `"textarea"`,
+  `"url"`, `"colour"`, `"slider"`, `"rating"` and numbers within limits
+  (`c(min = 0, max = 10, step = 0.5)`), alongside checkboxes, dropdowns,
+  `"date"` and `"password"`. Slider limits and rating stars are set with
+  e.g. `c(type = "slider", min = 0, max = 1, step = 0.05)`. Values that do
+  not fit a column's input are caught whether they are typed or pasted, and
+  values already in the data that do not fit are marked.
+* Cells of templates and new columns that were never filled in are returned
+  as `NA` (they were empty strings), like cells that were cleared.
+* Factor columns are returned as factors (ordered factors stay ordered) with
+  their original levels, and new values are added as levels after them.
+  Earlier versions returned them as text unless `col_factor = TRUE`, which
+  now only converts character columns.
+* The generated code (`code`) starts from the data that was opened from the
+  Open menu, returns matrices as matrices and new tables as data frames,
+  and recreates factors with the same levels as the returned data.
+* Dates are only read from complete `YYYY-MM-DD` values (`as.Date()` read
+  `15/03/2024` as the year 15); other formats are converted in the browser
+  before they reach R.
+* `col_options` no longer disables adding or removing columns, and
+  `col_readonly` columns are locked in the grid rather than reverted after
+  editing.
+* A change counter is shown above the grid, and `track` now highlights cells
+  with a tinted fill that is distinct from the range selection.
+* Column types are preserved: only empty template/new columns (empty text or
+  all-`NA` logical columns, not `NA_character_` or columns with an input in
+  `col_options`) are passed through `type.convert()` on return, so character
+  columns such as `"001"` are no longer converted to numbers. Dates stay
+  dates, and matrices, tibbles and data.tables are returned with their
+  original class.
+
+## Issues reported for DataEditR 1.x
+
+Every issue opened on GitHub for earlier versions was checked against this
+release. Besides the changes above (edits returned by `Done` without a
+`sync` button, undo, validation, date pickers, sliders, find and replace,
+hidden columns, filters that keep working with any number of filters and
+with filtered edits, factors, pasting that adds rows and columns, editing in
+shiny modals and with data that changes), these were fixed or added:
+
+* A named list of choices in `col_options` (as for `shiny::selectInput()`)
+  makes a dropdown that shows the names and stores the values (#76).
+* `col_options = list(x = "dropdown")` makes a dropdown of the values in the
+  column, or of its levels for a factor (#14). Dropdowns of numbers on numeric
+  columns return numbers, as in 1.x.
+* `col_options` type `"integer"` takes whole numbers and returns integers;
+  `list(type = "integer", min = 0, max = 10)` adds limits. The `step` of a
+  number input is now checked as well as its limits (#37).
+* Columns named in `col_readonly`, `col_hide`, `col_options` or `col_widths`
+  that are not in the data are ignored with a message instead of an error,
+  so the same settings can be used for different data in an app (#37).
+* `col_widths` sets the starting width of columns in pixels, and columns
+  with long text start at most 320 pixels wide (#74).
+* `col_options` type `"html"` shows cells as HTML (links, line breaks,
+  images, ...) without scripts, styles or event handlers (#69).
+* `Insert cells, shift down` and `Delete cells, shift up` in the cell menu
+  move the cells below a selection, in its columns only (#53).
+* `Ctrl+Shift+V` pastes a block with its first row as column names (#36).
+* `row_names = FALSE` keeps row names out of sight while returning them
+  (#40). A row name that another row already has is refused, instead of
+  the row names being moved to a column on return (#1).
+* Text filters starting with `!` keep the rows that do not contain the text,
+  as the old `not contain` filter did (#67).
+* `sf` objects are returned as `sf` objects: their geometry, and any other
+  list column, is shown as text and kept read-only while the other columns
+  are edited (#52). Rows can be added to data with list columns. A geometry
+  column on its own (`sfc`) opens as an `sf` object.
+* `read_fun` and `write_fun` accept `"pkg::fun"`, e.g.
+  `"readxl::read_excel"` (#70). `save_as` that is not a file (e.g. a Google
+  Sheet written by `write_fun`) no longer breaks the `Done` and `Export`
+  menus (#26). Data without row names is written without a column of row
+  numbers (#71), and `data_edit()` says where it saved the data (#62).
+* Date columns read from xlsx files (`POSIXct` in UTC) keep their time zone,
+  and the generated code gives their new values in it, so the code
+  reproduces the edits in any time zone (#34).
+* `dataOutputServer()` returns the data it saves, so
+  `edited <- dataOutputServer(...)` followed by `renderTable(edited())`
+  works (#51). Its download is written as `data_edit()` writes files.
+* Data without rows opens with one row to type in, which is only returned
+  once something has been entered in it (#34).
+* The RStudio add-in opens the highlighted data frame (#72).
+* `dataInputUI()`, `dataOutputUI()`, `dataFilterUI()`, `dataSelectUI()` and
+  `dataSyncUI()` load `shinyjs` themselves, so `hide = TRUE` works without
+  `useShinyjs()` (#19, #28). Hidden toolbar buttons stay hidden in apps that
+  use shiny's default Bootstrap 3 theme.
+* No code relies on partial argument matching, so the editor works with
+  `options(warnPartialMatchArgs = TRUE, warn = 2)` (#64).
+
+## Conditional formatting
+
+* `formats` colours cells by their values, without changing the data: rules
+  (one-sided formulas) give the cells of the columns they use, other
+  `columns` or whole rows a fill, a text colour and/or bold text, and colour
+  scales shade the numbers of a column from a low to a high colour (two or
+  three colours, with optional `limits` and `mid`). Formats are updated after
+  every change; when several colour a cell, the later one wins.
+* `Conditional formatting...` in a column's menu adds formats in the editor:
+  highlight the column's cells or whole rows where the value is above, below,
+  between or equal to values, contains text, is blank, duplicated, above or
+  below average, among the highest or lowest, or makes a formula `TRUE`, in
+  one of several styles; or shade the column with a colour scale. The dialog
+  previews how many rows match, lists the column's formats (with the code to
+  add each to `formats`) and removes them. Formats added in the editor are
+  kept in drafts.
+* Edited and added cells are highlighted by default (`track = TRUE`); set
+  `track = FALSE` to turn the highlight off.
+* A cell being edited is no longer closed when the highlight, problems,
+  comments or formats of its row are updated; the row is redrawn when the
+  edit ends.
+* Right-clicking a cell offers to insert a column to its left or right.
+* The `Load`, `Upload...` and `Create` buttons of the `Open` menu have their
+  text centred and match the height of the fields next to them.
+
+## Comments, drag to fill and a colour picker
+
+* Cells can carry comments: right-click a cell (or press `Shift+F2`) to add,
+  edit or delete one, or delete them all at once (after confirming). Commented cells get an amber corner, and the comment
+  shows when the pointer rests on the cell and in the record form. Comments
+  are kept in drafts and returned with the data as `attr(x, "comments")`, a
+  data frame of the `row`, `column`, `comment`, `user` and `time`; data
+  opened with that attribute shows its comments. Comments on database rows
+  follow the rows when changes are committed or other rows are loaded.
+* Selections have a fill handle: drag the corner of a selection down, up or
+  across to fill the cells it passes over. One value is copied; two or more
+  numbers, dates (days or months apart, month ends stay month ends) or text
+  ending in a number (`Week 1`, `Week 2`) carry on as a series, and anything
+  else is repeated. Hold `Ctrl` to copy without a series. A fill is one undo
+  step, and values that do not fit a column are asked about first, as for a
+  paste.
+* A paste wider than the columns to the right of the selected cell adds
+  columns (`V1`, `V2`, ...) unless `col_edit = FALSE`; extra values were
+  ignored.
+* Colour columns (`col_options = list(x = "colour")`) are edited with a
+  colour picker: type a colour, pick a swatch (the colours already in the
+  column, then R's palette and the Okabe-Ito palette) or any colour with the
+  browser's picker. `list(type = "colour", palette = c(...))` sets the
+  swatches offered. R colour names such as `"grey50"` now show the right
+  swatch (R's `"green"` and `"gray"` are not the CSS ones), and values that
+  are not colours get a dashed one.
+* The `History` tab lists earlier editing sessions of the same data, newest
+  first and folded away: `data_edit(log = "file.csv")` reads them from its
+  file, and `dataEditServer(history = )` takes a data frame (or a reactive)
+  of earlier log entries, for example read from a database table. The change
+  log has a new `session` column (when the editing session started) to tell
+  sessions apart; log files written before keep their columns.
+* The `Code` tab is much faster on big data: on 100,000 rows it takes about
+  0.6 s after column actions (was about 5 s) and 0.3 s after edits (was
+  1.5 s), with the same code.
+
+## Tables too big to load
+
+* Database tables no longer have to fit in memory: at most 100,000 rows are
+  loaded at a time (`db_table(limit = )`, default
+  `getOption("DataEditR.db_rows", 100000)`; it was all rows). The header and
+  a new **Rows** button in the toolbar show how many rows are loaded out of
+  how many there are.
+* **Rows** loads other rows: those matching a filter written like
+  `dplyr::filter()` (translated to SQL by dbplyr, limited to columns and the
+  functions formulas may use), sorted by a column, at most a number of rows.
+  The dialog counts the matching rows first, and unsaved changes are saved
+  to the database or discarded before other rows are loaded.
+* Queries that cannot be written back (SQL, joins, tables without a primary
+  key, e.g. Parquet files read by DuckDB) are opened read-only instead of
+  failing; `db_table(readonly = FALSE)` still stops with an error, and
+  `readonly = TRUE` opens any table read-only.
+
+## Labelled data (SPSS, Stata and SAS)
+
+* SPSS (`.sav`, `.por`), Stata (`.dta`) and SAS (`.sas7bdat`, `.xpt`) files
+  are read with haven, from a file name or the Open menu (unless `read_fun`
+  is given). `save_as` files ending in `.sav`, `.dta` or `.xpt` are written
+  with haven, and the Export menu can download SPSS and Stata files.
+* Variable labels, value labels (`haven_labelled`, or the `labels`
+  attribute of labelled/sjlabelled) and SPSS user-defined missing values
+  are kept through every edit, added and removed rows, undo and column
+  actions. Variable labels of plain columns were dropped when rows were
+  added or removed, and text columns with value labels made the editor fail.
+* Cells show values with their labels and columns with value labels get an
+  `lbl` badge. The cell editor lists the labels, and labels typed, pasted or
+  entered in the record form are stored as their values. User-defined
+  missing values are shown muted and count as missing in summaries and the
+  "is missing" filter.
+* **Labels...** in the column menu changes the variable label and the value
+  labels (one `value = label` per line), recorded as one step in the code.
+  **Change type** turns labelled columns into factors or text with their
+  labels (`haven::as_factor()`) or into plain values (`haven::zap_labels()`).
+* The generated code writes SPSS missing values as values (they were written
+  as `NA`) and puts back variable labels that `tibble::add_row()` drops.
+  Formulas may use `haven::as_factor()`, `zap_labels()`, `zap_label()`,
+  `labelled()`, `labelled_spss()` and `structure()`.
+
+## Column summaries and a record form
+
+* Each column header shows a summary of the column, worked out in R from all
+  rows: a histogram of numbers and dates or the most common values, the share
+  of missing values and the number of distinct values. Clicking a bar filters
+  the rows (a range for numbers, a period for dates, a value for the rest),
+  clicking the missing share shows the rows where the value is missing (a new
+  "is missing" filter), and the number of distinct values opens the details
+  (smallest, largest, mean, median, standard deviation). Summaries are kept
+  up to date as you edit, only recomputing the columns that changed. A toolbar
+  button hides them, and `col_summary = FALSE` leaves them out.
+* A new `Record` tab (and toolbar button) shows the selected row as a form,
+  for entering or checking data one record at a time. Its fields use the
+  column inputs and checks of the grid, show broken rules under the fields
+  and move with the grid; `New` adds a row at the end.
+* Double-click a column's name (rather than anywhere in its header) to rename
+  it.
+
+## Column actions and validation rules
+
+* A column's menu (the new `⋮` button in its header, or a right-click) has
+  actions that change the whole column: **Formula...** (a new column or new
+  values from an R expression such as `round(mpg * 0.425, 1)`), **Find and
+  replace...**, **Recode values...**, **Change type** and sorting. Each shows
+  a preview and is recorded as one `dplyr` verb (`mutate()`, `arrange()`), so
+  the generated code says what was done rather than listing every changed
+  value. The editor runs that same verb, so the code gives exactly the
+  result, and checks this before showing it. Formulas can only use columns
+  and common functions, so they are safe in shiny apps. Turn the actions off
+  with `col_actions = FALSE`.
+* `rules` checks the data as it is edited: formulas that are `TRUE` for valid
+  rows, named with their messages (e.g. `"End is after the start" = ~ end >=
+  start`). Cells that break a rule are marked, a new `Problems` tab lists
+  them, the status bar counts them and `Done` asks before returning data with
+  problems. Columns can be made required or unique, given limits or a
+  pattern, or a formula, from their menu (**Rules...**). `dataEditProblems()`
+  returns the problems in shiny apps.
+* Code for columns inserted between other columns now puts them in place
+  (`mutate(..., .after = )`).
+* The change log gains a `code` column with the verb of column actions.
+
+## Change log, notes and drafts
+
+* Every change is recorded with the time, the user and how it was made
+  (typed, pasted, filled, cleared, undone, redone or reverted). The new
+  `History` tab of the review panel lists the changes step by step, and each
+  step can be given a note saying why it was made.
+* `data_edit(log = "changes.csv")` adds the change log to a csv file when
+  `Done` is pressed (or passes it to a function), so one file can keep the
+  history of many editing sessions.
+* Changes are saved as a draft while editing (`autosave = TRUE`). If the
+  editor is closed without pressing `Done` or `Cancel`, opening the same data
+  again offers to restore the changes with their history. Drafts are kept in
+  `tools::R_user_dir("DataEditR", "data")` and removed after 30 days.
+* `Cancel` asks before changes are thrown away.
+* In shiny apps, `dataEditLog()` returns the change log, `dataEditCommit()`
+  returns the log of the changes it saved, and `dataEditServer()` gains
+  `autosave` and `user` arguments.
+
+## New editor layout
+
+* One toolbar replaces the old input row, icon buttons and undo/redo line:
+  Open, Undo/Redo, Columns, filter chips, Find in data, Review changes, Code,
+  Export and a keyboard shortcuts sheet (press `?`).
+* Filter rows by typing in the boxes under each column header: min/max for
+  numbers, a multi-select list for columns with few distinct values and
+  "contains" for text. Active filters appear as chips in the toolbar.
+* Opening other data from the Open menu no longer stops the editor when the
+  settings name columns the new data does not have (they are ignored, see
+  #37 above). Open also keeps the current data, and says why, if the new data
+  has columns without a name or columns that hold tables.
+* The **Filters** button opens a panel beside the grid that lists every filter
+  in one place, for combinations that would be awkward to set column by
+  column. The grid follows the panel as it changes, with no Apply step. Each
+  filter is a card that suits its column: a histogram with a range to drag (or
+  type) for numbers, dates and date-times; the values with how many rows have
+  each, to tick, for columns with few values; `TRUE`/`FALSE`/missing buttons
+  for logicals; and words to look for in text. Rows can match all or any of
+  the filters, each card says how many rows it keeps and cards fold to a
+  sentence such as "is between 15 and 25". `Add filter` lists the columns with
+  a sparkline or the number of values, and can be searched. It has the logics
+  of the 1.x dialog in plain words (is any of, is none of, is above, is below,
+  is between, contains, ...) plus matches the pattern (regular expressions),
+  is missing and is not missing, for numbers, text, dates and times. Filters
+  set under the column headers or from column summaries are listed too, and
+  stay where they are unless they are changed (a `!text` header filter is
+  listed as `does not contain`). Dropdowns with names list and show the names,
+  HTML columns are searched as their text, and password values are never
+  listed. `between` now includes its end points and `contains` looks for plain
+  text, ignoring case (1.x used regular expressions; use `matches the
+  pattern`). The `dataFilter` module is still exported.
+* **Pages:** *Pages* in the status bar shows the rows and the columns a page
+  at a time (`page_rows` and `page_cols` open the editor in pages), with
+  buttons to move between them. Filters, find, paste, new rows, Done and
+  exports work across every page.
+* A `+` in the corner above the row numbers adds a row or a column (a menu
+  with both), instead of a bar under the grid and a `+` after the last column.
+* The toolbar buttons are labelled `Summary`, `Select` (was `Columns`),
+  `Filters`, `Form` and `Review` (was `Review changes`), and *Find in data* is
+  in the status bar. The side panel's `Record` tab is now `Form`.
+* Click the name of the data in the header to rename it: the code assigns the
+  result to the new name and exported files are named after it.
+* In the Filters panel, words and pattern filters list the values of the
+  column with their counts to pick from.
+* Show or hide columns from the Select menu (or a column's right-click menu),
+  replacing the column selection dialog inside `data_edit()` (the
+  `dataSelect` module is still exported).
+* Review panel: lists every edited, added, removed or renamed cell, row and
+  column with a button to revert it (reverts can be undone), plus "Revert
+  all", and a Code tab that shows the `data_code()` output as you edit. When
+  rows are filtered or columns hidden, the Code tab adds the `filter()` and
+  `select()` that give the rows and columns on screen (header boxes, column
+  summaries and the Filters panel, matching all or any), checked by running
+  it; rows it cannot explain are picked by position. `code =` with "Only
+  what's on screen" ends with the same steps.
+* Status bar: rows and columns on screen, Excel-style sum/mean/count of the
+  selected cells, and a summary of changes.
+* Typing text into a number or date column asks whether to store `NA`,
+  convert the column to text or cancel, instead of silently converting the
+  column. `"NA"` is treated as a missing value in typed columns.
+* "+ Add row" under the grid and a "+" header to add a column; headers show
+  type badges and a lock on read-only columns; Ctrl+F finds values.
+* The Done button gains a menu to return all data or only what is on screen
+  (replacing the scissors toggle) and, with `save_as`, whether to save.
+* Open (R object, file upload or new table) and Export (all data or what is
+  on screen) menus replace the `dataInput`/`dataOutput` row; both modules are
+  still exported.
+* Bootstrap 5 theme by default (`theme = NULL`); Bootswatch names such as
+  `"yeti"` now select the Bootstrap 5 version. `shinyBS` and `miniUI` are no
+  longer dependencies.
+* Two more Tabulator 6.7.1 hot spots are patched (row display checks and
+  range re-layout touched every row), keeping edits at ~35 ms on 100,000 rows.
+
+## Database tables
+
+* `data_edit()` and `dataEditServer()` accept `dbplyr` lazy tables (e.g.
+  `data_edit(tbl(con, "artists"))`, optionally filtered), or a `db_table()`.
+  Rows are matched by primary key (detected for SQLite, DuckDB and
+  PostgreSQL), edits are staged until *Done*, the user confirms a summary, and
+  changes are written in a single transaction with optimistic concurrency
+  checks (the commit is rolled back if any row changed in the database since it
+  was loaded). Columns that are not part of the table are read-only and schema
+  changes are disabled.
+* `code = TRUE` generates `rows_update()`, `rows_append()` and `rows_delete()`
+  code for database edits.
+* New `dataEditCommit()` saves the changes made in a `dataEditServer()`
+  editor, so shiny applications can write database edits (in a single
+  transaction, rolled back with an `editr_conflict` error if rows changed in
+  the meantime) and read the rows back with the keys the database generated.
+  For other data the current data becomes the new starting point for the
+  review panel and change tracking. `dataEditChanges()` returns a summary of
+  the changes that have not been saved yet.
+* `data_edit()` returns database rows as read back after the commit, so new
+  rows include their generated keys.
+
+## Other changes
+
+* `data_code()` now inserts added rows at their edited positions using
+  `tibble::add_row(.before = )`, so the generated code reproduces row order.
+* `dataFilterServer()` and `dataSelectServer()` gain a `reset` argument so
+  filters are kept while data is edited; `dataSelectServer()` also returns the
+  selected column `names`.
+* Fix `dataFilter` filters being re-created by stale observers after
+  "Remove Filters".
+* A filter that matches no rows now shows an empty table rather than all rows.
+* `row_bind` adds typed empty rows, so numeric columns stay numeric.
+* `dataEditServer()` gains `rows` and `columns` arguments to display a subset
+  of the data; `row_index` is no longer needed.
+* `dataEditServer()` applies `rows` and `columns` when the data is first
+  loaded (and when it is reloaded), not only when they change.
+* Matrices without row names are returned without row names.
+* `dataInputServer()` can load an uploaded file after an R object, and no
+  longer fails on data without columns.
+* `dataOutputServer()` no longer loops when the first column holds row names.
+* `dataFilterServer()` has been simplified: filters without levels are
+  ignored, "between" accepts its limits in any order, and "not between" or
+  "not contain" filters that match every row return no rows.
+* `col_bind` lists without names get unique column names (`V1`, `V2`, ...).
+* Database tables built from raw SQL queries give a clear error asking for
+  `db_table(x, table = , key = )`, and factor values are written as text.
+* The table behind a lazy table is found with dbplyr 2.3, 2.4 and 2.5 (which
+  stores quoted table paths such as `` `main`.`cars` ``).
+* The RStudio add-in returns the highlighted data when cancelled and accepts
+  any object with dimensions or a database table.
+* Test suite covers the gadget, the shiny modules (with `shiny::testServer()`)
+  and the database backend, with over 95% code coverage.
+* Documentation: new pkgdown articles on editing database tables, using the
+  modules in shiny apps and what is new in 2.0, a rewritten user guide with
+  new screenshots, and a new logo with the package name typed into a table.
+
 # DataEditR 1.0.0
 
 ## Major New Features

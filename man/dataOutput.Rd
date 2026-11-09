@@ -43,20 +43,23 @@ be hidden from the user, set to FALSE by default.}
 \item{hover_text}{text to display on download button when user hovers cursor
 over button, set to NULL by default to turn off hover text.}
 }
+\value{
+\code{dataOutputServer} returns the data to be saved, wrapped in
+\code{reactive}.
+}
 \description{
 Shiny module for data output
 }
 \examples{
 if (interactive()) {
   library(shiny)
-  library(rhandsontable)
   library(shinyjs)
 
   ui <- fluidPage(
     useShinyjs(),
     dataInputUI("input1"),
     dataOutputUI("output1"),
-    rHandsontableOutput("data1")
+    tableOutput("data1")
   )
 
   server <- function(input,
@@ -64,10 +67,8 @@ if (interactive()) {
                      session) {
     data_input1 <- dataInputServer("input1")
 
-    output$data1 <- renderRHandsontable({
-      if (!is.null(data_input1())) {
-        rhandsontable(data_input1())
-      }
+    output$data1 <- renderTable({
+      data_input1()
     })
 
     dataOutputServer("output1",

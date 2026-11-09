@@ -2,40 +2,84 @@ url: https://dillonhammill.github.io/DataEditR/
 
 template:
   bootstrap: 5
+  bslib:
+    primary: "#1D4ED8"
+    navbar-light-brand-color: "#1E3A8A"
+    base_font: "Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+
+home:
+  title: "DataEditR: interactive data editor for R"
+  description: >
+    View, enter, filter and edit data frames, files and database tables in an
+    interactive spreadsheet-style editor, with undo, change review and
+    reproducible code.
+
+navbar:
+  structure:
+    left: [intro, reference, articles, news]
+    right: [search, github]
+  components:
+    articles:
+      text: Articles
+      menu:
+      - text: Editing database tables
+        href: articles/databases.html
+      - text: Using DataEditR in Shiny apps
+        href: articles/shiny-modules.html
+      - text: What's new in DataEditR 2.0
+        href: articles/whats-new.html
 
 reference:
-- title: Interactive Data Editor
+- title: Interactive data editor
   desc: >
-    DataEditR ships with a single function called `data_edit()` that provides an
-    interactive interface to view, enter, filter and edit data. DataEditR also
-    ships with an RStudio add-in that can be accessed through the `Addins` menu.
+    `data_edit()` opens the data editor to view, enter, filter and edit data.
+    It is also available from the RStudio `Addins` menu as
+    *Interactive Data Editor*.
   contents:
   - data_edit
 
-- title: Code Generation
+- title: Databases
   desc: >
-    DataEditR can generate tidyverse-style code to reproduce data edits using
-    `dplyr` verbs. The `data_code()` function compares an original and edited
-    dataset and returns a code string that transforms one into the other.
+    Edit tables stored in a database. Pass a `dbplyr` lazy table to
+    `data_edit()`, or describe the table with `db_table()` when the key or the
+    table to write to cannot be detected.
+  contents:
+  - db_table
+
+- title: Code generation
+  desc: >
+    Generate tidyverse-style code that reproduces data edits using `dplyr`
+    verbs.
   contents:
   - data_code
 
-- title: DataEditR Shiny Modules
+- title: Shiny modules
   desc: >
-    DataEditR is built using a series of shiny modules that work together to 
-    allow users to view, filter, edit and export their data. Using these shiny 
-    modules, users can integrate DataEditR features into their own custom Shiny 
-    applications.
+    Add the data editor to your own shiny applications with the `dataEdit`
+    module. Save the changes (e.g. to a database) with `dataEditCommit()`,
+    count unsaved changes with `dataEditChanges()`, list broken rules with
+    `dataEditProblems()` and get the change log with `dataEditLog()`.
+  contents:
+  - dataEdit
+  - dataEditCommit
+
+- title: Other shiny modules
+  desc: >
+    Modules for loading, filtering, selecting, synchronising and saving data
+    that were combined in `data_edit()` before DataEditR 2.0. They can be
+    combined with the `dataEdit` module in your own applications.
   contents:
   - dataInput
-  - dataEdit
   - dataFilter
   - dataSelect
   - dataSync
   - dataOutput
 
 articles:
-- title : DataEditR
+- title: Articles
   navbar: ~
   contents:
   - DataEditR
+  - databases
+  - shiny-modules
+  - whats-new

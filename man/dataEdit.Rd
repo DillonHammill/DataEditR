@@ -6,7 +6,13 @@
 \alias{dataEditServer}
 \title{Shiny module for data editing}
 \usage{
-dataEditUI(id)
+dataEditUI(
+  id,
+  height = "65vh",
+  toolbar = TRUE,
+  toolbar_left = NULL,
+  toolbar_right = NULL
+)
 
 dataEditServer(
   id,
@@ -22,10 +28,24 @@ dataEditServer(
   row_bind = NULL,
   row_edit = TRUE,
   row_index = reactive(NULL),
+  rows = NULL,
+  columns = NULL,
   quiet = FALSE,
   read_fun = "read.csv",
   read_args = NULL,
-  track = NULL,
+  track = TRUE,
+  code_name = "data",
+  autosave = FALSE,
+  user = NULL,
+  col_actions = TRUE,
+  rules = NULL,
+  formats = NULL,
+  col_summary = TRUE,
+  history = NULL,
+  row_names = TRUE,
+  col_widths = NULL,
+  page_rows = NULL,
+  page_cols = NULL,
   ...
 )
 }
@@ -33,11 +53,22 @@ dataEditServer(
 \item{id}{unique identifier for the module to prevent namespace clashes when
 making multiple calls to this shiny module.}
 
+\item{height}{height of the grid as a valid CSS unit, set to \code{"65vh"}
+by default.}
+
+\item{toolbar}{logical indicating whether the toolbar (undo/redo, columns,
+find, review changes, code), review panel and status bar should be shown
+around the grid, set to \code{TRUE} by default.}
+
+\item{toolbar_left, toolbar_right}{optional UI elements to add at the start
+or end of the toolbar (\code{data_edit()} adds its Open and Export menus
+here).}
+
 \item{data}{a reactive expression containing an array (e.g. data.frame,
-matrix or data.table) or a vector indicating the dimensions of the array
-(e.g. c(10,10)) or column names to construct a new template for editing. If
-no data is supplied a template with 10 rows and columns will be generated
-for editing.}
+matrix or data.table), a database table (see \code{\link{db_table}}) or a
+vector indicating the dimensions of the array (e.g. c(10,10)) or column
+names to construct a new template for editing. If no data is supplied a
+template with 10 rows and columns will be generated for editing.}
 
 \item{col_bind}{additional columns to add to the data prior to loading into
 editor, can be either an array containing the new data, a vector containing
@@ -47,9 +78,46 @@ for each new column.}
 \item{col_edit}{logical indicating whether columns can be added or removed,
 set to TRUE by default.}
 
-\item{col_options}{a list named with valid columns names and either
-\code{c(TRUE, FALSE)} for checkboxes, a vector of options for dropdowns,
-\code{"date"} for date input or \code{"password"} for password input.}
+\item{col_options}{a list named by column with the input to use for each
+column:
+\itemize{
+\item \code{c(TRUE, FALSE)} or \code{"checkbox"}: checkboxes;
+\item a vector of values, e.g. \code{c("A", "B", "C")}: a dropdown menu.
+Give the values names to show the names instead, as for
+\code{shiny::selectInput()}:
+\code{list("New South Wales" = "NSW", "Victoria" = "VIC")};
+\item \code{"dropdown"}: a dropdown menu of the values in the column
+(or the levels of a factor);
+\item \code{"date"} or \code{"datetime"}: a date or date-time picker
+(the column is returned as \code{Date} or \code{POSIXct});
+\item \code{"time"}: a time picker (\code{"HH:MM"} text);
+\item \code{"textarea"}: text over several lines;
+\item \code{"password"}: hidden text;
+\item \code{"url"}: web addresses with a button to open them;
+\item \code{"html"}: cells shown as HTML (links, line breaks, bold,
+images, ...) without scripts or styles; double-click to edit the HTML;
+\item \code{"colour"} (or \code{"color"}): colours (R colour names such
+as \code{"grey50"} or hex codes such as \code{"#1D4ED8"}) shown with a
+swatch and edited with a colour picker. Set the colours the picker
+offers with \code{list(type = "colour", palette = c("red", "#1D4ED8"))};
+any colour can still be typed or picked;
+\item \code{c(min = 0, max = 10, step = 1)} (any of the three): numbers
+within limits, in steps of \code{step} counted from \code{min};
+\item \code{"integer"}: whole numbers, returned as integers (with limits:
+\code{list(type = "integer", min = 0, max = 10)});
+\item \code{"slider"}: a slider and bar for numbers from 0 to 100;
+\item \code{"rating"}: a rating from 0 to 5 stars.
+}
+Set the limits of a slider with
+\code{c(type = "slider", min = 0, max = 1, step = 0.05)} and the number
+of stars of a rating with \code{c(type = "rating", stars = 10)} (a
+\code{list()} works too). Values outside the limits or off the steps are
+marked in the editor and cannot be entered. Columns that are not in the
+data are ignored (with a message), here and in \code{col_readonly},
+\code{col_hide} and \code{col_widths}, so the same settings can be used
+for different data.
+Unlike earlier versions, using \code{col_options} no longer disables
+adding or removing columns.}
 
 \item{col_stretch}{logical indicating whether columns should be stretched to
 fill the full width of the display, set to FALSE by default.}
@@ -58,9 +126,8 @@ fill the full width of the display, set to FALSE by default.}
 vector of column names that cannot be edited, set to TRUE by default to
 allow editing of column names.}
 
-\item{col_readonly}{names of columns that cannot be edited. Users will be
-able to edit values but these will be reverted to the original values.
-Column names for these column cannot be edited either.}
+\item{col_readonly}{names of columns that cannot be edited. Values and
+names of these columns are locked in the grid.}
 
 \item{col_hide}{names of columns to hide from the editor. Hidden columns
 will not be visible or editable but will be retained in the data returned
@@ -68,7 +135,8 @@ by the module.}
 
 \item{col_factor}{logical indicating whether character columns should be
 converted to factors prior to returning the edited data, set to FALSE by
-default.}
+default. Factor columns in the data are always returned as factors with
+their levels; new values become new levels after the existing ones.}
 
 \item{row_bind}{additional rows to add to the data prior to loading into
 editor, can be either an array containing the new data, a vector containing
@@ -78,12 +146,19 @@ each new column.}
 \item{row_edit}{logical indicating whether rows can be added or removed, set
 to TRUE by default.}
 
-\item{row_index}{indicates the starting index for new rows when the data
-supplied to \code{DataEdit()} is a subset of a larger dataset, i.e.
-\code{row_index} indicates the number of rows present in the parental
-dataset.}
+\item{row_index}{retained for backwards compatibility and no longer
+required. Rows now carry stable identifiers, so new rows are numbered
+automatically.}
 
-\item{quiet}{logical to suppress warnings when using \code{col_options}.}
+\item{rows}{a reactive expression returning the row indices (positions in
+the data returned by this module) to display, or \code{NULL} to display
+all rows. Edits made to the displayed subset are applied directly to the
+full data.}
+
+\item{columns}{a reactive expression returning the names of the columns to
+display, or \code{NULL} to display all columns.}
+
+\item{quiet}{logical to suppress messages and notifications.}
 
 \item{read_fun}{name of the function to use to read in the data when a file
 is selected, set to \code{read.csv} by default.}
@@ -91,22 +166,112 @@ is selected, set to \code{read.csv} by default.}
 \item{read_args}{a named list of additional arguments to pass to
 \code{read_fun} when reading in files.}
 
-\item{track}{can be set to \code{TRUE} to highlight cells that have
-been edited or added to the original data with a default blue border, or a
-valid CSS color (e.g. \code{"#FF0000"} or \code{"red"}) to use a custom
-border color. Set to \code{NULL} by default to disable highlighting.}
+\item{track}{\code{TRUE} (the default) highlights cells that have been
+edited or added with a blue tint and border. Give a CSS colour (e.g.
+\code{"#DC2626"} or \code{"red"}) to use another colour, or \code{FALSE}
+to turn the highlighting off.}
 
-\item{...}{additional arguments passed to
-\code{\link[rhandsontable:rhandsontable]{rhandsontable}}.}
+\item{code_name}{name of the data used in the code shown in the review
+panel, set to \code{"data"} by default. Can also be a reactive expression
+returning the name. Two names, e.g. \code{c("mtcars", "cars")}, give the
+data the code starts from and the name the code assigns the result to.}
+
+\item{autosave}{logical indicating whether changes should be saved as a
+draft while editing, so that they can be restored if the app is closed
+before they are saved. When the same data is opened again by the same
+user, they are asked whether to restore the changes. Set to \code{FALSE}
+by default. Drafts are kept in \code{tools::R_user_dir("DataEditR",
+  "data")} (or the folder set with \code{options(DataEditR.drafts = )}) and
+are removed when the changes are committed or after 30 days.}
+
+\item{user}{name of the person editing, recorded in the change log (see
+\code{\link{dataEditLog}()}). By default the user signed in to the app
+(\code{session$user}), the \code{DataEditR.user} option or the system
+user name.}
+
+\item{col_actions}{logical indicating whether the column menu offers
+actions that change a whole column: formulas, find and replace,
+recoding values, changing the type and sorting the rows. They are shown
+in the generated code as one \code{dplyr} verb each. Set to \code{TRUE}
+by default.}
+
+\item{rules}{a list of rules the data should follow, each a one-sided
+formula that is \code{TRUE} for valid rows, named with the message to
+show, e.g. \code{list("End must be after the start" = ~ end >= start)}.
+Cells that break a rule are marked and listed in the \emph{Problems}
+tab (see \code{\link{dataEditProblems}()}). Users can add rules to a
+column from its menu (\emph{Rules...}).}
+
+\item{formats}{conditional formats: how to colour cells, without
+changing the data. A list of formats, each a one-sided formula or a list:
+\itemize{
+\item \code{list(~ mpg > 25, fill = "#DCFCE7", color = "#166534",
+  bold = TRUE)}: cells where the formula is \code{TRUE} get the fill, text
+colour and/or bold text (a formula alone gets a yellow fill). The cells
+of the columns the formula uses are coloured; give \code{columns} to
+colour other columns, or \code{columns = "all"} for whole rows;
+\item \code{list(scale = c("white", "#EF4444"), columns = "hp")}: a
+colour scale shading numbers from the lowest to the highest value (two
+colours, or three for low, middle and high). \code{limits = c(0, 300)}
+fixes the values of the end colours and \code{mid} the middle one.
+}
+Names of the list are labels. When several formats colour a cell, the
+later one wins. Users can add formats to a column from its menu
+(\emph{Conditional formatting...}).}
+
+\item{col_summary}{logical indicating whether a summary of each column
+(a histogram or the most common values, the share of missing values and
+the number of distinct values) is shown under its header, set to
+\code{TRUE} by default. Clicking a bar shows only those rows; the
+summaries can be hidden with the toolbar button.}
+
+\item{history}{the change log of earlier editing sessions to list in the
+\emph{History} tab under the changes of this session: a data frame with
+the columns of \code{\link{dataEditLog}()} (at least \code{step} and
+\code{action}), or a reactive expression returning one. For example the
+entries returned by \code{\link{dataEditCommit}()} and written to a
+database table, read back with \code{DBI::dbReadTable()}. The
+\code{session} column tells the sessions apart (entries of the current
+session are left out). \code{data_edit(log = "file.csv")} reads the
+earlier sessions of the data from its file.}
+
+\item{row_names}{logical indicating whether the row names of the data are
+shown in the editor, set to \code{TRUE} by default. When \code{FALSE} the
+row names are kept out of sight but still returned; rows added in the
+editor are named by their row number.}
+
+\item{col_widths}{widths of the columns in pixels: one number for every
+column, or numbers named by column, e.g. \code{c(notes = 400, id = 60)}.
+Other columns are as wide as their values, up to 320 pixels; drag the
+edge of a column header to resize it.}
+
+\item{page_rows, page_cols}{number of rows and columns to show at a time,
+or \code{NULL} (the default) to show them all. The status bar has buttons
+to move between the pages, and \code{Pages} in the status bar changes the
+page sizes while editing. Pages only change what is on screen: filters,
+find, \code{Done} and exports cover every page.}
+
+\item{...}{not in use.}
 }
 \value{
-reactive expression containing the edited data.
+reactive expression containing the edited data. Pass it to
+\code{\link{dataEditCommit}()} to save the changes (e.g. write them to a
+database) and to \code{\link{dataEditChanges}()} for a summary of the
+changes that have not been saved yet. The reactive also carries the
+attribute \code{"view"}, a reactive returning only the rows and columns on
+display.
 }
 \description{
-Shiny module for data editing
+\code{dataEdit} renders an editable, spreadsheet-like grid built on the
+MIT-licensed 'Tabulator' JavaScript library. Edits are sent to R as
+cell-level changes rather than whole tables, which keeps large datasets
+responsive and makes undo/redo, change tracking and database commits
+possible.
 }
 \examples{
 if (interactive()) {
+  library(shiny)
+
   ui <- fluidPage(
     dataInputUI("input-1"),
     dataOutputUI("output-1"),
