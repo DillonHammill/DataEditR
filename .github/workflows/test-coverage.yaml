@@ -1,10 +1,14 @@
 # Workflow derived from https://github.com/r-lib/actions/tree/v2/examples
 # Need help debugging build failures? Start at https://github.com/r-lib/actions#where-to-find-help
 #
-# Coverage is uploaded with covr::codecov(), which needs no token for a public
-# repository on GitHub Actions (Codecov checks the run with GitHub instead). The
-# codecov-action needs a CODECOV_TOKEN secret to upload from a protected branch
-# such as master. covr::codecov() uses CODECOV_TOKEN if one is ever added.
+# Coverage is uploaded with covr::codecov(). Without a CODECOV_TOKEN secret
+# this relies on Codecov's legacy upload route, which accepts uploads from
+# GitHub Actions in public repositories without a token. covr 4.0.0 moved to
+# Codecov's new upload API, which needs a token except for pull requests from
+# forks, so covr is kept at 3.6.5 here. Adding a CODECOV_TOKEN secret (from
+# the repository's settings on codecov.io) makes the upload use it, after
+# which `any::covr` can be used again. A failed upload only gives a warning:
+# it must not fail the tests.
 on:
   push:
     branches: [main, master]
@@ -19,6 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
     steps:
       - uses: actions/checkout@v6
@@ -29,7 +34,7 @@ jobs:
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          extra-packages: any::covr
+          extra-packages: covr@3.6.5
           needs: coverage
 
       - name: Test coverage
@@ -42,8 +47,12 @@ jobs:
           print(cov)
           # Tokenless uploads share a rate limit at Codecov, so wait and retry
           # when it is reached rather than losing the report.
+          upload <- function() {
+            tryCatch(covr::codecov(coverage = cov, quiet = FALSE),
+                     error = function(e) list(error = conditionMessage(e)))
+          }
           for (i in 1:4) {
-            res <- covr::codecov(coverage = cov, quiet = FALSE)
+            res <- upload()
             msg <- paste(unlist(res), collapse = " ")
             if (!grepl("rate limit", msg, ignore.case = TRUE)) break
             if (i < 4) {
@@ -54,6 +63,9 @@ jobs:
             }
           }
           print(res)
+          if (!grepl("upload successfully", msg, ignore.case = TRUE)) {
+            cat("::warning::Coverage was not uploaded to Codecov:", gsub("\n", " ", msg), "\n")
+          }
         shell: Rscript {0}
 
       - name: Show testthat output
