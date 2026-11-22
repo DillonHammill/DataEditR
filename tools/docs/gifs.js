@@ -486,11 +486,16 @@ const scenarios = {
     await record(page, "col-checkbox", async () => {
       await caption(page, "Checkbox columns: col_options = list(fast = c(TRUE, FALSE))");
       for (const id of [1, 4]) {
-        await clickAt(page, await cell(page, id, "c3"), { clickCount: 2 });
-        await sleep(600);
-        await page.keyboard.press("Space");
-        await settle(page, 700);
+        await clickAt(page, await cell(page, id, "c3"));
+        await settle(page, 800);
       }
+      await caption(page, "Space ticks or unticks the selected boxes");
+      await clickAt(page, await cell(page, 6, "c2"));
+      await sleep(400);
+      await page.keyboard.press("ArrowRight");
+      await sleep(500);
+      await page.keyboard.press("Space");
+      await settle(page, 900);
       await caption(page, "");
     });
     await record(page, "col-dropdown", async () => {

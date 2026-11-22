@@ -147,6 +147,34 @@ test_that("save_as writes the result unless unticked", {
   expect_true(file.exists(file))
 })
 
+test_that("write_fun and read_fun can name functions only the caller sees", {
+  # as a package calling data_edit() with one of its internal functions
+  file <- withr::local_tempfile(fileext = ".csv")
+  caller <- function() {
+    internal_writer <- function(x, file) writeLines("written", file)
+    internal_reader <- function(file) data.frame(read = readLines(file))
+    mock_gadget(function(session) session$setInputs(done = 1))
+    data_edit(mtcars[1:2, 1:2], save_as = file, write_fun = "internal_writer",
+              hide = TRUE)
+    mock_gadget(function(session) session$setInputs(done = 1))
+    data_edit(file, read_fun = "internal_reader")
+  }
+  expect_identical(caller()$read, "written")
+  # a write that fails still returns the edits, with a warning
+  mock_gadget(function(session) session$setInputs(done = 1))
+  expect_warning(
+    res <- data_edit(mtcars[1:2, 1:2], save_as = file, hide = TRUE,
+                     write_fun = function(x, file) stop("disk full")),
+    "could not be saved to '.*': disk full"
+  )
+  expect_identical(res, mtcars[1:2, 1:2])
+  # names seen from DataEditR keep their meaning
+  expect_identical(DataEditR:::editr_caller_fun("write.csv", environment()),
+                   "write.csv")
+  expect_identical(DataEditR:::editr_caller_fun("nowhere_fun", environment()),
+                   "nowhere_fun")
+})
+
 test_that("files, names, templates and NULL can be edited", {
   file <- withr::local_tempfile(fileext = ".csv")
   write.csv(data.frame(a = 1:2, b = c("x", "y")), file, row.names = FALSE)
@@ -165,6 +193,10 @@ test_that("the user interface reflects the arguments", {
             save_as = withr::local_tempfile(fileext = ".csv"))
   html <- tag_text(gadget$ui)
   expect_match(html, ">Cars<", fixed = TRUE)
+  # a title is a heading, not a name to change
+  expect_match(html, '<span class="editr-name editr-name-fixed" id="dataset_name">Cars</span>',
+               fixed = TRUE)
+  expect_no_match(html, "renameData", fixed = TRUE)
   expect_match(html, "logo.png", fixed = TRUE)
   expect_match(html, "Also save to", fixed = TRUE)
   expect_match(html, "open_toggle", fixed = TRUE)

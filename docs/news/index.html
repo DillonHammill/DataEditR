@@ -190,6 +190,20 @@
 <li>Two more Tabulator 6.7.1 hot spots are patched (row display checks and range re-layout touched every row), keeping edits at ~35 ms on 100,000 rows.</li>
 </ul></div>
 <div class="section level3">
+<h3 id="packages-that-use-data_edit-2-0-0">Packages that use <code>data_edit()</code>
+<a class="anchor" aria-label="anchor" href="#packages-that-use-data_edit-2-0-0"></a></h3>
+<p>Checked against CytoExploreR, which opens <code><a href="../reference/data_edit.html">data_edit()</a></code> for its experiment details, markers, channel matching and gatingTemplate editors.</p>
+<ul><li>A <code>title</code> is shown as a heading. The name of the data can still be changed in the header when no title is given.</li>
+<li>
+<code>col_options</code> checkboxes show a box in every cell (dashed for <code>NA</code>), ticked with a click on the box or Space, as in 1.x.</li>
+<li>With <code>row_edit = FALSE</code> the rows cannot be sorted either, so the edited rows can be matched to the original rows by position (e.g. to put back row names).</li>
+<li>
+<code>write_fun</code> and <code>read_fun</code> can name functions that are only visible where <code><a href="../reference/data_edit.html">data_edit()</a></code> is called, such as a package’s internal functions.</li>
+<li>If <code>write_fun</code> fails when <em>Done</em> is pressed, the edited data is still returned, with a warning, instead of the editor staying open.</li>
+<li>
+<code>TRUE</code> and <code>FALSE</code> cells read <code>TRUE</code> and <code>FALSE</code>, as in R.</li>
+</ul></div>
+<div class="section level3">
 <h3 id="database-tables-2-0-0">Database tables<a class="anchor" aria-label="anchor" href="#database-tables-2-0-0"></a></h3>
 <ul><li>
 <code><a href="../reference/data_edit.html">data_edit()</a></code> and <code><a href="../reference/dataEdit.html">dataEditServer()</a></code> accept <code>dbplyr</code> lazy tables (e.g. <code>data_edit(tbl(con, "artists"))</code>, optionally filtered), or a <code><a href="../reference/db_table.html">db_table()</a></code>. Rows are matched by primary key (detected for SQLite, DuckDB and PostgreSQL), edits are staged until <em>Done</em>, the user confirms a summary, and changes are written in a single transaction with optimistic concurrency checks (the commit is rolled back if any row changed in the database since it was loaded). Columns that are not part of the table are read-only and schema changes are disabled.</li>

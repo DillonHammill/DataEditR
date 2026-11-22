@@ -348,6 +348,24 @@ shiny modals and with data that changes), these were fixed or added:
 * Two more Tabulator 6.7.1 hot spots are patched (row display checks and
   range re-layout touched every row), keeping edits at ~35 ms on 100,000 rows.
 
+## Packages that use `data_edit()`
+
+Checked against CytoExploreR, which opens `data_edit()` for its experiment
+details, markers, channel matching and gatingTemplate editors.
+
+* A `title` is shown as a heading. The name of the data can still be changed
+  in the header when no title is given.
+* `col_options` checkboxes show a box in every cell (dashed for `NA`), ticked
+  with a click on the box or Space, as in 1.x.
+* With `row_edit = FALSE` the rows cannot be sorted either, so the edited rows
+  can be matched to the original rows by position (e.g. to put back row
+  names).
+* `write_fun` and `read_fun` can name functions that are only visible where
+  `data_edit()` is called, such as a package's internal functions.
+* If `write_fun` fails when *Done* is pressed, the edited data is still
+  returned, with a warning, instead of the editor staying open.
+* `TRUE` and `FALSE` cells read `TRUE` and `FALSE`, as in R.
+
 ## Database tables
 
 * `data_edit()` and `dataEditServer()` accept `dbplyr` lazy tables (e.g.

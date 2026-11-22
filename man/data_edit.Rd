@@ -124,13 +124,16 @@ editor, can be either an array containing the new data, a vector containing
 the new row names for empty rows or a named list containing a vector for
 each new column.}
 
-\item{row_edit}{logical indicating whether rows can be added or removed, set
-to TRUE by default.}
+\item{row_edit}{logical indicating whether rows can be added, removed or
+sorted, set to TRUE by default. With \code{FALSE} the rows keep their
+number and order, so the edited rows can be matched to the original
+rows by position.}
 
 \item{save_as}{name of a csv file to which the edited data should be saved.}
 
 \item{title}{optional title to show in the header, set to the name of the
-data by default.}
+data by default. The name of the data can be changed in the header (it
+names the data in the code and exported files); a title cannot.}
 
 \item{logo}{optional logo to include next to the title, supplied as the path
 or URL of an image. No logo is shown by default.}
@@ -165,7 +168,9 @@ is the name of a file, set to \code{read.csv} by default. SPSS
 (\code{.sas7bdat}, \code{.xpt}) files are read with the haven package
 unless another function is given (see the \emph{Labelled data}
 section). Functions of other packages can be named with
-\code{"pkg::fun"}, e.g. \code{read_fun = "readxl::read_excel"}.}
+\code{"pkg::fun"}, e.g. \code{read_fun = "readxl::read_excel"}. Names
+are also looked up where \code{data_edit()} is called, so a package
+can name its own internal functions.}
 
 \item{read_args}{a named list of additional arguments to pass to
 \code{read_fun}.}
@@ -179,7 +184,8 @@ haven, keeping variable and value labels. Data without row names (only
 row numbers) is written by \code{write.csv()} without them, unless
 \code{write_args} sets \code{row.names}. \code{"pkg::fun"} names a
 function of another package, e.g. \code{"googlesheets4::write_sheet"},
-whose \code{save_as} need not be a file name.}
+whose \code{save_as} need not be a file name. As for \code{read_fun},
+names are also looked up where \code{data_edit()} is called.}
 
 \item{write_args}{a named list of additional arguments to pass to
 \code{write_fun}.}

@@ -216,8 +216,10 @@ each new column.</p></dd>
 
 
 <dt>row_edit</dt>
-<dd><p>logical indicating whether rows can be added or removed, set
-to TRUE by default.</p></dd>
+<dd><p>logical indicating whether rows can be added, removed or
+sorted, set to TRUE by default. With <code>FALSE</code> the rows keep their
+number and order, so the edited rows can be matched to the original
+rows by position.</p></dd>
 
 
 <dt>save_as</dt>
@@ -226,7 +228,8 @@ to TRUE by default.</p></dd>
 
 <dt>title</dt>
 <dd><p>optional title to show in the header, set to the name of the
-data by default.</p></dd>
+data by default. The name of the data can be changed in the header (it
+names the data in the code and exported files); a title cannot.</p></dd>
 
 
 <dt>logo</dt>
@@ -277,7 +280,9 @@ is the name of a file, set to <code>read.csv</code> by default. SPSS
 (<code>.sas7bdat</code>, <code>.xpt</code>) files are read with the haven package
 unless another function is given (see the <em>Labelled data</em>
 section). Functions of other packages can be named with
-<code>"pkg::fun"</code>, e.g. <code>read_fun = "readxl::read_excel"</code>.</p></dd>
+<code>"pkg::fun"</code>, e.g. <code>read_fun = "readxl::read_excel"</code>. Names
+are also looked up where <code>data_edit()</code> is called, so a package
+can name its own internal functions.</p></dd>
 
 
 <dt>read_args</dt>
@@ -295,7 +300,8 @@ haven, keeping variable and value labels. Data without row names (only
 row numbers) is written by <code><a href="https://rdrr.io/r/utils/write.table.html" class="external-link">write.csv()</a></code> without them, unless
 <code>write_args</code> sets <code>row.names</code>. <code>"pkg::fun"</code> names a
 function of another package, e.g. <code>"googlesheets4::write_sheet"</code>,
-whose <code>save_as</code> need not be a file name.</p></dd>
+whose <code>save_as</code> need not be a file name. As for <code>read_fun</code>,
+names are also looked up where <code>data_edit()</code> is called.</p></dd>
 
 
 <dt>write_args</dt>

@@ -93,6 +93,9 @@ dataInputServer <- function(id,
                             hide = FALSE,
                             envir = parent.frame()) {
   
+  # read_fun MAY NAME A FUNCTION ONLY SEEN BY THE CALLER
+  read_fun <- editr_caller_fun(read_fun, envir)
+
   # SERVER
   moduleServer(id, function(input,
                             output,

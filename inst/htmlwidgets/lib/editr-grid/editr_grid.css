@@ -157,6 +157,47 @@
   color: var(--editr-muted, #52606D);
 }
 
+/* checkbox cells (col_options = list(x = c(TRUE, FALSE))) */
+.editr-check {
+  display: inline-block;
+  position: relative;
+  width: 16px;
+  height: 16px;
+  vertical-align: middle;
+  border: 1.5px solid #9AA5B1;
+  border-radius: 4px;
+  background: #FFFFFF;
+  cursor: pointer;
+}
+.editr-check:hover {
+  border-color: var(--editr-accent, #1D4ED8);
+}
+.editr-check-on {
+  background: var(--editr-accent, #1D4ED8);
+  border-color: var(--editr-accent, #1D4ED8);
+}
+.editr-check-on::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 0.5px;
+  width: 5px;
+  height: 9px;
+  border: solid #FFFFFF;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+.editr-check-na {
+  border-style: dashed;
+}
+.editr-check-ro {
+  cursor: default;
+  opacity: 0.55;
+}
+.editr-check-ro:hover {
+  border-color: #9AA5B1;
+}
+
 .tabulator .tabulator-row .tabulator-cell.editr-rowheader,
 .tabulator .tabulator-cell.editr-rowheader {
   background: var(--editr-chrome, #F6F7F9);

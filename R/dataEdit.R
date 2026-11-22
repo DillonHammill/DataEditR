@@ -156,8 +156,10 @@
 #'   editor, can be either an array containing the new data, a vector containing
 #'   the new row names for empty rows or a named list containing a vector for
 #'   each new column.
-#' @param row_edit logical indicating whether rows can be added or removed, set
-#'   to TRUE by default.
+#' @param row_edit logical indicating whether rows can be added, removed or
+#'   sorted, set to TRUE by default. With \code{FALSE} the rows keep their
+#'   number and order, so the edited rows can be matched to the original
+#'   rows by position.
 #' @param row_index retained for backwards compatibility and no longer
 #'   required. Rows now carry stable identifiers, so new rows are numbered
 #'   automatically.
@@ -421,6 +423,8 @@ dataEditServer <- function(id,
   data_r <- if (is.reactive(data)) data else reactive(data)
   page_rows <- editr_page_size(page_rows, "page_rows")
   page_cols <- editr_page_size(page_cols, "page_cols")
+  # read_fun MAY NAME A FUNCTION ONLY SEEN BY THE CALLER
+  read_fun <- editr_caller_fun(read_fun, parent.frame())
   history_r <- if (is.function(history)) history else function() history
   rows_r <- if (is.null(rows) || is.reactive(rows)) rows else reactive(rows)
   columns_r <- if (is.null(columns) || is.reactive(columns)) {
