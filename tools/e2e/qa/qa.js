@@ -2011,11 +2011,20 @@ const scenarios = {
     const exportBtn = await page.evaluate(() => [...document.querySelectorAll("button.editr-tool")]
       .some((b) => b.textContent.includes("Export")));
     check(!exportBtn, "Export hidden");
+    // a click on the box ticks it; Space unticks and ticks the selected box
+    const ticked = async () => (await L.gridData(page))[0].c2;
+    check(await page.$$eval(".tabulator-cell[tabulator-field=c2] .editr-check-na", (e) => e.length) === 2,
+          "NA checkboxes shown as boxes");
     const p = await L.cellCentre(page, 1, "c2");
-    await page.mouse.click(p.x, p.y, { clickCount: 2 });
-    await sleep(500);
+    await page.mouse.click(p.x, p.y);
+    await L.settle(page);
+    check(await ticked() === true, "a click ticks the box: " + await ticked());
     await page.keyboard.press("Space");
     await L.settle(page);
+    check(await ticked() === false, "Space unticks it: " + await ticked());
+    await page.keyboard.press("Space");
+    await L.settle(page);
+    check(await ticked() === true, "Space ticks it again: " + await ticked());
     // #35 a paste bigger than the table is trimmed when rows and columns are fixed
     await L.selectCell(page, 2, "c1");
     await L.paste(page, "z\tFALSE\textra\nw\tTRUE\tmore\n");

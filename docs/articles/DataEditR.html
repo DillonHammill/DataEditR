@@ -634,7 +634,9 @@ cannot be converted (e.g. <code>"x"</code> to a date), you are told
 which ones before they become missing.</li>
 <li>
 <strong>Sort ascending</strong> / <strong>Sort descending</strong>:
-put the rows in order of the column.</li>
+put the rows in order of the column (not offered with
+<code>row_edit = FALSE</code>, which keeps the rows in their
+order).</li>
 </ul>
 <p><img src="images/column-actions.png" width="100%" style="display: block; margin: auto;"></p>
 <p><img src="images/formula.png" width="100%" style="display: block; margin: auto;"></p>
@@ -1192,10 +1194,11 @@ kinds of input and a read-only <code>mpg</code> column:</p>
 <h3 id="checkboxes">7.1 Checkboxes<a class="anchor" aria-label="anchor" href="#checkboxes"></a>
 </h3>
 <p>Checkboxes can be used to obtain <code>TRUE</code> or
-<code>FALSE</code> value inputs from users. Double-click a checkbox cell
-and click the box (or press <code>Space</code>) to change its value;
-ticked cells are returned as <code>TRUE</code>. A new checkbox column
-can be added to existing data with <code>col_bind</code>:</p>
+<code>FALSE</code> value inputs from users. Click a box to tick or
+untick it, or select cells and press <code>Space</code>; ticked cells
+are returned as <code>TRUE</code> and boxes with a dashed border are
+missing values (<code>NA</code>). A new checkbox column can be added to
+existing data with <code>col_bind</code>:</p>
 <div class="sourceCode" id="cb32"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/data_edit.html">data_edit</a></span><span class="op">(</span><span class="va">mtcars</span>,</span>
 <span>          col_bind <span class="op">=</span> <span class="st">"fast"</span>,</span>

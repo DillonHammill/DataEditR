@@ -461,6 +461,11 @@ action_plan <- function(store, cfg, spec) {
   if (isTRUE(spec$new) && !isTRUE(cfg$col_edit)) {
     stop("Columns cannot be added to this data.", call. = FALSE)
   }
+  # ROWS THAT CANNOT BE ADDED OR REMOVED KEEP THEIR ORDER (CALLERS OFTEN PUT
+  # THEM BACK BY POSITION, E.G. TO RESTORE ROW NAMES)
+  if (spec$kind == "sort" && !isTRUE(cfg$row_edit)) {
+    stop("The rows of this data cannot be reordered.", call. = FALSE)
+  }
   if (!isTRUE(spec$new) && spec$kind != "sort" && spec$cid %in% cfg$readonly) {
     stop("This column is read-only.", call. = FALSE)
   }

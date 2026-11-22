@@ -313,6 +313,9 @@ test_that("actions respect read-only columns, column edits and databases", {
   expect_error(plan(p, kind = "formula", cid = "c2", new = TRUE, name = "z",
                     expr = "1"), "cannot be added")
   expect_silent(plan(p, kind = "sort", cid = "c1"))
+  # rows that cannot be added or removed are not reordered either
+  f <- prep(data.frame(a = 2:1, b = 3:4), row_edit = FALSE)
+  expect_error(plan(f, kind = "sort", cid = "c1"), "cannot be reordered")
   skip_if_not_installed("RSQLite")
   skip_if_not_installed("dbplyr")
   con <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")

@@ -86,6 +86,9 @@ dataOutputServer <- function(id,
                              hide = FALSE,
                              hover_text = NULL) {
   
+  # write_fun MAY NAME A FUNCTION ONLY SEEN BY THE CALLER
+  write_fun <- editr_caller_fun(write_fun, parent.frame())
+
   # SERVER
   moduleServer(id, function(input,
                             output,

@@ -375,7 +375,7 @@ Click the `⋮` button in a column's header (or right-click the header) for acti
 * **Find and replace...**: replace text within cells (matching case or not, or with a regular expression), or replace whole cells. For numbers and dates whole cells are replaced; leave `Find` empty to fill missing values, or `Replace with` empty to clear the cells.
 * **Recode values...**: lists the values of the column, the most common first, with a box to type a new value for each.
 * **Change type**: number, whole number, text, `TRUE`/`FALSE`, date or factor. If some values cannot be converted (e.g. `"x"` to a date), you are told which ones before they become missing.
-* **Sort ascending** / **Sort descending**: put the rows in order of the column.
+* **Sort ascending** / **Sort descending**: put the rows in order of the column (not offered with `row_edit = FALSE`, which keeps the rows in their order).
 
 ```{r, echo = FALSE, fig.align = "center", out.width = "100%"}
 screenshot("column-actions.png")
@@ -670,7 +670,7 @@ data_edit(cars,
 
 ### 7.1 Checkboxes
 
-Checkboxes can be used to obtain `TRUE` or `FALSE` value inputs from users. Double-click a checkbox cell and click the box (or press `Space`) to change its value; ticked cells are returned as `TRUE`. A new checkbox column can be added to existing data with `col_bind`:
+Checkboxes can be used to obtain `TRUE` or `FALSE` value inputs from users. Click a box to tick or untick it, or select cells and press `Space`; ticked cells are returned as `TRUE` and boxes with a dashed border are missing values (`NA`). A new checkbox column can be added to existing data with `col_bind`:
 
 ```{r, eval = FALSE}
 data_edit(mtcars,

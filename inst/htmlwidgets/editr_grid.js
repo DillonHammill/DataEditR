@@ -718,6 +718,7 @@
             return document.createTextNode("");
           }
           if (base === "colour") return colourNode(v);
+          if (base === "checkbox") return checkNode(grid.colMap[cell.getField()], v);
           if (base === "html") return safeHTML(v);
           if (base === "choice") {
             var shown = choiceLabel(grid.colMap[cell.getField()], v);
@@ -732,9 +733,38 @@
                             onRendered);
             }
           }
+          // TRUE / FALSE as in R (and the filters), not true / false
           return document.createTextNode(
-            v === null || v === undefined ? "" : String(v));
+            v === null || v === undefined ? "" :
+              typeof v === "boolean" ? (v ? "TRUE" : "FALSE") : String(v));
         };
+      }
+
+      // a checkbox cell: ticked (TRUE), empty (FALSE) or dashed (NA)
+      function checkNode(c, v) {
+        var box = document.createElement("span");
+        var na = v === null || v === undefined;
+        box.className = "editr-check" + (v === true ? " editr-check-on" : "") +
+          (na ? " editr-check-na" : "") + (c && c.readonly ? " editr-check-ro" : "");
+        box.setAttribute("role", "checkbox");
+        box.setAttribute("aria-checked", v === true ? "true" : na ? "mixed" : "false");
+        if (na) box.title = "NA";
+        return box;
+      }
+
+      function isCheckColumn(c) {
+        return !!(c && !c.readonly && c.option && c.option.type === "checkbox");
+      }
+
+      // tick or untick checkbox cells: all ticked unless all were ticked
+      function toggleChecks(cells) {
+        cells = cells.filter(function (cell) {
+          return isCheckColumn(grid.colMap[cell.getField()]);
+        });
+        if (!cells.length) return false;
+        var to = !cells.every(function (cell) { return cell.getValue() === true; });
+        cells.forEach(function (cell) { cell.setValue(to); });
+        return true;
       }
 
       // the value of a labelled column with its label; SPSS user-defined
@@ -2901,10 +2931,10 @@
           def.minWidth = Math.max(def.minWidth, 110);
         }
         if (o && o.type === "checkbox") {
-          def.editor = c.readonly ? false : "tickCross";
-          def.editorParams = {tristate: false};
-          def.formatter = makeFormatter("tickCross",
-                                        {allowEmpty: true, crossElement: false});
+          // a box in every cell, ticked with a click on it or Space (see
+          // toggleChecks()), rather than an editor opened by a double-click
+          def.editor = false;
+          def.formatter = makeFormatter("checkbox");
           def.hozAlign = "center";
         } else if (o && o.type === "dropdown") {
           def.editor = c.readonly ? false : "list";
@@ -3420,7 +3450,9 @@
             ]});
           }
         }
-        if (!grid.opts.db) {
+        // rows that cannot be added or removed keep their order too: code
+        // that edits such data often puts the rows back by position
+        if (!grid.opts.db && grid.opts.row_edit) {
           items.push({label: "Sort ascending", action: ask("sort", {desc: false})});
           items.push({label: "Sort descending", action: ask("sort", {desc: true})});
         }
@@ -5592,6 +5624,10 @@
         });
 
         table.on("cellClick", function (e, cell) {
+          // a click on a checkbox ticks it
+          if (e.target && e.target.closest && e.target.closest(".editr-check")) {
+            toggleChecks([cell]);
+          }
           if (formVisible() && cell.getRow().getIndex() !== grid.formRow) {
             renderForm(cell.getRow().getIndex());
           }
@@ -5699,6 +5735,26 @@
       el.addEventListener("keydown", function (e) {
         if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === "v") {
           grid.pasteHeaders = Date.now();
+        }
+      }, true);
+
+      // Space ticks or unticks the selected checkboxes
+      el.addEventListener("keydown", function (e) {
+        if (e.key !== " " || e.ctrlKey || e.metaKey || e.altKey || !grid.table) return;
+        var t = e.target;
+        if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" ||
+                  t.tagName === "SELECT" || t.isContentEditable)) return;
+        if (grid.table.modules.edit && grid.table.modules.edit.currentCell) return;
+        var ranges = grid.table.getRanges ? grid.table.getRanges() : [];
+        var cells = [];
+        ranges.forEach(function (r) {
+          r.getCells().forEach(function (row) {
+            (Array.isArray(row) ? row : [row]).forEach(function (cell) { cells.push(cell); });
+          });
+        });
+        if (toggleChecks(cells)) {
+          e.preventDefault();
+          e.stopPropagation();
         }
       }, true);
 

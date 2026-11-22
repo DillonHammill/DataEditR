@@ -342,6 +342,20 @@ editr_fun <- function(f) {
   f
 }
 
+#' A function named in read_fun or write_fun that can only be seen where it
+#' was given (e.g. an internal function of the package calling data_edit(), or
+#' one defined in the calling function) is taken from there. Other names stay
+#' names, so they are found as before and "read.csv" etc. keep their meaning.
+#' @noRd
+editr_caller_fun <- function(f, envir) {
+  if (!is.character(f) || length(f) != 1 || is.na(f) ||
+      grepl("::", f, fixed = TRUE) || !is.environment(envir) ||
+      exists(f, envir = environment(editr_caller_fun), mode = "function")) {
+    return(f)
+  }
+  get0(f, envir = envir, mode = "function", ifnotfound = f)
+}
+
 #' Write data with write_fun, or with haven to an SPSS, Stata or SAS
 #' transport file when write_fun was not chosen
 #' @noRd

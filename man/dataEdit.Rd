@@ -143,8 +143,10 @@ editor, can be either an array containing the new data, a vector containing
 the new row names for empty rows or a named list containing a vector for
 each new column.}
 
-\item{row_edit}{logical indicating whether rows can be added or removed, set
-to TRUE by default.}
+\item{row_edit}{logical indicating whether rows can be added, removed or
+sorted, set to TRUE by default. With \code{FALSE} the rows keep their
+number and order, so the edited rows can be matched to the original
+rows by position.}
 
 \item{row_index}{retained for backwards compatibility and no longer
 required. Rows now carry stable identifiers, so new rows are numbered

@@ -91,6 +91,22 @@
   outline-offset: 1px;
 }
 
+/* a title given to data_edit() is a heading, not a name to change */
+.editr-header-title .editr-name-fixed {
+  display: inline-block;
+  padding-right: 8px;
+  cursor: default;
+}
+
+.editr-header-title .editr-name-fixed::after {
+  display: none;
+}
+
+.editr-header-title .editr-name-fixed:hover {
+  border-color: transparent;
+  background: transparent;
+}
+
 .editr-header-title .editr-name-input {
   height: 30px;
   font-size: 15px;

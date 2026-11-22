@@ -24,10 +24,7 @@ const { check } = L;
 
     // checkbox
     const c = await L.cellCentre(page, 3, fieldOf("ok"));
-    await page.mouse.click(c.x, c.y, { clickCount: 2 });
-    await page.waitForSelector(".tabulator-cell.tabulator-editing input[type=checkbox]", { timeout: 3000 });
-    await page.click(".tabulator-cell.tabulator-editing input[type=checkbox]");
-    await page.keyboard.press("Enter");
+    await page.mouse.click(c.x, c.y);
     await L.settle(page);
     data = await L.gridData(page);
     check(data[2][fieldOf("ok")] === true, "checkbox ticked (" + JSON.stringify(data[2][fieldOf("ok")]) + ")");

@@ -171,11 +171,14 @@
 #'   editor, can be either an array containing the new data, a vector containing
 #'   the new row names for empty rows or a named list containing a vector for
 #'   each new column.
-#' @param row_edit logical indicating whether rows can be added or removed, set
-#'   to TRUE by default.
+#' @param row_edit logical indicating whether rows can be added, removed or
+#'   sorted, set to TRUE by default. With \code{FALSE} the rows keep their
+#'   number and order, so the edited rows can be matched to the original
+#'   rows by position.
 #' @param save_as name of a csv file to which the edited data should be saved.
 #' @param title optional title to show in the header, set to the name of the
-#'   data by default.
+#'   data by default. The name of the data can be changed in the header (it
+#'   names the data in the code and exported files); a title cannot.
 #' @param logo optional logo to include next to the title, supplied as the path
 #'   or URL of an image. No logo is shown by default.
 #' @param logo_size width of the logo in pixels, set to 30 pixels by default.
@@ -202,7 +205,9 @@
 #'   (\code{.sas7bdat}, \code{.xpt}) files are read with the haven package
 #'   unless another function is given (see the \emph{Labelled data}
 #'   section). Functions of other packages can be named with
-#'   \code{"pkg::fun"}, e.g. \code{read_fun = "readxl::read_excel"}.
+#'   \code{"pkg::fun"}, e.g. \code{read_fun = "readxl::read_excel"}. Names
+#'   are also looked up where \code{data_edit()} is called, so a package
+#'   can name its own internal functions.
 #' @param read_args a named list of additional arguments to pass to
 #'   \code{read_fun}.
 #' @param write_fun name of the function to use to write the edited version of
@@ -214,7 +219,8 @@
 #'   row numbers) is written by \code{write.csv()} without them, unless
 #'   \code{write_args} sets \code{row.names}. \code{"pkg::fun"} names a
 #'   function of another package, e.g. \code{"googlesheets4::write_sheet"},
-#'   whose \code{save_as} need not be a file name.
+#'   whose \code{save_as} need not be a file name. As for \code{read_fun},
+#'   names are also looked up where \code{data_edit()} is called.
 #' @param write_args a named list of additional arguments to pass to
 #'   \code{write_fun}.
 #' @param quiet logical indicating whether messages should be suppressed, set to
@@ -369,6 +375,11 @@ data_edit <- function(x = NULL,
   # SEARCH DATA OUTSIDE DATA_EDIT
   envir <- parent.frame()
 
+  # FUNCTIONS NAMED IN read_fun / write_fun ARE ALSO FOUND WHERE data_edit()
+  # WAS CALLED (E.G. A PACKAGE'S OWN INTERNAL FUNCTIONS)
+  read_fun <- editr_caller_fun(read_fun, envir)
+  write_fun <- editr_caller_fun(write_fun, envir)
+
   # PAGES (CHECKED BEFORE THE EDITOR OPENS)
   page_rows <- editr_page_size(page_rows, "page_rows")
   page_cols <- editr_page_size(page_cols, "page_cols")
@@ -464,9 +475,15 @@ data_edit <- function(x = NULL,
     div(
       class = "editr-header-title",
       if (!grepl("^r", logo_side, ignore.case = TRUE)) logo_tag,
-      tags$button(type = "button", class = "editr-name", id = "dataset_name",
-                  title = "Rename the data", onclick = "DataEditR.renameData(this)",
-                  label),
+      if (is.null(title)) {
+        tags$button(type = "button", class = "editr-name", id = "dataset_name",
+                    title = "Rename the data",
+                    onclick = "DataEditR.renameData(this)", label)
+      } else {
+        # A TITLE (E.G. FROM A PACKAGE USING data_edit()) IS A HEADING, NOT A
+        # NAME TO CHANGE
+        span(class = "editr-name editr-name-fixed", id = "dataset_name", label)
+      },
       span(class = "editr-pill", id = "dataset_meta"),
       if (grepl("^r", logo_side, ignore.case = TRUE)) logo_tag
     ),
@@ -859,11 +876,19 @@ data_edit <- function(x = NULL,
       }
       save <- !is.null(save_as) && !isFALSE(input$save_file)
       if (!is.null(result) && save) {
-        editr_write(result, save_as, write_fun, write_args)
-        if (!quiet) {
-          message("Saved the edited data to ",
-                  if (is.character(save_as)) paste0("'", save_as, "'") else "save_as",
-                  ".")
+        where <- if (is.character(save_as)) paste0("'", save_as, "'") else "save_as"
+        # A FAILED WRITE MUST NOT KEEP THE EDITOR OPEN (DONE WOULD DO NOTHING)
+        # OR LOSE THE EDITS: THE DATA IS STILL RETURNED, WITH A WARNING
+        saved <- tryCatch({
+          editr_write(result, save_as, write_fun, write_args)
+          TRUE
+        }, error = function(e) {
+          warning("The edited data could not be saved to ", where, ": ",
+                  conditionMessage(e), call. = FALSE)
+          FALSE
+        })
+        if (saved && !quiet) {
+          message("Saved the edited data to ", where, ".")
         }
       }
       if (!is.null(log)) {
